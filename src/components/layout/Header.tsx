@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
-import React, { type ReactNode } from 'react';
+import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './Header.css';
 import { SearchIcon } from '../common/Icons';
@@ -13,36 +13,40 @@ interface HeaderProps {
   searchPlaceholder?: string;
 }
 
-const profileDropdown = (): ReactNode => {
-  const navigate = useNavigate()
-    const goToProfile = () => navigate && navigate(customerPageMap['customer-settings']);
+const ProfileDropdown: React.FC = () => {
+  const navigate = useNavigate();
+  const goToProfile = () => navigate(customerPageMap['customer-settings']);
   const goToLogout = () => {
-    logoutUser()
-    navigate && navigate('/');
-  }
-  return (<div className="profile-dropdown">
-            <button className="profile-btn" type="button" aria-haspopup="menu" aria-label="Tài khoản của tôi">
-              <img src="https://i.pravatar.cc/150?img=32" alt="Avatar" className="avatar-img" />
-            </button>
+    logoutUser();
+    navigate('/');
+  };
 
-            <div className="profile-menu" role="menu" aria-label="Tùy chọn tài khoản">
-              <div className="profile-menu__header">
-                <img src="https://i.pravatar.cc/150?img=32" alt="Avatar" className="profile-menu__avatar" />
-                <div>
-                  <p className="profile-menu__name">Hồ sơ của tôi</p>
-                  <p className="profile-menu__sub">Quản lý thông tin cá nhân</p>
-                </div>
-              </div>
+  return (
+    <div className="profile-dropdown">
+      <button className="profile-btn" type="button" aria-haspopup="menu" aria-label="Tài khoản của tôi">
+        <img src="https://i.pravatar.cc/150?img=32" alt="Avatar" className="avatar-img" />
+      </button>
 
-              <button className="profile-menu__item" type="button" onClick={goToProfile} role="menuitem">
-                Hồ sơ của tôi
-              </button>
+      <div className="profile-menu" role="menu" aria-label="Tùy chọn tài khoản">
+        <div className="profile-menu__header">
+          <img src="https://i.pravatar.cc/150?img=32" alt="Avatar" className="profile-menu__avatar" />
+          <div>
+            <p className="profile-menu__name">Hồ sơ của tôi</p>
+            <p className="profile-menu__sub">Quản lý thông tin cá nhân</p>
+          </div>
+        </div>
 
-              <button className="profile-menu__item profile-menu__item--danger" type="button" onClick={goToLogout} role="menuitem">
-                Đăng xuất
-              </button>
-            </div>
-          </div>)}
+        <button className="profile-menu__item" type="button" onClick={goToProfile} role="menuitem">
+          Hồ sơ của tôi
+        </button>
+
+        <button className="profile-menu__item profile-menu__item--danger" type="button" onClick={goToLogout} role="menuitem">
+          Đăng xuất
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const loginButton = (onNavigate: any)=> (
   <button className="profile-menu__item profile-menu__item--danger" type="button" onClick={()=> onNavigate && onNavigate('login')} role="menuitem">
@@ -113,7 +117,7 @@ export const Header: React.FC<HeaderProps> = ({
             <input type="text" placeholder={searchPlaceholder} className="search-input" />
           </div>
           <NotificationMenu badgeStyle="dot" />
-          {isAuthenticated() ? profileDropdown() :  loginButton(onNavigate)}
+          {isAuthenticated() ? <ProfileDropdown /> : loginButton(onNavigate)}
         </div>
       </div>
     </header>

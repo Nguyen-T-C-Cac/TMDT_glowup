@@ -6,6 +6,7 @@ import { PopularServices } from '../components/home/PopularServices';
 import { TopExperts } from '../components/home/TopExperts';
 import { PremiumBanner } from '../components/home/PremiumBanner';
 import { Footer } from '../components/layout/Footer';
+import './HomePage.css';
 
 const pageMap: Record<string, string> = {
   'home': '/',
@@ -26,10 +27,10 @@ export const HomePage: React.FC = () => {
   };
 
   return (
-    <div style={{ backgroundColor: '#ffffff', minHeight: '100vh' }}>
+    <div className="home-page">
       <Header onNavigate={onNavigate} />
-      <main>
-        <HeroSection />
+      <main className="home-page__main">
+        <HeroSection onNavigate={onNavigate} />
         <PopularServices />
         <TopExperts onNavigate={onNavigate} />
         <PremiumBanner />

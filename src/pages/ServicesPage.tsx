@@ -13,7 +13,7 @@ import {
   CarIcon,
 } from '../components/common/Icons';
 import { getCategories, type Category } from '../services/categoryService';
-import '../components/home/PopularServices.css'; // Reusing the CSS
+import './ServicePage.css'; // Reusing the CSS
 
 const pageMap: Record<string, string> = {
   'home': '/',
@@ -94,15 +94,15 @@ export const ServicesPage: React.FC = () => {
       <Header onNavigate={onNavigate} />
 
       <main style={{ flexGrow: 1, padding: '40px 0' }}>
-        <section className="services-section" style={{ margin: '0 auto' }}>
-          <div className="services-header">
+        <section className="services-page" style={{ margin: '0 auto' }}>
+          <div className="services-page__header">
             <div>
-              <h1 className="section-title" style={{ fontSize: '36px' }}>Tất cả dịch vụ</h1>
-              <p className="section-subtitle">Khám phá các dịch vụ chăm sóc nhà cửa toàn diện từ GlowUp.</p>
+              <h1 className="services-page__title">Tất cả dịch vụ</h1>
+              <p className="services-page__subtitle">Khám phá các dịch vụ chăm sóc nhà cửa toàn diện từ GlowUp.</p>
             </div>
           </div>
 
-          <div className="services-grid">
+          <div className="services-page__grid">
             {loading && (
               <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '32px 16px' }}>
                 Đang tải danh sách dịch vụ...
@@ -118,20 +118,20 @@ export const ServicesPage: React.FC = () => {
             {!loading && !error && categories.map((category) => (
               <div
                 key={category.id}
-                className="service-card"
+                className="services-page__card"
                 onClick={() => handleServiceClick(category.title)}
                 role="button"
                 tabIndex={0}
               >
-                <div className="service-icon-container">
+                <div className="services-page__icon">
                   {category.iconUrl ? (
-                    <img src={category.iconUrl} alt={category.title} style={{ width: 32, height: 32, objectFit: 'contain' }} />
+                    <img src={category.iconUrl} alt={category.title} />
                   ) : (
                     iconByTitle[category.title as keyof typeof iconByTitle] || <WrenchIcon />
                   )}
                 </div>
-                <h3 className="service-name">{category.title}</h3>
-                <p className="service-desc">{category.description}</p>
+                <h3 className="services-page__name">{category.title}</h3>
+                <p className="services-page__desc">{category.description}</p>
               </div>
             ))}
 
