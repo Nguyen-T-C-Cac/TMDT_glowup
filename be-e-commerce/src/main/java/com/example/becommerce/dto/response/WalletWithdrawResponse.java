@@ -18,6 +18,8 @@ public class WalletWithdrawResponse {
     private BigDecimal amount;
     private BigDecimal fee;
     private BigDecimal netAmount;
+    private String walletType;
+    private BigDecimal remainingBalance;
     private BankAccountInfo bankAccount;
     private String status;
 
@@ -30,4 +32,3 @@ public class WalletWithdrawResponse {
         private String owner;
     }
 }
-

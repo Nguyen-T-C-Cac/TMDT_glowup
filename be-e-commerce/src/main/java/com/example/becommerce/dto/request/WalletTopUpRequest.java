@@ -22,10 +22,9 @@ public class WalletTopUpRequest {
     private BigDecimal amount;
 
     @NotNull(message = "Phương thức thanh toán không được để trống")
-    @Pattern(regexp = "(?i)^vnpay$", message = "Hiện tại chỉ hỗ trợ thanh toán bằng VNPay")
+    @Pattern(regexp = "(?i)^(vietqr|momo|zalopay|vnpay)$", message = "Phương thức thanh toán không hợp lệ")
     private String method;
 }
-
 
 
 

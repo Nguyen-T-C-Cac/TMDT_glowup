@@ -16,12 +16,21 @@ import java.time.LocalDateTime;
 public class WalletResponse {
 
     private String userId;
-    private BigDecimal balance;
-    private String status;
-    private BigDecimal pendingBalance;
+    private BigDecimal totalBalance;
+    private WalletPocket creditWallet;
+    private WalletPocket personalWallet;
     private BigDecimal totalEarned;
     private BigDecimal totalWithdrawn;
     private String currency;
     private LocalDateTime updatedAt;
-}
 
+    @Getter
+    @Builder
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class WalletPocket {
+        private String type;
+        private BigDecimal balance;
+        private BigDecimal pendingBalance;
+        private String status;
+    }
+}

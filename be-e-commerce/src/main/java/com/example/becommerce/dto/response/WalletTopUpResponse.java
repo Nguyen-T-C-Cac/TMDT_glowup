@@ -17,6 +17,7 @@ public class WalletTopUpResponse {
 
     private String transactionId;
     private BigDecimal amount;
+    private String walletType;
     private String method;
     private String checkoutUrl;
     private String deepLink;
@@ -36,5 +37,4 @@ public class WalletTopUpResponse {
         private String qrCode;
     }
 }
-
 

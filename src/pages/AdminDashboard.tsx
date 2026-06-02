@@ -4,7 +4,6 @@ import { AdminHeader } from '../components/admin/AdminHeader.tsx';
 import './AdminDashboard.css';
 import { DashboardStatsCards } from '../components/admin/DashboardStatsCards.tsx';
 import { RevenueChart } from '../components/admin/RevenueChart.tsx';
-import { ServiceDistributionChart } from '../components/admin/ServiceDistributionChart.tsx';
 import { RecentOrdersTable } from '../components/admin/RecentOrdersTable.tsx';
 import type { DashboardTimeFilter, DashboardViewMode } from '../types/DashboardTimeFilter.ts';
 import {

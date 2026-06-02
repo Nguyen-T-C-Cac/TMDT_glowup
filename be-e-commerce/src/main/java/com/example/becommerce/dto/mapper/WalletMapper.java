@@ -2,7 +2,7 @@ package com.example.becommerce.dto.mapper;
 
 import com.example.becommerce.dto.response.WalletResponse;
 import com.example.becommerce.entity.Wallet;
-import com.example.becommerce.entity.enums.WalletStatus;
+import com.example.becommerce.entity.enums.WalletType;
 import org.springframework.stereotype.Component;
 
 /**
@@ -18,9 +18,19 @@ public class WalletMapper {
 
         return WalletResponse.builder()
                 .userId(wallet.getUser() != null ? wallet.getUser().getCode() : null)
-                .balance(wallet.getBalance())
-                .status(WalletStatus.fromBalance(wallet.getBalance()).apiValue())
-                .pendingBalance(wallet.getPendingBalance())
+                .totalBalance(wallet.getCreditBalance().add(wallet.getPersonalBalance()))
+                .creditWallet(WalletResponse.WalletPocket.builder()
+                        .type(WalletType.CREDIT.apiValue())
+                        .balance(wallet.getCreditBalance())
+                        .pendingBalance(null)
+                        .status(null)
+                        .build())
+                .personalWallet(WalletResponse.WalletPocket.builder()
+                        .type(WalletType.PERSONAL.apiValue())
+                        .balance(wallet.getPersonalBalance())
+                        .pendingBalance(wallet.getPendingWithdrawBalance())
+                        .status(null)
+                        .build())
                 .totalEarned(wallet.getTotalEarned())
                 .totalWithdrawn(wallet.getTotalWithdrawn())
                 .currency(wallet.getCurrency())
