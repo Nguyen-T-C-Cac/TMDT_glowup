@@ -19,3 +19,4 @@ public class CommissionSettingsResponse {
     private final Boolean autoLockEnabled;
     private final LocalDateTime updatedAt;
 }
+

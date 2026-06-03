@@ -26,7 +26,6 @@ import com.example.becommerce.entity.enums.TransactionStatus;
 import com.example.becommerce.entity.enums.TransactionType;
 import com.example.becommerce.entity.enums.UserStatus;
 import com.example.becommerce.entity.enums.WalletStatus;
-import com.example.becommerce.entity.enums.WalletType;
 import com.example.becommerce.exception.AppException;
 import com.example.becommerce.repository.CategoryRepository;
 import com.example.becommerce.repository.OrderRepository;
@@ -378,7 +377,7 @@ public class AdminServiceImpl implements AdminService {
 
         Wallet wallet = walletRepository.findWithLockByUser_Id(transaction.getWallet().getUser().getId())
                 .orElseThrow(() -> AppException.notFound("Không tìm thấy ví"));
-        wallet.setPendingWithdrawBalance(wallet.getPendingWithdrawBalance().subtract(transaction.getNetAmount()));
+        wallet.setPendingBalance(wallet.getPendingBalance().subtract(transaction.getNetAmount()));
         walletRepository.save(wallet);
 
         transaction.setStatus(TransactionStatus.SUCCESS);
@@ -451,19 +450,27 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional(readOnly = true)
     public CommissionWalletsResponse getCommissionWallets(String status, String keyword, int page, int size) {
-        BigDecimal minimumCommissionBalance = getMinimumCommissionBalance();
+        BigDecimal minimumBalance = getConfiguredMinimumCommissionBalance();
+
+        // Build query using Specification
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size), Sort.by(Sort.Direction.DESC, "balance"));
 
         Page<Wallet> walletPage = walletRepository.findAll((root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Filter by computed status if provided
+            // Filter by status if provided
             if (StringUtils.hasText(status) && !"all".equalsIgnoreCase(status)) {
-                try {
-                    WalletStatus walletStatus = parseWalletStatus(status);
-                    predicates.addAll(buildWalletStatusPredicates(cb, root, walletStatus, minimumCommissionBalance));
-                } catch (IllegalArgumentException ex) {
-                    throw AppException.badRequest(ErrorCode.BAD_REQUEST, "Trạng thái ví không hợp lệ");
+                String normalizedStatus = status.trim().toLowerCase(Locale.ROOT);
+                switch (normalizedStatus) {
+                    case "locked" -> predicates.add(cb.lessThanOrEqualTo(root.get("balance"), BigDecimal.ZERO));
+                    case "low", "low_balance" -> {
+                        predicates.add(cb.greaterThan(root.get("balance"), BigDecimal.ZERO));
+                        predicates.add(cb.lessThan(root.get("balance"), minimumBalance));
+                    }
+                    case "normal" -> predicates.add(cb.greaterThanOrEqualTo(root.get("balance"), minimumBalance));
+                    default -> {
+                        // Ignore invalid status values
+                    }
                 }
             }
 
@@ -481,7 +488,7 @@ public class AdminServiceImpl implements AdminService {
         }, pageable);
 
         List<CommissionWalletsResponse.Item> items = walletPage.getContent().stream()
-                .map(wallet -> toCommissionWalletItem(wallet, minimumCommissionBalance))
+                .map(wallet -> toCommissionWalletItem(wallet, minimumBalance))
                 .toList();
 
         return CommissionWalletsResponse.builder()
@@ -502,18 +509,17 @@ public class AdminServiceImpl implements AdminService {
                 .orElseThrow(() -> AppException.notFound("Không tìm thấy kỹ thuật viên"));
         Wallet wallet = walletRepository.findWithLockByUser_Id(technician.getId())
                 .orElseGet(() -> walletRepository.save(Wallet.builder().user(technician).currency("VND").build()));
-        BigDecimal newBalance = wallet.getCreditBalance().add(request.getAmount());
+        BigDecimal newBalance = wallet.getBalance().add(request.getAmount());
         if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
             throw AppException.badRequest(ErrorCode.INSUFFICIENT_BALANCE, "Số dư ví không đủ để điều chỉnh");
         }
-        wallet.setCreditBalance(newBalance);
+        wallet.setBalance(newBalance);
         walletRepository.save(wallet);
 
         WalletTransaction transaction = WalletTransaction.builder()
                 .transactionCode(transactionCodeGenerator.generateTransactionCode(TransactionType.COMMISSION))
                 .wallet(wallet)
                 .type(TransactionType.COMMISSION)
-                .walletType(WalletType.CREDIT)
                 .category(request.getType())
                 .title(request.getReason())
                 .amount(request.getAmount())
@@ -531,7 +537,7 @@ public class AdminServiceImpl implements AdminService {
                 .transactionId(transaction.getTransactionCode())
                 .technicianId(technician.getCode())
                 .amount(request.getAmount())
-                .newBalance(wallet.getCreditBalance())
+                .newBalance(wallet.getBalance())
                 .reason(request.getReason())
                 .createdAt(transaction.getCreatedAt())
                 .build();
@@ -580,7 +586,7 @@ public class AdminServiceImpl implements AdminService {
                 .transactionType(transaction.getType().apiValue())
                 .amount(transaction.getAmount())
                 .afterBalance(transaction.getAfterBalance())
-                .walletStatus(walletStatus.apiValue())
+                .walletStatus(transaction.getWallet().getWalletStatus() != null ? transaction.getWallet().getWalletStatus().apiValue() : "NORMAL")
                 .technicianName(user.getFullName())
                 .orderCode(orderCode)
                 .note(transaction.getNote())
@@ -598,72 +604,86 @@ public class AdminServiceImpl implements AdminService {
                 .build();
     }
 
-    private CommissionWalletsResponse.Item toCommissionWalletItem(Wallet wallet, BigDecimal minimumCommissionBalance) {
-        BigDecimal totalCommissionPaid = walletTransactionRepository.sumCommissionDeductionAmount(wallet.getId());
-        totalCommissionPaid = totalCommissionPaid == null ? BigDecimal.ZERO : totalCommissionPaid.abs();
+    private CommissionWalletsResponse.Item toCommissionWalletItem(Wallet wallet, BigDecimal minimumBalance) {
+        // Calculate total commission paid from commission deduction transactions only.
+        List<WalletTransaction> commissions = walletTransactionRepository.findAll((root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("wallet").get("id"), wallet.getId()));
+            predicates.add(cb.equal(root.get("type"), TransactionType.COMMISSION));
+            predicates.add(cb.equal(root.get("category"), "COMMISSION_DEDUCTION"));
+            predicates.add(cb.equal(root.get("status"), TransactionStatus.SUCCESS));
+            return cb.and(predicates.toArray(Predicate[]::new));
+        });
 
+        BigDecimal totalCommissionPaid = commissions.stream()
+                .map(t -> t.getNetAmount() != null ? t.getNetAmount().abs() : t.getAmount().abs())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Get the latest commission-related transaction linked to an order.
+        LocalDateTime lastOrderAt = null;
+        if (wallet.getUser() != null) {
+            List<WalletTransaction> transactions = walletTransactionRepository.findAll((root, query, cb) -> {
+                List<Predicate> predicates = new ArrayList<>();
+                predicates.add(cb.equal(root.get("wallet").get("id"), wallet.getId()));
+                predicates.add(cb.or(
+                        cb.isNotNull(root.get("order")),
+                        cb.and(
+                                cb.isNotNull(root.get("relatedOrderCode")),
+                                cb.notEqual(cb.trim(root.get("relatedOrderCode")), "")
+                        )
+                ));
+                return cb.and(predicates.toArray(Predicate[]::new));
+            });
+            if (!transactions.isEmpty()) {
+                lastOrderAt = transactions.stream()
+                        .map(WalletTransaction::getCreatedAt)
+                        .max(LocalDateTime::compareTo)
+                        .orElse(null);
+            }
+        }
         LocalDateTime lastOrderAt = walletTransactionRepository.findLastOrderActivityAt(wallet.getId());
+        WalletStatus computedStatus = resolveCommissionWalletStatus(wallet.getBalance(), minimumBalance);
 
-        WalletStatus walletStatus = resolveCommissionWalletStatus(wallet.getCreditBalance(), minimumCommissionBalance);
 
 
         return CommissionWalletsResponse.Item.builder()
                 .technicianId(wallet.getUser().getId())
                 .technicianName(wallet.getUser().getFullName())
-                .walletBalance(wallet.getCreditBalance())
-                .walletStatus(walletStatus.apiValue())
+                .walletBalance(wallet.getBalance())
+                .walletStatus(computedStatus.apiValue())
                 .totalCommissionPaid(totalCommissionPaid)
                 .lastOrderAt(lastOrderAt)
-                .locked(walletStatus == WalletStatus.LOCKED)
+                .locked(computedStatus == WalletStatus.LOCKED)
                 .build();
     }
 
-    private WalletStatus resolveCommissionWalletStatus(BigDecimal balance, BigDecimal minimumCommissionBalance) {
-        BigDecimal safeBalance = balance == null ? BigDecimal.ZERO : balance;
-        BigDecimal threshold = minimumCommissionBalance == null ? BigDecimal.ZERO : minimumCommissionBalance;
-        if (safeBalance.compareTo(BigDecimal.ZERO) <= 0) {
-            return WalletStatus.LOCKED;
-        }
-        if (safeBalance.compareTo(threshold) <= 0) {
-            return WalletStatus.LOW_BALANCE;
-        }
-        return WalletStatus.NORMAL;
-    }
-
-    private BigDecimal getMinimumCommissionBalance() {
+    private BigDecimal getConfiguredMinimumCommissionBalance() {
         return systemSettingRepository.findByKey(MINIMUM_COMMISSION_BALANCE_KEY)
-                .map(setting -> {
+                .map(SystemSetting::getValue)
+                .map(value -> {
                     try {
-                        return new BigDecimal(setting.getValue());
+                        return new BigDecimal(value);
                     } catch (Exception ex) {
                         return BigDecimal.ZERO;
                     }
                 })
+                .filter(value -> value.compareTo(BigDecimal.ZERO) >= 0)
                 .orElse(BigDecimal.ZERO);
     }
 
-    private WalletStatus parseWalletStatus(String value) {
-        return WalletStatus.valueOf(value.trim().toUpperCase(Locale.ROOT));
-    }
+    private WalletStatus resolveCommissionWalletStatus(BigDecimal balance, BigDecimal minimumBalance) {
+        BigDecimal safeBalance = balance == null ? BigDecimal.ZERO : balance;
+        BigDecimal safeMinimumBalance = minimumBalance == null ? BigDecimal.ZERO : minimumBalance;
 
-    private List<Predicate> buildWalletStatusPredicates(
-            jakarta.persistence.criteria.CriteriaBuilder cb,
-            jakarta.persistence.criteria.Root<Wallet> root,
-            WalletStatus walletStatus,
-            BigDecimal minimumCommissionBalance) {
-        List<Predicate> predicates = new ArrayList<>();
-        BigDecimal safeMinimum = minimumCommissionBalance == null ? BigDecimal.ZERO : minimumCommissionBalance;
-
-        switch (walletStatus) {
-            case LOCKED -> predicates.add(cb.lessThanOrEqualTo(root.get("balance"), BigDecimal.ZERO));
-            case LOW_BALANCE -> {
-                predicates.add(cb.greaterThan(root.get("balance"), BigDecimal.ZERO));
-                predicates.add(cb.lessThanOrEqualTo(root.get("balance"), safeMinimum));
-            }
-            case NORMAL -> predicates.add(cb.greaterThan(root.get("balance"), safeMinimum));
+        if (safeBalance.compareTo(BigDecimal.ZERO) <= 0) {
+            return WalletStatus.LOCKED;
         }
 
-        return predicates;
+        if (safeBalance.compareTo(safeMinimumBalance) < 0) {
+            return WalletStatus.LOW_BALANCE;
+        }
+
+        return WalletStatus.NORMAL;
     }
 
     private WithdrawRequestsResponse.Item toWithdrawItem(WalletTransaction transaction) {

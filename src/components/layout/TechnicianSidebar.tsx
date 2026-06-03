@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {useNavigate} from 'react-router-dom';
 import './technicianSidebar.css';
-import { fetchCurrentUser, getStoredUser, type User } from '../../services/auth';
 
 interface SidebarProps {
     activeItem?: string;
@@ -10,36 +9,9 @@ interface SidebarProps {
 
 export const TechnicianSidebar: React.FC<SidebarProps> = ({activeItem = 'dashboard', onNavigate}) => {
     const navigate = useNavigate();
-    const [currentUser, setCurrentUser] = useState<User | null>(() => getStoredUser());
-
-    useEffect(() => {
-        let isMounted = true;
-
-        const loadCurrentUser = async () => {
-            try {
-                const user = await fetchCurrentUser();
-                if (!isMounted) {
-                    return;
-                }
-                setCurrentUser(user);
-            } catch {
-                if (!isMounted) {
-                    return;
-                }
-                setCurrentUser(getStoredUser());
-            }
-        };
-
-        loadCurrentUser();
-
-        return () => {
-            isMounted = false;
-        };
-    }, []);
-
     const menuItems = [
         {
-            id: 'dashboard', label: 'Tổng quan', icon: (
+            id: 'dashboard', label: 'Dashboard', icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                      strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
@@ -50,7 +22,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({activeItem = 'dashboa
             )
         },
         {
-            id: 'jobs', label: 'Quản lý đơn hàng', icon: (
+            id: 'jobs', label: 'Order Management', icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                      strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -61,7 +33,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({activeItem = 'dashboa
             )
         },
         {
-            id: 'messages', label: 'Tin nhắn', icon: (
+            id: 'messages', label: 'Messages', icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                      strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -69,7 +41,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({activeItem = 'dashboa
             )
         },
         {
-            id: 'wallet', label: 'Ví của tôi', icon: (
+            id: 'wallet', label: 'My Wallet', icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                      strokeLinecap="round" strokeLinejoin="round">
                     <rect x="2" y="5" width="20" height="14" rx="2"></rect>
@@ -78,7 +50,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({activeItem = 'dashboa
             )
         },
         {
-            id: 'profile', label: 'Hồ sơ kỹ thuật viên', icon: (
+            id: 'profile', label: 'Technician Profile', icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                      strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -111,7 +83,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({activeItem = 'dashboa
             <div className="db-sidebar-top">
                 <div className="db-sidebar-brand">
                     <h2 className="db-sidebar-logo">GlowUp</h2>
-                    <span className="db-sidebar-badge">Kỹ thuật viên xác thực</span>
+                    <span className="db-sidebar-badge">Verified Provider</span>
                 </div>
 
                 <nav className="db-sidebar-nav">
@@ -132,8 +104,8 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({activeItem = 'dashboa
                 <div className="db-user-profile">
                     <img src="https://i.pravatar.cc/150?img=28" alt="User" className="db-user-avatar"/>
                     <div className="db-user-info">
-                        <span className="db-user-name">{currentUser?.fullName || 'Kỹ thuật viên'}</span>
-                        <span className="db-user-id">ID: {currentUser?.code || '--'}</span>
+                        <span className="db-user-name">Minh Nguyễn</span>
+                        <span className="db-user-id">ID: #GP-8829</span>
                     </div>
                 </div>
             </div>
