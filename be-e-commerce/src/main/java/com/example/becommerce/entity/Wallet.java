@@ -1,5 +1,6 @@
 package com.example.becommerce.entity;
 
+import com.example.becommerce.entity.enums.WalletStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,7 +15,7 @@ import java.time.LocalDateTime;
 
 /**
  * Wallet aggregate root.
- * One user can own exactly one wallet with two logical pockets.
+ * One user can own exactly one wallet.
  */
 @Entity
 @Table(name = "wallets",
@@ -36,17 +37,13 @@ public class Wallet {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    @Column(name = "credit_balance", nullable = false, precision = 19, scale = 0)
+    @Column(nullable = false, precision = 19, scale = 0)
     @Builder.Default
-    private BigDecimal creditBalance = BigDecimal.ZERO;
+    private BigDecimal balance = BigDecimal.ZERO;
 
-    @Column(name = "personal_balance", nullable = false, precision = 19, scale = 0)
+    @Column(name = "pending_balance", nullable = false, precision = 19, scale = 0)
     @Builder.Default
-    private BigDecimal personalBalance = BigDecimal.ZERO;
-
-    @Column(name = "pending_withdraw_balance", nullable = false, precision = 19, scale = 0)
-    @Builder.Default
-    private BigDecimal pendingWithdrawBalance = BigDecimal.ZERO;
+    private BigDecimal pendingBalance = BigDecimal.ZERO;
 
     @Column(name = "total_earned", nullable = false, precision = 19, scale = 0)
     @Builder.Default
@@ -60,6 +57,11 @@ public class Wallet {
     @Builder.Default
     private String currency = "VND";
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20, columnDefinition = "varchar(20) default 'NORMAL'")
+    @Builder.Default
+    private WalletStatus walletStatus = WalletStatus.NORMAL;
+
     @Version
     private Long version;
 
@@ -71,3 +73,4 @@ public class Wallet {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }
+

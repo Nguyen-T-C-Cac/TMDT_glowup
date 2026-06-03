@@ -19,6 +19,7 @@ const DEFAULT_AVATAR = 'https://segayanime.com/wp-content/uploads/2026/01/avatar
 
 export const Header: React.FC<HeaderProps> = ({
   onNavigate,
+  profilePage = 'customer-settings',
   searchPlaceholder = 'Tìm kiếm dịch vụ...',
 }) => {
   const location = useLocation();

@@ -51,7 +51,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashbo
 
     const menuItems = [
         {
-            id: 'dashboard', label: 'Tổng quan', icon: (
+            id: 'dashboard', label: 'Dashboard', icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                     strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
@@ -62,7 +62,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashbo
             )
         },
         {
-            id: 'jobs', label: 'Quản lý đơn hàng', icon: (
+            id: 'jobs', label: 'Order Management', icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                     strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -73,7 +73,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashbo
             )
         },
         {
-            id: 'messages', label: 'Tin nhắn', icon: (
+            id: 'messages', label: 'Messages', icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                     strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -81,7 +81,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashbo
             )
         },
         {
-            id: 'wallet', label: 'Ví của tôi', icon: (
+            id: 'wallet', label: 'My Wallet', icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                     strokeLinecap="round" strokeLinejoin="round">
                     <rect x="2" y="5" width="20" height="14" rx="2"></rect>
@@ -90,7 +90,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashbo
             )
         },
         {
-            id: 'profile', label: 'Hồ sơ kỹ thuật viên', icon: (
+            id: 'profile', label: 'Technician Profile', icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                     strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -126,7 +126,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashbo
             <div className="db-sidebar-top">
                 <div className="db-sidebar-brand">
                     <h2 className="db-sidebar-logo">GlowUp</h2>
-                    <span className="db-sidebar-badge">Kỹ thuật viên xác thực</span>
+                    <span className="db-sidebar-badge">Verified Provider</span>
                 </div>
 
                 <nav className="db-sidebar-nav">

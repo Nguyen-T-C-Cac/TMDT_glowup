@@ -30,15 +30,21 @@ export function CustomerAccountProfileCard({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  const [prevAvatarUrl, setPrevAvatarUrl] = useState(avatarUrl);
+
   const resolvedAvatarUrl = resolveMediaUrl(avatarUrl);
   const displayAvatar = previewUrl || resolvedAvatarUrl || DEFAULT_AVATAR;
 
+  if (avatarUrl !== prevAvatarUrl) {
+    setPrevAvatarUrl(avatarUrl);
+    setPreviewUrl(null);
+  }
+
   useEffect(() => {
-    if (resolvedAvatarUrl && previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
+    if (previewUrl) {
+      return () => URL.revokeObjectURL(previewUrl);
     }
-  }, [resolvedAvatarUrl, previewUrl]);
+  }, [previewUrl]);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();

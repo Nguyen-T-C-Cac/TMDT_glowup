@@ -69,12 +69,14 @@ export default function TechnicianProfileSettingsPage() {
   const resolvedAvatarUrl = resolveMediaUrl(userProfileContext.avatar);
   const displayAvatar = previewUrl || resolvedAvatarUrl || 'https://segayanime.com/wp-content/uploads/2026/01/avatar-fb-mac-dinh-1.jpg';
 
+  // Cleanup object URL on unmount to prevent memory leaks
   useEffect(() => {
-    if (resolvedAvatarUrl && previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
-    }
-  }, [resolvedAvatarUrl, previewUrl]);
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   useEffect(() => {
     userService.getMe()
@@ -152,6 +154,10 @@ export default function TechnicianProfileSettingsPage() {
         setAvatar(newResolved);
         updateProfile({ avatar: newResolved });
 
+        // Xóa previewUrl sau khi upload thành công để dùng URL từ server
+        URL.revokeObjectURL(objectUrl);
+        setPreviewUrl(null);
+
         showToast('Cập nhật ảnh đại diện thành công!', 'success');
       } else {
         throw new Error(res.message || 'Upload thất bại');
@@ -159,6 +165,7 @@ export default function TechnicianProfileSettingsPage() {
     } catch (error: unknown) {
       console.error('Lỗi upload avatar:', error);
       // Xóa preview khi upload thất bại
+      URL.revokeObjectURL(objectUrl);
       setPreviewUrl(null);
       // Xử lý lỗi mạng hoặc server
       const errorMessage =
@@ -210,7 +217,7 @@ export default function TechnicianProfileSettingsPage() {
         });
       }
 
-      showToast('Lưu thay đổi thành công! ✨', 'success');
+      showToast('Lưu thay đổi thành công!', 'success');
     } catch (err: unknown) {
       console.error('Lỗi khi lưu hồ sơ:', err);
       // Phân biệt lỗi mạng và lỗi server để hiển thị thông báo phù hợp
@@ -269,12 +276,13 @@ export default function TechnicianProfileSettingsPage() {
           <section className="tech-settings-overview">
             <article className="tech-settings-hero">
               <div className="tech-settings-hero__identity">
-                <div className="profile-avatar-wrapper" onClick={handleAvatarClick} title="Nhấp để đổi ảnh đại diện">
+                <div className="profile-avatar-wrapper" onClick={handleAvatarClick} title="Nhấp để đổi ảnh đại diện"
+                  style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '50%', overflow: 'hidden' }}>
                   <img
                     src={displayAvatar}
                     alt={profile.name}
                     className="tech-settings-hero__avatar"
-                    style={{ width: '80px', height: '80px', objectFit: 'cover' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                   />
                   <div className="profile-avatar-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: '0.2s', color: 'white', borderRadius: '50%', cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0'}>
                     {isUploading ? (

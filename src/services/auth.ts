@@ -66,11 +66,6 @@ export interface RefreshTokenResponse {
   }
 }
 
-interface AuthMeResponse {
-  success: boolean
-  data: User
-}
-
 type FetchWithAuthOptions = RequestInit & {
   skipAuth?: boolean
 }
