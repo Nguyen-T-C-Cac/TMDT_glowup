@@ -3,7 +3,6 @@ package com.example.becommerce.repository;
 import com.example.becommerce.entity.WalletTransaction;
 import com.example.becommerce.entity.enums.TransactionStatus;
 import com.example.becommerce.entity.enums.TransactionType;
-import com.example.becommerce.entity.enums.WalletType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -30,26 +29,12 @@ public interface WalletTransactionRepository extends JpaRepository<WalletTransac
 
     Page<WalletTransaction> findByWallet_User_IdAndTypeOrderByCreatedAtDesc(Long userId, TransactionType type, Pageable pageable);
 
-    Page<WalletTransaction> findByWallet_User_IdAndWalletTypeOrderByCreatedAtDesc(Long userId, WalletType walletType, Pageable pageable);
-
-    Page<WalletTransaction> findByWallet_User_IdAndTypeAndWalletTypeOrderByCreatedAtDesc(
-            Long userId,
-            TransactionType type,
-            WalletType walletType,
-            Pageable pageable);
-
     List<WalletTransaction> findByTypeOrderByCreatedAtDesc(TransactionType type);
 
     long countByTypeAndStatus(TransactionType type, TransactionStatus status);
 
     @Query("select coalesce(sum(t.netAmount), 0) from WalletTransaction t where t.status = :status")
     BigDecimal sumNetAmountByStatus(@Param("status") TransactionStatus status);
-
-    @Query("select coalesce(sum(t.amount), 0) from WalletTransaction t where t.wallet.id = :walletId and t.type = 'COMMISSION' and t.status = 'SUCCESS' and t.category = 'COMMISSION_DEDUCTION'")
-    BigDecimal sumCommissionDeductionAmount(@Param("walletId") Long walletId);
-
-    @Query("select max(coalesce(t.processedAt, t.createdAt)) from WalletTransaction t where t.wallet.id = :walletId and (t.order is not null or t.relatedOrderCode is not null)")
-    LocalDateTime findLastOrderActivityAt(@Param("walletId") Long walletId);
 
     @Query("select coalesce(sum(t.fee), 0) from WalletTransaction t where t.status = :status")
     BigDecimal sumFeeByStatus(@Param("status") TransactionStatus status);

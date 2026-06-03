@@ -51,6 +51,7 @@ const loginButton = (onNavigate: any)=> (
 )
 export const Header: React.FC<HeaderProps> = ({
   onNavigate,
+  profilePage = 'customer-settings',
   searchPlaceholder = 'Tìm kiếm dịch vụ...',
 }) => {
   const location = useLocation();
