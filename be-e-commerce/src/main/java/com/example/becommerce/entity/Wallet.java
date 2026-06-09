@@ -60,6 +60,10 @@ public class Wallet {
     @Builder.Default
     private String currency = "VND";
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20, columnDefinition = "varchar(20) default 'NORMAL'")
+    @Builder.Default
+    private WalletStatus walletStatus = WalletStatus.NORMAL;
 
     @Version
     private Long version;

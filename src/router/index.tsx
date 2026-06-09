@@ -8,6 +8,8 @@ import {
   LoginPage,
   RegisterPage,
 } from '../pages/AuthScreens'
+import { VerifyEmailPage } from '../pages/VerifyEmailPage'
+import { PendingEmailVerificationPage } from '../pages/PendingEmailVerificationPage'
 import AdminCategoriesPage from '../pages/AdminCategoriesPage'
 import AdminDashboard from '../pages/AdminDashboard'
 import AdminFinancePage from '../pages/AdminFinancePage'
@@ -26,6 +28,7 @@ import HomePage from '../pages/HomePage'
 import Provider from '../pages/Provider'
 import ProviderDashboard from '../pages/ProviderDashboard'
 import ProviderProfile from '../pages/ProviderProfile'
+import CustomerSecurityPage from '../pages/CustomerSecurityPage'
 import { OrderManagementPage } from '../pages/OrderManagementPage'
 import ServicesPage from '../pages/ServicesPage'
 import TechnicianProfileSettingsPage from '../pages/TechnicianProfileSettingsPage'
@@ -52,6 +55,9 @@ export default function AppRouter() {
       <Route path="/auth/register" element={<RegisterPage />} />
       <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/auth/change-password" element={<ChangePasswordPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/pending-email-verification" element={<PendingEmailVerificationPage />} />
+      <Route path="/reset-password" element={<ChangePasswordPage />} />
 
       <Route path="/technician">
         <Route path="jobs" element={<TechnicianLayout activeItem="jobs"><OrderManagementPage role="technician" /></TechnicianLayout>} />
@@ -67,10 +73,10 @@ export default function AppRouter() {
       </Route>
 
       <Route path="/customer">
-        <Route path="settings" element={<CustomerAccountSettingsPage />} />
+        <Route path="settings" element={<Navigate to="/customer/account-settings" replace />} />
         <Route path="chat" element={<ChatPage />} />
         <Route path="order-management" element={<CustomerLayout activeNavKey="account" activeSidebarItem="wallet" searchPlaceholder="Tìm kiếm dịch vụ..."><OrderManagementPage role="customer" /></CustomerLayout>} />
-        <Route path="change-password" element={<CustomerLayout activeNavKey="account" activeSidebarItem="security" searchPlaceholder="Tìm kiếm dịch vụ..."><ChangePasswordPage /></CustomerLayout>} />
+        <Route path="change-password" element={<CustomerLayout activeNavKey="account" activeSidebarItem="security" searchPlaceholder="Tìm kiếm dịch vụ..."><CustomerSecurityPage /></CustomerLayout>} />
         <Route path="account-settings" element={<CustomerLayout activeNavKey="account" activeSidebarItem="personal" searchPlaceholder="Tìm kiếm dịch vụ..."><CustomerAccountSettingsPage /></CustomerLayout>} />
       </Route>
 

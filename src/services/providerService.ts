@@ -15,6 +15,7 @@ export interface Technician {
   type?: 'normal' | 'premium'
   titleBadge?: string
   completedJobs: number
+  bio?: string
 }
 
 export interface PaginationMeta {

@@ -26,6 +26,7 @@ public final class ErrorCode {
     public static final String ACCOUNT_LOCKED            = "ACCOUNT_LOCKED";
     public static final String ACCOUNT_DISABLED          = "ACCOUNT_DISABLED";
     public static final String PASSWORDS_DO_NOT_MATCH    = "PASSWORDS_DO_NOT_MATCH";
+    public static final String OLD_PASSWORD_INCORRECT    = "OLD_PASSWORD_INCORRECT";
     public static final String EMAIL_NOT_VERIFIED        = "EMAIL_NOT_VERIFIED";
     public static final String EMAIL_VERIFICATION_FAILED = "EMAIL_VERIFICATION_FAILED";
 

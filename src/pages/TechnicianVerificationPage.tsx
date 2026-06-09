@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { ArrowLeft, Check, Camera, Upload, Phone, Mail, MapPin, Grid, Image, ChevronRight } from 'lucide-react'
 import './TechnicianVerificationPage.css'
+import { submitVerification } from '../services/verificationService'
+import { useNavigate } from 'react-router-dom'
 
 type VerificationStep = 'identity' | 'face' | 'description' | 'complete'
 
@@ -64,10 +66,27 @@ export const TechnicianVerificationPage: React.FC = () => {
     else if (currentStep === 'complete') setCurrentStep('description')
   }
 
-  const handleContinue = () => {
-    // Submit verification data
-    console.log('Submitting verification:', verificationData)
-    // Here you would send the data to the backend
+  const navigate = useNavigate()
+
+  const handleContinue = async () => {
+    try {
+      const formData = new FormData()
+      if (verificationData.idFront) formData.append('idFront', verificationData.idFront)
+      if (verificationData.idBack) formData.append('idBack', verificationData.idBack)
+      if (verificationData.faceSelfie) formData.append('faceSelfie', verificationData.faceSelfie)
+      if (verificationData.certificate) formData.append('certificate', verificationData.certificate)
+      if (verificationData.phone) formData.append('phone', verificationData.phone)
+      if (verificationData.email) formData.append('email', verificationData.email)
+      if (verificationData.area) formData.append('area', verificationData.area)
+      if (verificationData.services) formData.append('services', verificationData.services)
+      if (verificationData.experience) formData.append('experience', verificationData.experience)
+
+      await submitVerification(formData)
+      navigate('/technician/verification-status')
+    } catch (err) {
+      console.error('Lỗi khi nộp hồ sơ KYC:', err)
+      alert('Có lỗi xảy ra khi nộp hồ sơ. Vui lòng thử lại.')
+    }
   }
 
   const isStepComplete = (step: VerificationStep): boolean => {

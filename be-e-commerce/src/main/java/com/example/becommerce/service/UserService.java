@@ -1,5 +1,6 @@
 package com.example.becommerce.service;
 
+import com.example.becommerce.dto.request.UpdatePasswordRequest;
 import com.example.becommerce.dto.request.UpdateUserRequest;
 import com.example.becommerce.dto.request.UpdateUserStatusRequest;
 import com.example.becommerce.dto.response.PagedResponse;
@@ -31,4 +32,8 @@ public interface UserService {
 
     /** Admin-only: update user status with optional reason. */
     UserResponse updateUserStatus(Long id, UpdateUserStatusRequest request);
+
+    /** Đổi mật khẩu: xác minh mật khẩu cũ, rồi cập nhật bằng mật khẩu mới. */
+    void changePassword(String email, UpdatePasswordRequest request);
 }
+

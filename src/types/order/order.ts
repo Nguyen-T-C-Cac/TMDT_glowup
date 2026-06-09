@@ -9,29 +9,18 @@ export interface OrderPartySummary {
     role?: string;
 }
 
-export interface OrderPriceAdjustmentPart {
-  name?: string;
-  price?: number;
-  partCode?: string;
-}
-
 export interface OrderPriceAdjustmentResponse {
-  id?: string;
-  status?: string;
-  originalPrice?: number;
-  newPrice?: number;
-  beforePrice?: number;
-  afterPrice?: number;
-  amount?: number;
-  reason?: string;
-  note?: string;
-  parts?: OrderPriceAdjustmentPart[];
-  evidenceImages?: string[];
-  requestedBy?: string;
-  reviewedBy?: string;
-  requestedAt?: string;
-  createdAt?: string;
-  updatedAt?: string;
+    id?: string;
+    status?: string;
+    beforePrice?: number;
+    afterPrice?: number;
+    amount?: number;
+    reason?: string;
+    note?: string;
+    requestedBy?: string;
+    reviewedBy?: string;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface OrderResponse {
@@ -83,17 +72,4 @@ export interface OrderPageResponse {
     totalElements: number;
     first: boolean;
     last: boolean;
-}
-
-export interface CreateOrderPayload {
-    deviceName: string;
-    description: string;
-    address: string;
-    estimatedPrice?: number;
-    expectedTime?: string;
-    serviceCategory?: string;
-    serviceName?: string;
-    subService?: string;
-    images?: string[];
-    technicianId?: string;
 }

@@ -6,7 +6,11 @@ const apiClient = axios.create({
     // baseURL: 'http://10.0.2.2:8080/',
     baseURL: 'http://localhost:8080/',
     // baseURL: 'http://192.168.1.191:8080/',
-    timeout: 10000,
+    timeout: 60000, // 60s để xử lý upload ảnh lớn
+    // KHÔNG đặt Content-Type mặc định ở đây.
+    // Axios sẽ tự động đặt 'multipart/form-data' khi body là FormData,
+    // và 'application/json' khi body là object thường.
+
     headers: {
         'Content-Type': 'application/json',
     },
@@ -16,8 +20,8 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
     (config) => {
         const token = loadTokenFromStorage();
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+        if (token && config.headers) {
+            config.headers.set('Authorization', `Bearer ${token}`);
         }
         return config;
     },

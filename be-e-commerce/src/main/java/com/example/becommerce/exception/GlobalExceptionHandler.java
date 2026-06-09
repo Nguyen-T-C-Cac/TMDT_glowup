@@ -93,7 +93,7 @@ public class GlobalExceptionHandler {
 
         log.error("Unhandled exception on {}: ", request.getRequestURI(), ex);
         ApiResponse<Void> response = ApiResponse.error(
-                ErrorCode.INTERNAL_SERVER_ERROR, "Đã xảy ra lỗi nội bộ, vui lòng thử lại sau");
+                ErrorCode.INTERNAL_SERVER_ERROR, "Đã xảy ra lỗi nội bộ: " + ex.getMessage());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 }

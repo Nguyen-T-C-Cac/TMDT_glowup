@@ -578,7 +578,8 @@ public class AdminServiceImpl implements AdminService {
     private AdminTransactionsResponse.Item toTransactionItem(WalletTransaction transaction) {
         User user = transaction.getWallet().getUser();
         String orderCode = transaction.getOrder() != null ? transaction.getOrder().getCode() : (transaction.getRelatedOrderCode() != null ? transaction.getRelatedOrderCode() : "");
-        WalletStatus walletStatus = resolveCommissionWalletStatus(transaction.getWallet().getBalance(), getMinimumCommissionBalance());
+
+        WalletStatus walletStatus = resolveCommissionWalletStatus(transaction.getWallet().getBalance(), getConfiguredMinimumCommissionBalance());
 
         return AdminTransactionsResponse.Item.builder()
                 .id(transaction.getTransactionCode())
@@ -604,9 +605,45 @@ public class AdminServiceImpl implements AdminService {
                 .build();
     }
 
-    private CommissionWalletsResponse.Item toCommissionWalletItem(Wallet wallet, BigDecimal minimumCommissionBalance) {
-        BigDecimal totalCommissionPaid = walletTransactionRepository.sumCommissionDeductionAmount(wallet.getId());
-        totalCommissionPaid = totalCommissionPaid == null ? BigDecimal.ZERO : totalCommissionPaid.abs();
+    private CommissionWalletsResponse.Item toCommissionWalletItem(Wallet wallet, BigDecimal minimumBalance) {
+        // Calculate total commission paid from commission deduction transactions only.
+        List<WalletTransaction> commissions = walletTransactionRepository.findAll((root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("wallet").get("id"), wallet.getId()));
+            predicates.add(cb.equal(root.get("type"), TransactionType.COMMISSION));
+            predicates.add(cb.equal(root.get("category"), "COMMISSION_DEDUCTION"));
+            predicates.add(cb.equal(root.get("status"), TransactionStatus.SUCCESS));
+            return cb.and(predicates.toArray(Predicate[]::new));
+        });
+
+        BigDecimal totalCommissionPaid = commissions.stream()
+                .map(t -> t.getNetAmount() != null ? t.getNetAmount().abs() : t.getAmount().abs())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Get the latest commission-related transaction linked to an order.
+        LocalDateTime lastOrderAt = null;
+        if (wallet.getUser() != null) {
+            List<WalletTransaction> transactions = walletTransactionRepository.findAll((root, query, cb) -> {
+                List<Predicate> predicates = new ArrayList<>();
+                predicates.add(cb.equal(root.get("wallet").get("id"), wallet.getId()));
+                predicates.add(cb.or(
+                        cb.isNotNull(root.get("order")),
+                        cb.and(
+                                cb.isNotNull(root.get("relatedOrderCode")),
+                                cb.notEqual(cb.trim(root.get("relatedOrderCode")), "")
+                        )
+                ));
+                return cb.and(predicates.toArray(Predicate[]::new));
+            });
+            if (!transactions.isEmpty()) {
+                lastOrderAt = transactions.stream()
+                        .map(WalletTransaction::getCreatedAt)
+                        .max(LocalDateTime::compareTo)
+                        .orElse(null);
+            }
+        }
+        WalletStatus computedStatus = resolveCommissionWalletStatus(wallet.getBalance(), minimumBalance);
+
 
         LocalDateTime lastOrderAt = walletTransactionRepository.findLastOrderActivityAt(wallet.getId());
         WalletStatus walletStatus = resolveCommissionWalletStatus(wallet.getBalance(), minimumCommissionBalance);

@@ -2,6 +2,7 @@ package com.example.becommerce.service.impl;
 
 import com.example.becommerce.constant.ErrorCode;
 import com.example.becommerce.dto.mapper.UserMapper;
+import com.example.becommerce.dto.request.UpdatePasswordRequest;
 import com.example.becommerce.dto.request.UpdateUserRequest;
 import com.example.becommerce.dto.request.UpdateUserStatusRequest;
 import com.example.becommerce.dto.response.PagedResponse;
@@ -19,6 +20,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -36,6 +38,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final UserMapper     userMapper;
+    private final PasswordEncoder passwordEncoder;
 
     // ----------------------------------------------------------------
     // List users with filters + pagination
@@ -139,6 +142,28 @@ public class UserServiceImpl implements UserService {
                 user.getCode(), newStatus, request.getReason());
 
         return userMapper.toResponse(user);
+    }
+
+    // ----------------------------------------------------------------
+    // Change password
+    // ----------------------------------------------------------------
+
+    @Override
+    @Transactional
+    public void changePassword(String email, UpdatePasswordRequest request) {
+        User user = userRepository.findByEmailAndDeletedFalse(email)
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy người dùng"));
+
+        // Xác minh mật khẩu cũ
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw AppException.badRequest(ErrorCode.OLD_PASSWORD_INCORRECT, "Mật khẩu cũ không đúng");
+        }
+
+        // Cập nhật mật khẩu mới
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        log.info("Password changed successfully for user: {}", email);
     }
 
     // ----------------------------------------------------------------
