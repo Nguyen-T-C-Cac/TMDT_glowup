@@ -76,9 +76,6 @@ export const ArrowLeftIcon = ({ size = 20, className = "" }: { size?: number, cl
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
 );
 
-export const MicrowaveIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><rect x="6" y="8" width="8" height="8" rx="1" ry="1"></rect><circle cx="18" cy="10" r="1"></circle><circle cx="18" cy="14" r="1"></circle></svg>
-);
 export const FacebookIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
   <svg
     className={className}
@@ -116,4 +113,8 @@ export const InstagramIcon = ({ size = 24, className = "" }: { size?: number, cl
     <circle cx="12" cy="12" r="5" />
     <circle cx="17" cy="7" r="1" />
   </svg>
+);
+
+export const MicrowaveIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><rect x="6" y="8" width="8" height="8" rx="1" ry="1"></rect><circle cx="18" cy="10" r="1"></circle><circle cx="18" cy="14" r="1"></circle></svg>
 );

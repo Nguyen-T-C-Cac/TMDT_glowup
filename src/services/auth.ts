@@ -189,6 +189,25 @@ export const getAccessToken = (): string | null => {
   return localStorage.getItem('accessToken')
 }
 
+
+export const getStoredUser = (): User | null => {
+  const raw = localStorage.getItem('user')
+  if (!raw) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as { user?: User } | User
+    if ('user' in parsed && parsed.user) {
+      return parsed.user
+    }
+    return parsed as User
+  } catch {
+    return null
+  }
+}
+
+
 export const getRefreshToken = (): string | null => {
   return localStorage.getItem('refreshToken')
 }
