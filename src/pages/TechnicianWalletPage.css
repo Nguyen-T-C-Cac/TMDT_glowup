@@ -401,6 +401,11 @@
   background: #fff7e7;
 }
 
+.wallet-status.failed {
+  color: #c44949;
+  background: #fde7e7;
+}
+
 .wallet-history-footer {
   display: flex;
   justify-content: space-between;

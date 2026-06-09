@@ -1,4 +1,5 @@
 import type { VerificationRequest, VerificationStatus } from '../types/VerificationRequest'
+import apiClient from '../api/config'
 
 const REQUESTS_KEY = 'glowup_verification_requests_v1'
 const TECH_STATUS_KEY = 'glowup_technician_verification_status_v1'
@@ -295,3 +296,32 @@ export const verificationStatusColor: Record<VerificationStatus, { color: string
 }
 
 export { formatDate }
+
+// --- API Endpoints ---
+
+/**
+ * POST /api/verifications
+ * Thợ nộp hồ sơ KYC (Multipart form)
+ */
+export const submitVerification = async (
+  formData: FormData
+): Promise<{ success: boolean; data: VerificationRequest; message?: string }> => {
+  const response = await apiClient.post<{ success: boolean; data: VerificationRequest; message?: string }>(
+    '/api/verifications',
+    formData
+  );
+  return response.data;
+};
+
+/**
+ * GET /api/verifications/:id
+ * Kiểm tra trạng thái hồ sơ KYC
+ */
+export const getVerificationStatus = async (
+  id: string
+): Promise<{ success: boolean; data: VerificationRequest }> => {
+  const response = await apiClient.get<{ success: boolean; data: VerificationRequest }>(
+    `/api/verifications/${id}`
+  );
+  return response.data;
+};

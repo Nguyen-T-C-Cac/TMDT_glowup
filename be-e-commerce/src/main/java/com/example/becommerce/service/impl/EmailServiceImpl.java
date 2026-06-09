@@ -46,7 +46,7 @@ public class EmailServiceImpl implements EmailService {
                     "Xác nhận tài khoản " + appName,
                     buildConfirmationEmailHtml(fullName, url));
             log.info("Confirmation email sent to: {}", email);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send confirmation email to {}: {}", email, e.getMessage(), e);
         }
     }
@@ -59,7 +59,7 @@ public class EmailServiceImpl implements EmailService {
                     "Đặt lại mật khẩu - " + appName,
                     buildPasswordResetEmailHtml(url));
             log.info("Password reset email sent to: {}", email);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send password reset email to {}: {}", email, e.getMessage(), e);
         }
     }
@@ -69,7 +69,7 @@ public class EmailServiceImpl implements EmailService {
         try {
             sendHtmlEmail(email, subject, buildNotificationEmailHtml(subject, body));
             log.info("Notification email sent to: {}", email);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send notification email to {}: {}", email, e.getMessage(), e);
         }
     }
@@ -86,7 +86,7 @@ public class EmailServiceImpl implements EmailService {
                     "Đơn hàng #" + orderId + " đã được nhận - " + appName,
                     buildOrderAcceptedEmailHtml(customerName, orderId, technicianName, scheduledTime));
             log.info("Order accepted email sent to: {}", email);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send order accepted email to {}: {}", email, e.getMessage(), e);
         }
     }
@@ -101,7 +101,7 @@ public class EmailServiceImpl implements EmailService {
                     "Đơn hàng #" + orderId + " hoàn thành - " + appName,
                     buildOrderCompletedEmailHtml(customerName, orderId, finalPrice));
             log.info("Order completed email sent to: {}", email);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send order completed email to {}: {}", email, e.getMessage(), e);
         }
     }
@@ -116,7 +116,7 @@ public class EmailServiceImpl implements EmailService {
                     "Nạp tiền thành công - " + appName,
                     buildTopUpSuccessEmailHtml(fullName, amount, transactionId));
             log.info("Top-up success email sent to: {}", email);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send top-up email to {}: {}", email, e.getMessage(), e);
         }
     }

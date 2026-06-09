@@ -99,6 +99,11 @@ interface WithdrawApi {
   status?: string | null
 }
 
+interface VnpayIpnAckApi {
+  RspCode?: string | null
+  Message?: string | null
+}
+
 export type WalletStatus = 'normal' | 'low_balance' | 'locked'
 export type WalletGroup = 'credit' | 'personal'
 
@@ -124,7 +129,7 @@ export interface TechnicianWalletHistoryItem {
   note: string
   actor: string
   relatedOrderCode: string
-  status: 'success' | 'pending'
+  status: 'success' | 'pending' | 'failed'
   createdAt: string
   walletGroup: WalletGroup
 }
@@ -155,6 +160,11 @@ export interface WalletWithdrawResult {
   fee: number
   netAmount: number
   status: string
+}
+
+export interface VnpaySyncResult {
+  responseCode: string
+  message: string
 }
 
 const parseNumber = (value: number | string | null | undefined): number => {
@@ -221,9 +231,17 @@ const mapWalletGroup = (transaction: WalletTransactionApi): WalletGroup => {
   return amount >= 0 ? 'personal' : 'credit'
 }
 
-const mapTransactionStatus = (status?: string | null): 'success' | 'pending' => {
+const mapTransactionStatus = (status?: string | null): 'success' | 'pending' | 'failed' => {
   const normalized = (status || '').trim().toLowerCase()
-  return normalized === 'success' ? 'success' : 'pending'
+  if (normalized === 'success') {
+    return 'success'
+  }
+
+  if (normalized === 'failed' || normalized === 'cancelled') {
+    return 'failed'
+  }
+
+  return 'pending'
 }
 
 export const getTechnicianWalletSummary = async (): Promise<TechnicianWalletSummary> => {
@@ -314,6 +332,23 @@ export const createTechnicianWalletTopUp = async (amount: number): Promise<Walle
     qrCodeUrl: payload.qrCodeUrl || '',
     expiredAt: payload.expiredAt || '',
     status: payload.status || '',
+  }
+}
+
+export const syncTechnicianWalletTopUpResult = async (queryString: string): Promise<VnpaySyncResult> => {
+  const response = await fetchWithAuth(`${API_URL}/payments/vnpay/ipn?${queryString}`, {
+    method: 'GET',
+  })
+
+  const payload: VnpayIpnAckApi = await response.json()
+
+  if (!response.ok) {
+    throw new Error('Không thể cập nhật trạng thái thanh toán')
+  }
+
+  return {
+    responseCode: payload.RspCode || '',
+    message: payload.Message || '',
   }
 }
 

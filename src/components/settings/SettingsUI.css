@@ -41,6 +41,7 @@
   grid-template-columns: 288px minmax(0, 1fr);
   gap: 24px;
   box-sizing: border-box;
+  background-color: var(--plate-white);
 }
 
 .settings-frame--single {
@@ -890,4 +891,220 @@
   .tech-settings-status {
     padding: 22px;
   }
+}
+
+/* ─── Avatar Upload Section ───────────────────────────────────────────────── */
+
+.profile-avatar-section {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 0 8px;
+}
+
+.profile-avatar-wrapper {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  cursor: pointer;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 3px solid rgba(92, 107, 138, 0.22);
+  box-shadow: 0 8px 24px rgba(47, 58, 85, 0.16);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.profile-avatar-wrapper:hover {
+  transform: scale(1.04);
+  box-shadow: 0 12px 32px rgba(47, 58, 85, 0.24);
+}
+
+.profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 50%;
+}
+
+.profile-avatar-wrapper:hover .profile-avatar-overlay {
+  opacity: 1;
+}
+
+/* Spinner khi upload */
+.profile-avatar-spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: avatarSpin 0.7s linear infinite;
+}
+
+@keyframes avatarSpin {
+  to { transform: rotate(360deg); }
+}
+
+.profile-avatar-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-avatar-hint__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--blueberry-skin);
+}
+
+.profile-avatar-hint__desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+/* ─── Change Password ─────────────────────────────────────────────── */
+
+.change-pw-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.change-pw-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.change-pw-input {
+  padding-right: 48px !important;
+}
+
+.change-pw-toggle {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--berry-bloom);
+  opacity: 0.55;
+  transition: opacity 0.18s ease, color 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.change-pw-toggle:hover {
+  opacity: 1;
+  color: var(--blueberry-skin);
+}
+
+/* Strength meter */
+.change-pw-strength {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.change-pw-strength__track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(110, 111, 115, 0.12);
+  overflow: hidden;
+}
+
+.change-pw-strength__fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.35s ease, background 0.35s ease;
+}
+
+.change-pw-strength__label {
+  font-size: 13px;
+  font-weight: var(--fw-semibold);
+  min-width: 80px;
+  text-align: right;
+  transition: color 0.35s ease;
+}
+
+/* Mismatch hint */
+.change-pw-mismatch {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #ef4444;
+  font-weight: var(--fw-medium);
+  animation: changePwShake 0.35s ease;
+}
+
+/* Messages */
+.change-pw-msg {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: var(--fw-medium);
+  line-height: 1.5;
+  animation: changePwFadeIn 0.3s ease;
+}
+
+.change-pw-msg--error {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.18);
+  color: #b91c1c;
+}
+
+.change-pw-msg--success {
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.18);
+  color: #166534;
+}
+
+.change-pw-msg__icon {
+  flex: 0 0 auto;
+  font-size: 16px;
+}
+
+@keyframes changePwFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes changePwShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
 }

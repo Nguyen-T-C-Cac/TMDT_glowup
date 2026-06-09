@@ -1,6 +1,7 @@
 package com.example.becommerce.controller;
 
 import com.example.becommerce.constant.ApiConstant;
+import com.example.becommerce.dto.request.UpdatePasswordRequest;
 import com.example.becommerce.dto.request.UpdateUserRequest;
 import com.example.becommerce.dto.request.UpdateUserStatusRequest;
 import com.example.becommerce.dto.response.ApiResponse;
@@ -11,6 +12,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -79,4 +82,20 @@ public class UserController {
         UserResponse data = userService.updateUserStatus(id, request);
         return ResponseEntity.ok(ApiResponse.success(data));
     }
+
+    // ----------------------------------------------------------------
+    // PUT /api/users/change-password  — Authenticated user
+    // ----------------------------------------------------------------
+
+    @PutMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody UpdatePasswordRequest request) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+
+        userService.changePassword(email, request);
+        return ResponseEntity.ok(ApiResponse.success());
+    }
 }
+

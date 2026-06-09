@@ -60,6 +60,10 @@ public class Wallet {
     @Builder.Default
     private String currency = "VND";
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20, columnDefinition = "varchar(20) default 'NORMAL'")
+    @Builder.Default
+    private WalletStatus walletStatus = WalletStatus.NORMAL;
 
     @Version
     private Long version;
@@ -71,4 +75,28 @@ public class Wallet {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public void normalizeForPersistence() {
+        if (balance == null) {
+            balance = BigDecimal.ZERO;
+        }
+        if (pendingBalance == null) {
+            pendingBalance = BigDecimal.ZERO;
+        }
+        if (personalBalance == null) {
+            personalBalance = BigDecimal.ZERO;
+        }
+        if (totalEarned == null) {
+            totalEarned = BigDecimal.ZERO;
+        }
+        if (totalWithdrawn == null) {
+            totalWithdrawn = BigDecimal.ZERO;
+        }
+        if (currency == null || currency.isBlank()) {
+            currency = "VND";
+        }
+        if (version == null) {
+            version = 0L;
+        }
+    }
 }

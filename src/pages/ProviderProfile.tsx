@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
+import { technicianService } from '../services/technicianService';
 import { useCustomerNavigate } from '../components/layout/useCustomerNavigate';
 import { ProfileHeader } from '../components/provider-profile/ProfileHeader';
 import { ProfileTabs } from '../components/provider-profile/ProfileTabs';
@@ -15,8 +16,21 @@ export const ProviderProfile: React.FC = () => {
   const location = useLocation();
   const providerData = location.state as any;
 
+  const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState(() => providerData?.activeTab || 'about');
+  const [fetchedData, setFetchedData] = useState<any>(null);
   
+  useEffect(() => {
+    const providerId = id || providerData?.id;
+    if (providerId) {
+      technicianService.getTechnicianById(providerId)
+        .then(res => {
+          if (res.data) setFetchedData(res.data);
+        })
+        .catch(err => console.error('Lỗi khi lấy thông tin thợ', err));
+    }
+  }, [id, providerData]);
+
   const defaultProfile = {
     name: 'Nguyễn Văn Hùng',
     avatar: 'https://i.pravatar.cc/150?img=33',
@@ -30,17 +44,17 @@ export const ProviderProfile: React.FC = () => {
     titleBadge: ''
   };
 
-  const profileData = providerData ? {
+  const sourceData = fetchedData || providerData;
+  const profileData = sourceData ? {
     ...defaultProfile,
-    // Technician user code (e.g. USR-004) — needed to open a real conversation.
-    code: providerData.code || providerData.id,
-    name: providerData.name,
-    avatar: providerData.avatar,
-    rating: providerData.rating || 4.9,
-    reviewCount: providerData.reviewCount || 1240,
-    location: providerData.location || 'Khu vực TP.HCM',
-    type: providerData.type || 'normal',
-    titleBadge: providerData.titleBadge || ''
+    name: sourceData.name || sourceData.fullName || defaultProfile.name,
+    avatar: sourceData.avatar || defaultProfile.avatar,
+    rating: sourceData.rating || defaultProfile.rating,
+    reviewCount: sourceData.reviewCount || defaultProfile.reviewCount,
+    location: sourceData.location || sourceData.district || defaultProfile.location,
+    type: sourceData.type || defaultProfile.type,
+    titleBadge: sourceData.titleBadge || defaultProfile.titleBadge,
+    isAvailable: sourceData.isAvailable ?? defaultProfile.isAvailable,
   } : defaultProfile;
 
   return (

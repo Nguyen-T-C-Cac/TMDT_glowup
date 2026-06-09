@@ -3,38 +3,32 @@ import Modal from "../common/Modal";
 import QuoteForm from "../quote/QuoteForm";
 import { QuotationCard } from "../chat/QuotationCard";
 import type { Quote } from "../../types/Quote";
-import { computeQuoteTotal } from "../../types/Quote";
-import type { CreateQuotePayload } from "../../services/chatService";
 import "./css/quote.css";
 
 interface QuoteCreateModalProps {
     open: boolean;
     onClose: () => void;
-    /** Submit handler wired by the chat page; posts the quote to the backend. */
-    onSubmit?: (payload: CreateQuotePayload) => Promise<void> | void;
+    onSubmit: (quote: Quote) => Promise<void>;
 }
 
-const initialQuote = (): Quote => ({
-    serviceType: "Sửa chữa máy giặt",
-    description: "",
-    items: [
-        { id: "seed-1", name: "Công thợ sửa chữa", quantity: 1, unitPrice: 0 },
-    ],
-    inspectionFee: 0,
-    shippingFee: 0,
-    vat: 0,
-    notes: "",
-});
-
 const QuoteCreateModal: React.FC<QuoteCreateModalProps> = ({ open, onClose, onSubmit }) => {
-    const [quote, setQuote] = useState<Quote>(initialQuote);
+    const [quote, setQuote] = useState<Quote>({
+        serviceName: "Sửa máy lạnh",
+        description: "",
+        date: "",
+        time: "",
+        price: 0,
+        notes: "",
+    });
 
-    const total = computeQuoteTotal(quote);
+    const previewSchedule =
+        quote.date && quote.time
+            ? new Date(`${quote.date}T${quote.time}`).toISOString()
+            : undefined;
 
     return (
         <Modal open={open} onClose={onClose}>
             <div className="quote-modal">
-                {/* LEFT: FORM */}
                 <div className="quote-left">
                     <QuoteForm
                         quote={quote}
@@ -43,17 +37,16 @@ const QuoteCreateModal: React.FC<QuoteCreateModalProps> = ({ open, onClose, onSu
                         onSubmit={onSubmit}
                     />
                 </div>
-
-                {/* RIGHT: PREVIEW */}
                 <div className="quote-right">
-                    <div className="preview-header-text" style={{ marginBottom: "24px" }}>
+                    <div className="preview-header-text" style={{ marginBottom: '24px' }}>
                         <div className="preview-title">XEM TRƯỚC BÁO GIÁ</div>
                         <div className="preview-sub">Giao diện khách hàng sẽ nhận</div>
                     </div>
                     <QuotationCard
-                        serviceName={quote.serviceType}
+                        serviceName={quote.serviceName}
                         description={quote.description}
-                        price={total}
+                        price={quote.price}
+                        scheduledAt={previewSchedule}
                         previewMode={true}
                     />
                 </div>

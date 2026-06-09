@@ -1,16 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import {
-    AlertTriangle,
-    CheckCircle2,
-    Clock3,
-    Image as ImageIcon,
-    MapPin,
-    Play,
-    Send,
-    ShieldAlert,
-    Wrench,
-} from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import styles from './ChatPage.module.css';
 import { ContactItem } from '../components/chat/ContactItem';
@@ -18,255 +7,488 @@ import { QuotationCard } from '../components/chat/QuotationCard';
 import { MessageInput } from '../components/chat/MessageInput';
 import { SearchBar } from '../components/chat/SearchBar';
 import { Avatar } from '../components/common/Avatar';
+import { RepairRequestCard } from '../components/chat/RepairRequestCard';
+import { PriceAdjustmentCard } from '../components/chat/PriceAdjustmentCard';
+import { AdjustmentModal, type AdjustmentSubmitPayload } from '../components/modal/AdjustmentModal';
+import UpdatePriceModal from '../components/modal/UpdatePriceModal';
+import { chatService } from '../services/chat/chatService';
+import { mapWsMessageToChatMessage } from '../services/chat/chatRealtimeClient';
+import { orderService } from '../services/order/orderService';
+import { getStoredUser } from '../services/auth';
+import { useChatRealtime } from '../hooks/useChatRealtime';
 import type { Contact } from '../types/Message';
-import type { UserRole } from '../types/UserRole.ts';
-import { getInfo } from '../services/getInfo';
-import {
-    acceptQuote,
-    createQuote,
-    listConversations,
-    listMessages,
-    rejectQuote,
-    sendTextMessage,
-    type ChatMessage,
-    type ConversationListItem,
-    type CreateQuotePayload,
-} from '../services/chatService';
+import type { UserRole } from '../types/UserRole';
+import type { ChatLocationState, ChatMessage, ConversationItem } from '../types/chat';
+import type { OrderResponse } from '../types/order/order';
+import type { Quote } from '../types/Quote';
 
 const pageMap: Record<string, string> = {
     home: '/',
     provider: '/provider',
     services: '/services',
-    rewards: '/rewards',
     'provider-profile': '/provider-profile',
     'provider-dashboard': '/provider-dashboard',
     'customer-settings': '/customer/account-settings',
     login: '/auth/login',
 };
 
-const formatTime = (iso?: string) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '';
-    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+const formatMessageTime = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 };
 
-const readCachedUserCode = (): string | null => {
-    try {
-        const raw = localStorage.getItem('user');
-        if (!raw) return null;
-        const parsed = JSON.parse(raw);
-        return parsed?.user?.code ?? null;
-    } catch {
-        return null;
-    }
-};
+const toContact = (conversation: ConversationItem): Contact => ({
+    id: conversation.id,
+    name: conversation.partner?.fullName ?? 'Đối tác',
+    lastMessage:
+        conversation.lastMessage?.preview ??
+        conversation.lastMessage?.content ??
+        '',
+    time: conversation.lastMessage?.sentAt
+        ? formatMessageTime(conversation.lastMessage.sentAt)
+        : '',
+    avatar: conversation.partner?.avatar ?? 'https://placehold.co/48x48',
+    isOnline: conversation.partner?.isOnline ?? false,
+    unread: conversation.unreadCount > 0,
+});
 
 export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) => {
-    const nav = useNavigate();
+    const navigate = useNavigate();
     const location = useLocation();
+    const locationState = location.state as ChatLocationState | null;
+
+    const routeConversationId = locationState?.conversationId;
+    const routeOrderId = locationState?.orderId;
+    const routeTechnicianId = locationState?.technicianId;
+    const routeCustomerId = locationState?.customerId;
 
     const [searchQuery, setSearchQuery] = useState('');
     const [isSidebarOpen, setIsSidebarOpen] = useState(role === 'customer');
-
-    // When arriving from "Nhắn tin với thợ", open that conversation directly.
-    const openConversationId = (location.state as { openConversationId?: string })?.openConversationId ?? null;
-
-    const [myCode, setMyCode] = useState<string | null>(readCachedUserCode());
-    const [conversations, setConversations] = useState<ConversationListItem[]>([]);
-    const [activeId, setActiveId] = useState<string | null>(openConversationId);
+    const [conversations, setConversations] = useState<ConversationItem[]>([]);
+    const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
-    const [loadingConvos, setLoadingConvos] = useState(true);
-    const [actionQuoteId, setActionQuoteId] = useState<string | null>(null);
-    const [banner, setBanner] = useState<string | null>(null);
-    /** quoteId -> orderId, captured from accept responses to show the order code. */
-    const [acceptedOrders, setAcceptedOrders] = useState<Record<string, string>>({});
+    const [linkedOrder, setLinkedOrder] = useState<OrderResponse | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
+    const [isPriceConfirmOpen, setIsPriceConfirmOpen] = useState(false);
 
-    const messageListRef = useRef<HTMLDivElement | null>(null);
+    const currentUser = getStoredUser();
+    const currentUserCode = currentUser?.code ?? '';
 
-    const isTechnician = role === 'technician';
-    const isCustomer = role === 'customer';
-
-    // ---- existing booking → chat hand-off (repair request prefill) ----------
-    const repairPrefill = (location.state as {
-        prefillRepairRequest?: {
-            provider: { name: string; avatar: string; rating: number };
-            request: {
-                serviceLabel: string;
-                deviceType: string;
-                brand: string;
-                description: string;
-                urgency: string;
-                timeSlot: string;
-                date?: string;
-                address: string;
-                phone: string;
-                attachments: Array<{ name: string; type: string; previewUrl: string }>;
-            };
-        };
-    })?.prefillRepairRequest;
-
-    const urgencyMap: Record<string, string> = {
-        normal: 'Không gấp',
-        today: 'Cần hôm nay',
-        urgent: 'Khẩn cấp',
-    };
-    const [requestTimestamp] = useState(() =>
-        new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    const activeConversation = useMemo(
+        () => conversations.find((c) => c.id === activeConversationId) ?? null,
+        [conversations, activeConversationId]
     );
 
-    // -------------------------------------------------------------------------
-    // Load current user code (for message alignment) — best effort.
-    // -------------------------------------------------------------------------
-    useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            try {
-                const info = await getInfo();
-                if (!cancelled && info?.code) setMyCode(info.code);
-            } catch {
-                /* fall back to cached code */
-            }
-        })();
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+    const filteredConversations = useMemo(() => {
+        const keyword = searchQuery.trim().toLowerCase();
+        if (!keyword) return conversations;
+        return conversations.filter((c) => c.partner.fullName.toLowerCase().includes(keyword));
+    }, [conversations, searchQuery]);
 
-    // -------------------------------------------------------------------------
-    // Load conversation list.
-    // -------------------------------------------------------------------------
-    const loadConversations = useCallback(async () => {
-        try {
-            const items = await listConversations();
-            setConversations(items);
-            setActiveId((prev) => prev ?? items[0]?.id ?? null);
-        } catch (err) {
-            setBanner(err instanceof Error ? err.message : 'Không tải được danh sách hội thoại');
-        } finally {
-            setLoadingConvos(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        loadConversations();
-    }, [loadConversations]);
-
-    // -------------------------------------------------------------------------
-    // Load messages for the active conversation + poll for updates.
-    // -------------------------------------------------------------------------
-    const loadMessages = useCallback(async (conversationId: string) => {
-        try {
-            const items = await listMessages(conversationId);
-            setMessages(items);
-        } catch (err) {
-            setBanner(err instanceof Error ? err.message : 'Không tải được tin nhắn');
-        }
-    }, []);
-
-    useEffect(() => {
-        if (!activeId) {
-            setMessages([]);
+    const loadLinkedOrder = useCallback(async (orderId?: string | null) => {
+        if (!orderId) {
+            setLinkedOrder(null);
             return;
         }
-        loadMessages(activeId);
-        const timer = window.setInterval(() => {
-            loadMessages(activeId);
-            loadConversations();
-        }, 4000);
-        return () => window.clearInterval(timer);
-    }, [activeId, loadMessages, loadConversations]);
+        try {
+            const order = await orderService.getOrderById(orderId);
+            setLinkedOrder(order);
+        } catch {
+            setLinkedOrder(null);
+        }
+    }, []);
 
-    // Auto-scroll to the newest message.
-    useEffect(() => {
-        const el = messageListRef.current;
-        if (el) el.scrollTop = el.scrollHeight;
-    }, [messages.length, activeId]);
+    const loadMessages = useCallback(async (conversationId: string) => {
+        const items = await chatService.listMessages(conversationId);
+        setMessages(items);
+    }, []);
+
+    const refreshConversations = useCallback(async () => {
+        const items = await chatService.listConversations();
+        setConversations(items);
+        return items;
+    }, []);
+
+    const conversationIds = useMemo(
+        () => conversations.map((c) => c.id).filter(Boolean),
+        [conversations]
+    );
+
+    const handleRealtimeMessage = useCallback(
+        (payload: Parameters<typeof mapWsMessageToChatMessage>[0]) => {
+            const incoming = mapWsMessageToChatMessage(payload);
+            const conversationId = incoming.conversationId;
+            const isActive = conversationId === activeConversationId;
+            const isFromMe = incoming.senderId === currentUserCode;
+
+            if (isActive) {
+                setMessages((prev) => {
+                    if (prev.some((m) => m.id === incoming.id)) {
+                        return prev;
+                    }
+                    return [...prev, incoming];
+                });
+            }
+
+            setConversations((prev) =>
+                prev.map((c) => {
+                    if (c.id !== conversationId) return c;
+                    const preview =
+                        incoming.type === 'quotation'
+                            ? 'Báo giá mới'
+                            : incoming.content ?? '';
+                    return {
+                        ...c,
+                        lastMessage: {
+                            type: incoming.type,
+                            content: preview,
+                            preview,
+                            sentAt: incoming.sentAt,
+                        },
+                        unreadCount:
+                            isActive || isFromMe ? c.unreadCount : c.unreadCount + 1,
+                    };
+                })
+            );
+        },
+        [activeConversationId, currentUserCode]
+    );
+
+    useChatRealtime({
+        conversationIds,
+        enabled: !isLoading && conversationIds.length > 0,
+        onMessage: handleRealtimeMessage,
+    });
+
+    const openConversation = useCallback(
+        async (conversationId: string, orderId?: string | null) => {
+            setActiveConversationId(conversationId);
+            setConversations((prev) =>
+                prev.map((c) =>
+                    c.id === conversationId ? { ...c, unreadCount: 0 } : c
+                )
+            );
+            await loadLinkedOrder(orderId ?? null);
+            await loadMessages(conversationId);
+        },
+        [loadLinkedOrder, loadMessages]
+    );
 
     useEffect(() => {
         setIsSidebarOpen(role === 'customer');
     }, [role]);
 
-    // -------------------------------------------------------------------------
-    // Actions
-    // -------------------------------------------------------------------------
-    const handleSendMessage = async (text: string) => {
-        if (!activeId) return;
-        try {
-            await sendTextMessage(activeId, text);
-            await loadMessages(activeId);
-        } catch (err) {
-            setBanner(err instanceof Error ? err.message : 'Gửi tin nhắn thất bại');
-        }
-    };
+    useEffect(() => {
+        let cancelled = false;
 
-    const handleCreateQuote = async (payload: CreateQuotePayload) => {
-        if (!activeId) throw new Error('Chưa chọn cuộc trò chuyện');
-        await createQuote(activeId, payload); // throws → modal shows the error
-        await loadMessages(activeId);
-    };
+        const bootstrap = async () => {
+            setIsLoading(true);
+            setLoadError(null);
 
-    const handleAccept = async (quoteId: string) => {
-        if (actionQuoteId) return;
-        setActionQuoteId(quoteId);
-        try {
-            const result = await acceptQuote(quoteId);
-            if (result.orderId) {
-                setAcceptedOrders((prev) => ({ ...prev, [quoteId]: result.orderId }));
+            try {
+                let items = await refreshConversations();
+                if (cancelled) return;
+
+                let technicianId = routeTechnicianId;
+                let orderId = routeOrderId;
+
+                if (role === 'customer' && orderId && !technicianId) {
+                    const order = await orderService.getOrderById(orderId);
+                    if (cancelled) return;
+                    technicianId = order.technician?.id;
+                    setLinkedOrder(order);
+                    if (!technicianId) {
+                        setLoadError('Đơn hàng chưa có thợ nhận. Vui lòng đợi thợ nhận đơn trước khi chat.');
+                        return;
+                    }
+                }
+
+                if (routeConversationId) {
+                    const found = items.find((c) => c.id === routeConversationId);
+                    await openConversation(
+                        routeConversationId,
+                        found?.orderId ?? orderId ?? null
+                    );
+                    return;
+                }
+
+                if (orderId) {
+                    const byOrder = items.find((c) => c.orderId === orderId);
+                    if (byOrder) {
+                        await openConversation(byOrder.id, byOrder.orderId ?? orderId);
+                        return;
+                    }
+
+                    if (role === 'technician' || role === 'customer') {
+                        try {
+                            const order = await orderService.getOrderById(orderId);
+                            if (cancelled) return;
+                            const partnerId =
+                                role === 'technician'
+                                    ? order.customer?.id
+                                    : order.technician?.id;
+                            if (partnerId) {
+                                const byPartner = items.find((c) => c.partner?.id === partnerId);
+                                if (byPartner) {
+                                    await openConversation(
+                                        byPartner.id,
+                                        byPartner.orderId ?? orderId
+                                    );
+                                    return;
+                                }
+                            }
+                            if (role === 'customer' && order.technician?.id) {
+                                technicianId = order.technician.id;
+                            }
+                            if (role === 'technician' && order.customer?.id) {
+                                const byCustomer = items.find(
+                                    (c) => c.partner?.id === order.customer?.id
+                                );
+                                if (byCustomer) {
+                                    await openConversation(byCustomer.id, orderId);
+                                    return;
+                                }
+                            }
+                        } catch {
+                            // order lookup failed — fall through
+                        }
+                    }
+                }
+
+                if (role === 'technician' && routeCustomerId) {
+                    const byCustomer = items.find((c) => c.partner?.id === routeCustomerId);
+                    if (byCustomer) {
+                        await openConversation(
+                            byCustomer.id,
+                            byCustomer.orderId ?? orderId ?? null
+                        );
+                        return;
+                    }
+                }
+
+                if (role === 'customer' && technicianId) {
+                    const existing = items.find((c) => c.partner?.id === technicianId);
+                    if (existing && (!orderId || existing.orderId === orderId)) {
+                        await openConversation(
+                            existing.id,
+                            existing.orderId ?? orderId ?? null
+                        );
+                        return;
+                    }
+
+                    const created = await chatService.createConversation({
+                        technicianId,
+                        orderId,
+                    });
+                    if (cancelled) return;
+
+                    setConversations((prev) => {
+                        const withoutDup = prev.filter((c) => c.id !== created.id);
+                        return [created, ...withoutDup];
+                    });
+                    await openConversation(created.id, created.orderId ?? orderId ?? null);
+                    return;
+                }
+
+                if (items.length > 0 && !orderId && !routeCustomerId && !technicianId) {
+                    await openConversation(items[0].id, items[0].orderId);
+                    return;
+                }
+
+                if (routeOrderId || routeTechnicianId || routeCustomerId) {
+                    setLoadError(
+                        'Không tìm thấy hội thoại tương ứng. Hãy thử mở lại từ đơn hàng hoặc hồ sơ thợ.'
+                    );
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    setLoadError(
+                        error instanceof Error
+                            ? error.message
+                            : 'Không thể tải dữ liệu chat. Vui lòng thử lại.'
+                    );
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsLoading(false);
+                }
             }
-            if (activeId) await loadMessages(activeId);
-        } catch (err) {
-            setBanner(err instanceof Error ? err.message : 'Chấp nhận báo giá thất bại');
-        } finally {
-            setActionQuoteId(null);
+        };
+
+        bootstrap();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        openConversation,
+        refreshConversations,
+        role,
+        routeConversationId,
+        routeOrderId,
+        routeTechnicianId,
+        routeCustomerId,
+    ]);
+
+    useEffect(() => {
+        if (role !== 'customer') return;
+        if (linkedOrder?.priceAdjustment?.status?.toLowerCase() === 'pending') {
+            setIsPriceConfirmOpen(true);
+        }
+    }, [linkedOrder, role]);
+
+    const handleSelectConversation = async (conversationId: string) => {
+        setActiveConversationId(conversationId);
+        setConversations((prev) =>
+            prev.map((c) =>
+                c.id === conversationId ? { ...c, unreadCount: 0 } : c
+            )
+        );
+        const selected = conversations.find((c) => c.id === conversationId);
+        await loadLinkedOrder(selected?.orderId);
+        await loadMessages(conversationId);
+    };
+
+    const handleSendMessage = async (text: string) => {
+        if (!activeConversationId) return;
+        const sent = await chatService.sendMessage(activeConversationId, text);
+        setMessages((prev) => [...prev, { ...sent, isRead: true }]);
+        await refreshConversations();
+    };
+
+    const handleCreateQuote = async (quote: Quote) => {
+        if (!activeConversationId) return;
+        const scheduledAt =
+            quote.scheduledAt ??
+            (quote.date && quote.time
+                ? new Date(`${quote.date}T${quote.time}`).toISOString()
+                : new Date().toISOString());
+
+        await chatService.createQuotation(activeConversationId, {
+            serviceName: quote.serviceName,
+            description: quote.description,
+            price: quote.price,
+            scheduledAt,
+            notes: quote.notes,
+        });
+        await refreshConversations();
+    };
+
+    const handleAcceptQuote = async (quotationId: string) => {
+        const result = await chatService.acceptQuotation(quotationId);
+        if (activeConversationId) {
+            await loadMessages(activeConversationId);
+        }
+        await loadLinkedOrder(result.orderId);
+        const items = await refreshConversations();
+        const active = items.find((c) => c.orderId === result.orderId);
+        if (active) {
+            setActiveConversationId(active.id);
         }
     };
 
-    const handleReject = async (quoteId: string) => {
-        if (actionQuoteId) return;
-        setActionQuoteId(quoteId);
+    const handleRejectQuote = async (quotationId: string) => {
+        await chatService.rejectQuotation(quotationId);
+        if (activeConversationId) {
+            await loadMessages(activeConversationId);
+        }
+    };
+
+    const handleSubmitPriceAdjustment = async (payload: AdjustmentSubmitPayload) => {
+        if (!linkedOrder?.id) return;
+        const updated = await orderService.requestPriceAdjustment(linkedOrder.id, payload);
+        setLinkedOrder(updated);
+        if (activeConversationId) {
+            await loadMessages(activeConversationId);
+        }
+    };
+
+    const handleApprovePrice = async () => {
+        if (!linkedOrder?.id) return;
+        const updated = await orderService.approvePriceAdjustment(linkedOrder.id);
+        setLinkedOrder(updated);
+        setIsPriceConfirmOpen(false);
+    };
+
+    const handleRejectPrice = async () => {
+        if (!linkedOrder?.id) return;
+        const updated = await orderService.rejectPriceAdjustment(
+            linkedOrder.id,
+            'Khách hàng từ chối điều chỉnh giá'
+        );
+        setLinkedOrder(updated);
+        setIsPriceConfirmOpen(false);
+    };
+
+    const handleAcceptOrder = async () => {
+        if (!linkedOrder?.id) return;
         try {
-            await rejectQuote(quoteId);
-            if (activeId) await loadMessages(activeId);
+            const updated = await orderService.acceptOrder(linkedOrder.id);
+            setLinkedOrder(updated);
+            if (activeConversationId) {
+                await loadMessages(activeConversationId);
+            }
+            await refreshConversations();
         } catch (err) {
-            setBanner(err instanceof Error ? err.message : 'Từ chối báo giá thất bại');
-        } finally {
-            setActionQuoteId(null);
+            alert(err instanceof Error ? err.message : "Không thể chấp nhận đơn hàng");
+        }
+    };
+
+    const handleRejectOrder = async () => {
+        if (!linkedOrder?.id) return;
+        const reason = prompt("Nhập lý do từ chối yêu cầu:") || "Thợ từ chối yêu cầu sửa chữa";
+        try {
+            const updated = await orderService.cancelOrder(linkedOrder.id, reason);
+            setLinkedOrder(updated);
+            if (activeConversationId) {
+                await loadMessages(activeConversationId);
+            }
+            await refreshConversations();
+        } catch (err) {
+            alert(err instanceof Error ? err.message : "Không thể từ chối đơn hàng");
         }
     };
 
     const onNavigate = (page: string, data?: unknown) => {
-        nav(pageMap[page] || '/', { state: data });
+        const path = pageMap[page] || '/';
+        navigate(path, { state: data });
     };
 
-    // -------------------------------------------------------------------------
-    // Derived view data
-    // -------------------------------------------------------------------------
-    const toContact = (c: ConversationListItem): Contact => ({
-        id: c.id,
-        name: c.partner?.fullName || 'Người dùng',
-        lastMessage: c.lastMessage?.content || 'Bắt đầu trò chuyện',
-        time: formatTime(c.lastMessage?.sentAt || c.updatedAt),
-        avatar: c.partner?.avatar || 'https://placehold.co/48x48',
-        isOnline: c.partner?.isOnline,
-        unread: (c.unreadCount ?? 0) > 0,
-    });
-
-    const visibleConversations = conversations.filter((c) =>
-        (c.partner?.fullName || '').toLowerCase().includes(searchQuery.toLowerCase())
+    const orderStatus = linkedOrder?.status?.toLowerCase() ?? '';
+    const showPriceAdjustAction =
+        role === 'technician' && orderStatus === 'in_progress';
+    const showRepairCard = Boolean(
+        linkedOrder &&
+            (['new', 'assigned'].includes(orderStatus) ||
+                !messages.some((m) => m.type === 'quotation'))
     );
-    const activeConversation = conversations.find((c) => c.id === activeId) || null;
-    const partner = activeConversation?.partner;
 
-    const isMine = (m: ChatMessage) => !!myCode && m.senderId === myCode;
+    const pendingAdjustment =
+        linkedOrder?.priceAdjustment?.status?.toLowerCase() === 'pending'
+            ? linkedOrder.priceAdjustment
+            : null;
+
+    const activeContact: Contact = activeConversation
+        ? toContact(activeConversation)
+        : {
+              id: '',
+              name: 'Chọn hội thoại',
+              lastMessage: '',
+              time: '',
+              avatar: 'https://placehold.co/48x48',
+          };
 
     return (
         <div className={styles.container}>
             {role === 'customer' && <Header onNavigate={onNavigate} />}
 
             <div className={styles.mainLayout}>
-                {/* SIDEBAR */}
-                <aside className={`${styles.sidebar} ${!isSidebarOpen ? styles.sidebarClosed : ''}`}>
+                <aside
+                    className={`${styles.sidebar} ${!isSidebarOpen ? styles.sidebarClosed : ''}`}
+                >
                     <div style={{ padding: '16px' }}>
                         <SearchBar
                             value={searchQuery}
@@ -275,233 +497,158 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                         />
                     </div>
                     <div style={{ padding: '0 8px' }}>
-                        {loadingConvos && (
-                            <p style={{ padding: 16, color: '#64748B', fontSize: 14 }}>Đang tải…</p>
-                        )}
-                        {!loadingConvos && visibleConversations.length === 0 && (
-                            <p style={{ padding: 16, color: '#64748B', fontSize: 14 }}>
-                                Chưa có cuộc trò chuyện nào.
-                            </p>
-                        )}
-                        {visibleConversations.map((c) => (
+                        {filteredConversations.map((conversation) => (
                             <ContactItem
-                                key={c.id}
-                                contact={toContact(c)}
-                                isActive={c.id === activeId}
-                                onClick={() => setActiveId(c.id)}
+                                key={conversation.id}
+                                contact={toContact(conversation)}
+                                isActive={conversation.id === activeConversationId}
+                                onClick={() => handleSelectConversation(conversation.id)}
                             />
                         ))}
+                        {!isLoading && filteredConversations.length === 0 && (
+                            <p className={styles.emptySidebar}>Chưa có hội thoại</p>
+                        )}
                     </div>
                 </aside>
 
-                {/* CHAT AREA */}
                 <main className={styles.chatArea}>
-                    {/* HEADER */}
                     <header className={styles.chatHeader}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             {role === 'technician' && (
                                 <button
+                                    type="button"
                                     className={styles.toggleBtn}
-                                    onClick={() => setIsSidebarOpen((p) => !p)}
+                                    onClick={() => setIsSidebarOpen((prev) => !prev)}
                                 >
                                     ☰
                                 </button>
                             )}
-                            <Avatar
-                                src={partner?.avatar || 'https://placehold.co/48x48'}
-                                size={40}
-                                isOnline={partner?.isOnline}
-                            />
+                            <Avatar src={activeContact.avatar} size={40} isOnline={activeContact.isOnline} />
                             <div>
-                                <strong>{partner?.fullName || 'Chọn một cuộc trò chuyện'}</strong>
-                                {partner?.isOnline && (
-                                    <span style={{ fontSize: 12, color: '#22C55E', display: 'block' }}>
-                                        ● Đang hoạt động
+                                <strong>{activeContact.name}</strong>
+                                {linkedOrder && (
+                                    <span style={{ fontSize: 12, color: '#64748b', display: 'block' }}>
+                                        Đơn {linkedOrder.id}
                                     </span>
                                 )}
                             </div>
                         </div>
                     </header>
 
-                    {banner && (
-                        <div
-                            style={{
-                                margin: '8px 16px',
-                                padding: '8px 12px',
-                                borderRadius: 8,
-                                background: '#FEF2F2',
-                                color: '#DC2626',
-                                fontSize: 13,
-                            }}
-                            onClick={() => setBanner(null)}
-                        >
-                            {banner}
-                        </div>
-                    )}
+                    <section className={styles.messageList}>
+                        {isLoading && <p className={styles.emptyChat}>Đang tải hội thoại...</p>}
 
-                    {/* MESSAGES */}
-                    <section className={styles.messageList} ref={messageListRef}>
-                        {/* Booking → chat hand-off summary (customer flow) */}
-                        {repairPrefill && (
-                            <div className={`${styles.messageRow} ${styles.messageRowRight}`}>
-                                <div className={`${styles.messageContent} ${styles.repairMessageContent}`}>
-                                    <div className={styles.repairSummaryCard}>
-                                        <div className={styles.repairSummaryHeader}>
-                                            <div className={styles.repairSummaryTitleGroup}>
-                                                <span className={styles.repairSummaryIconWrap}>
-                                                    <Wrench size={14} />
-                                                </span>
-                                                <h4>Yêu cầu sửa chữa đã gửi</h4>
-                                            </div>
-                                            <span className={`${styles.repairStatusBadge} ${styles.sent}`}>
-                                                <CheckCircle2 size={13} /> Đang chờ phản hồi
-                                            </span>
-                                        </div>
-                                        <div className={styles.repairInfoRows}>
-                                            <div className={styles.repairInfoRow}>
-                                                <span className={styles.repairInfoIcon}><Wrench size={15} /></span>
-                                                <div>
-                                                    <p className={styles.repairInfoLabel}>Thiết bị</p>
-                                                    <p className={styles.repairInfoValue}>
-                                                        {repairPrefill.request.serviceLabel} • {repairPrefill.request.deviceType} • {repairPrefill.request.brand}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className={styles.repairInfoRow}>
-                                                <span className={styles.repairInfoIcon}><AlertTriangle size={15} /></span>
-                                                <div>
-                                                    <p className={styles.repairInfoLabel}>Sự cố</p>
-                                                    <p className={styles.repairInfoValue}>{repairPrefill.request.description || 'Chưa cập nhật'}</p>
-                                                </div>
-                                            </div>
-                                            <div className={styles.repairInfoRow}>
-                                                <span className={styles.repairInfoIcon}><MapPin size={15} /></span>
-                                                <div>
-                                                    <p className={styles.repairInfoLabel}>Địa chỉ</p>
-                                                    <p className={styles.repairInfoValue}>{repairPrefill.request.address}</p>
-                                                </div>
-                                            </div>
-                                            <div className={styles.repairInfoRow}>
-                                                <span className={styles.repairInfoIcon}><Clock3 size={15} /></span>
-                                                <div>
-                                                    <p className={styles.repairInfoLabel}>Thời gian</p>
-                                                    <p className={styles.repairInfoValue}>
-                                                        {repairPrefill.request.timeSlot}{repairPrefill.request.date ? ` - ${repairPrefill.request.date}` : ''}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className={styles.repairInfoRow}>
-                                                <span className={styles.repairInfoIcon}><ShieldAlert size={15} /></span>
-                                                <div>
-                                                    <p className={styles.repairInfoLabel}>Mức độ</p>
-                                                    <p className={styles.repairInfoValue}>{urgencyMap[repairPrefill.request.urgency] || 'Không gấp'}</p>
-                                                </div>
-                                            </div>
-                                            <div className={styles.repairInfoRow}>
-                                                <span className={styles.repairInfoIcon}><ImageIcon size={15} /></span>
-                                                <div>
-                                                    <p className={styles.repairInfoLabel}>Media</p>
-                                                    <p className={styles.repairInfoValue}>
-                                                        {repairPrefill.request.attachments.length > 0
-                                                            ? `${repairPrefill.request.attachments.length} hình ảnh/video đính kèm`
-                                                            : 'Không có tệp đính kèm'}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {repairPrefill.request.attachments.length > 0 && (
-                                            <div className={styles.repairMediaGrid}>
-                                                {repairPrefill.request.attachments.slice(0, 3).map((asset, index) => (
-                                                    <div key={`${asset.name}-${index}`} className={styles.repairMediaItem}>
-                                                        {asset.type.startsWith('video/') ? (
-                                                            <>
-                                                                <video src={asset.previewUrl} muted playsInline />
-                                                                <span className={styles.repairMediaPlay}><Play size={14} /></span>
-                                                            </>
-                                                        ) : (
-                                                            <img src={asset.previewUrl} alt={asset.name} />
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                        <div className={styles.repairSummaryFooter}>
-                                            <span>
-                                                <Send size={13} /> Thông tin đã được gửi đến thợ để tư vấn và báo giá
-                                            </span>
-                                            <small>{requestTimestamp}</small>
-                                        </div>
-                                    </div>
+                        {!isLoading && loadError && (
+                            <p className={styles.emptyChat}>{loadError}</p>
+                        )}
+
+                        {!isLoading && !loadError && !activeConversationId && (
+                            <p className={styles.emptyChat}>Chọn hoặc bắt đầu một cuộc trò chuyện</p>
+                        )}
+
+                        {!isLoading && activeConversationId && linkedOrder && showRepairCard && (
+                            <div className={styles.messageRow}>
+                                <div className={styles.messageContent}>
+                                    <RepairRequestCard 
+                                        order={linkedOrder} 
+                                        role={role}
+                                        onAccept={handleAcceptOrder}
+                                        onReject={handleRejectOrder}
+                                    />
                                 </div>
                             </div>
                         )}
 
-                        {activeId && messages.length === 0 && (
-                            <p style={{ textAlign: 'center', color: '#94A3B8', fontSize: 14, marginTop: 24 }}>
-                                Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện
-                                {isTechnician ? ' hoặc gửi báo giá cho khách.' : '.'}
-                            </p>
-                        )}
+                        {!isLoading &&
+                            messages.map((message) => {
+                                const isMe = message.senderId === currentUserCode;
+                                const isQuotation = message.type === 'quotation' && message.quotation;
 
-                        {messages.map((m) => {
-                            const mine = isMine(m);
-
-                            if (m.type === 'quotation' && m.quotation) {
-                                const q = m.quotation;
                                 return (
                                     <div
-                                        key={m.id}
-                                        className={`${styles.messageRow} ${mine ? styles.messageRowRight : ''}`}
+                                        key={message.id}
+                                        className={`${styles.messageRow} ${isMe ? styles.messageRowRight : ''}`}
                                     >
-                                        {!mine && <Avatar src={partner?.avatar || 'https://placehold.co/48x48'} size={32} />}
+                                        {!isMe && (
+                                            <Avatar src={activeContact.avatar} size={32} isOnline={false} />
+                                        )}
                                         <div className={styles.messageContent}>
-                                            <QuotationCard
-                                                serviceName={q.serviceName}
-                                                description={q.description}
-                                                price={q.price}
-                                                scheduledAt={q.scheduledAt}
-                                                status={q.status}
-                                                orderId={acceptedOrders[q.id]}
-                                                showActions={isCustomer}
-                                                loading={actionQuoteId === q.id}
-                                                onAccept={() => handleAccept(q.id)}
-                                                onReject={() => handleReject(q.id)}
-                                            />
+                                            {isQuotation ? (
+                                                <QuotationCard
+                                                    serviceName={message.quotation!.serviceName}
+                                                    description={message.quotation!.description}
+                                                    price={message.quotation!.price}
+                                                    scheduledAt={message.quotation!.scheduledAt}
+                                                    status={message.quotation!.status}
+                                                    isCustomer={role === 'customer'}
+                                                    onAccept={() =>
+                                                        handleAcceptQuote(message.quotation!.id)
+                                                    }
+                                                    onReject={() =>
+                                                        handleRejectQuote(message.quotation!.id)
+                                                    }
+                                                />
+                                            ) : (
+                                                <div
+                                                    className={`${styles.bubble} ${
+                                                        isMe ? styles.bubbleRight : styles.bubbleLeft
+                                                    }`}
+                                                >
+                                                    {message.content}
+                                                </div>
+                                            )}
+                                            <span className={styles.messageTime}>
+                                                {formatMessageTime(message.sentAt)}
+                                            </span>
                                         </div>
                                     </div>
                                 );
-                            }
+                            })}
 
-                            // text / system / image
-                            return (
-                                <div
-                                    key={m.id}
-                                    className={`${styles.messageRow} ${mine ? styles.messageRowRight : ''}`}
-                                >
-                                    {!mine && <Avatar src={partner?.avatar || 'https://placehold.co/48x48'} size={32} />}
-                                    <div className={styles.messageContent}>
-                                        <div
-                                            className={`${styles.bubble} ${mine ? styles.bubbleRight : styles.bubbleLeft}`}
-                                        >
-                                            {m.content}
-                                        </div>
-                                    </div>
+                        {pendingAdjustment && role === 'customer' && (
+                            <div className={styles.messageRow}>
+                                <div className={styles.messageContent}>
+                                    <PriceAdjustmentCard
+                                        adjustment={pendingAdjustment}
+                                        onConfirm={() => setIsPriceConfirmOpen(true)}
+                                    />
                                 </div>
-                            );
-                        })}
+                            </div>
+                        )}
                     </section>
 
-                    {/* INPUT */}
-                    <footer className={styles.inputArea}>
-                        <MessageInput
-                            onSendMessage={handleSendMessage}
-                            canQuote={isTechnician}
-                            onCreateQuote={handleCreateQuote}
-                            disabled={!activeId}
-                        />
-                    </footer>
+                    {activeConversationId && (
+                        <footer className={styles.inputArea}>
+                            <MessageInput
+                                role={role}
+                                onSendMessage={handleSendMessage}
+                                onCreateQuote={handleCreateQuote}
+                                showQuoteAction={role === 'technician'}
+                                showPriceAdjustAction={showPriceAdjustAction}
+                                onOpenPriceAdjust={() => setIsAdjustmentOpen(true)}
+                            />
+                        </footer>
+                    )}
                 </main>
             </div>
+
+            {isAdjustmentOpen && linkedOrder && (
+                <AdjustmentModal
+                    currentPrice={linkedOrder.estimatedPrice ?? linkedOrder.finalPrice ?? 0}
+                    onClose={() => setIsAdjustmentOpen(false)}
+                    onSubmit={handleSubmitPriceAdjustment}
+                />
+            )}
+
+            {pendingAdjustment && (
+                <UpdatePriceModal
+                    open={isPriceConfirmOpen}
+                    onClose={() => setIsPriceConfirmOpen(false)}
+                    adjustment={pendingAdjustment}
+                    onConfirm={handleApprovePrice}
+                    onReject={handleRejectPrice}
+                />
+            )}
         </div>
     );
 };

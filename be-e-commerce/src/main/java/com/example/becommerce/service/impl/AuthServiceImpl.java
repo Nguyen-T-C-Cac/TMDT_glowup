@@ -21,7 +21,6 @@ import com.example.becommerce.security.JwtProvider;
 import com.example.becommerce.service.AuthService;
 import com.example.becommerce.service.EmailService;
 import com.example.becommerce.service.WalletService;
-import com.example.becommerce.utils.UserCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -48,7 +47,6 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder                       passwordEncoder;
     private final JwtProvider                           jwtProvider;
     private final UserMapper                            userMapper;
-    private final UserCodeGenerator                     codeGenerator;
     private final WalletService                         walletService;
     private final EmailService                          emailService;
 
@@ -79,8 +77,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // 3. Generate unique user code
-        long count = userRepository.countAll();
-        String code = codeGenerator.generate(count + 1);
+        String code = "USR-" + System.currentTimeMillis();
 
         // 4. Build and save user
         User user = User.builder()
@@ -235,8 +232,8 @@ public class AuthServiceImpl implements AuthService {
 
         passwordResetTokenRepository.save(resetToken);
 
-        // TODO: Send email/SMS with the reset link
-        // For now, log the token (replace with real email service in production)
+        // Send email with the reset link
+        emailService.sendPasswordResetEmail(user.getEmail(), tokenValue);
         log.info("Password reset token for {}: {}", user.getEmail(), tokenValue);
     }
 

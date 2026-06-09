@@ -26,7 +26,7 @@ type HistoryRow = {
   title: string
   category: string
   amount: number
-  status: 'success' | 'pending'
+  status: 'success' | 'pending' | 'failed'
   walletType: Exclude<WalletType, 'all'>
   note: string
 }
@@ -305,7 +305,7 @@ const TechnicianWalletPage: React.FC = () => {
               <span className={item.amount > 0 ? 'amount-in' : 'amount-out'}>{formatMoney(item.amount, true)}</span>
               <span>
                 <b className={`wallet-status ${item.status}`}>
-                  {item.status === 'success' ? 'Thành công' : 'Đang xử lý'}
+                  {item.status === 'success' ? 'Thành công' : item.status === 'failed' ? 'Thất bại' : 'Đang xử lý'}
                 </b>
               </span>
             </div>

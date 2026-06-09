@@ -1,29 +1,30 @@
 import React, { useState } from 'react';
-import { FileText, Image, Smile, SendHorizontal } from 'lucide-react';
+import { Paperclip, Image, Smile, SendHorizontal, Coins } from 'lucide-react';
 import styles from './Chat.module.css';
 import QuoteCreateModal from '../modal/QuoteCreateModal';
-import type { CreateQuotePayload } from '../../services/chatService';
-
 import { ChatInputWrapper } from './ChatInputWrapper';
-
+import type { Quote } from '../../types/Quote';
+import type { UserRole } from '../../types/UserRole';
 
 interface MessageInputProps {
+    role: UserRole;
     onSendMessage?: (message: string) => void;
-    /** When true, shows the "Tạo báo giá" action (technician only). */
-    canQuote?: boolean;
-    /** Posts the composed quote to the backend. */
-    onCreateQuote?: (payload: CreateQuotePayload) => Promise<void> | void;
-    disabled?: boolean;
+    onCreateQuote?: (quote: Quote) => Promise<void>;
+    showQuoteAction?: boolean;
+    showPriceAdjustAction?: boolean;
+    onOpenPriceAdjust?: () => void;
 }
 
 export const MessageInput: React.FC<MessageInputProps> = ({
+    role,
     onSendMessage,
-    canQuote = false,
     onCreateQuote,
-    disabled = false,
+    showQuoteAction = false,
+    showPriceAdjustAction = false,
+    onOpenPriceAdjust,
 }) => {
     const [message, setMessage] = useState('');
-    const [open, setOpen] = useState(false);
+    const [openQuote, setOpenQuote] = useState(false);
 
     const handleSend = () => {
         if (message.trim() && onSendMessage) {
@@ -37,45 +38,40 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             <ChatInputWrapper
                 leftIcons={
                     <>
-                        {canQuote && (
+                        {showQuoteAction && role === 'technician' && (
                             <button
-                                title="Tạo báo giá gửi cho khách"
-                                onClick={() => setOpen(true)}
-                                disabled={disabled}
-                                style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: 6,
-                                    padding: '8px 12px',
-                                    borderRadius: 8,
-                                    border: 'none',
-                                    background: disabled ? '#94A3B8' : '#1E3A8A',
-                                    color: '#fff',
-                                    fontSize: 13,
-                                    fontWeight: 600,
-                                    cursor: disabled ? 'not-allowed' : 'pointer',
-                                    whiteSpace: 'nowrap',
-                                }}
+                                type="button"
+                                className={styles.iconButton}
+                                title="Gửi báo giá"
+                                onClick={() => setOpenQuote(true)}
                             >
-                                <FileText size={16} color="#fff" />
-                                Tạo báo giá
+                                <Paperclip size={20} color="#4A5E8B" />
                             </button>
                         )}
-
-                        <button className={styles.iconButton} title="Gửi hình ảnh">
-                            <Image size={20} color="#4A5E8B" />
+                        {showPriceAdjustAction && role === 'technician' && (
+                            <button
+                                type="button"
+                                className={styles.iconButton}
+                                title="Cập nhật giá thực tế"
+                                onClick={onOpenPriceAdjust}
+                            >
+                                <Coins size={20} color="#4A5E8B" />
+                            </button>
+                        )}
+                        <button type="button" className={styles.iconButton} title="Gửi hình ảnh" disabled>
+                            <Image size={20} color="#94a3b8" />
                         </button>
-
-                        <button className={styles.iconButton} title="Biểu cảm">
-                            <Smile size={20} color="#4A5E8B" />
+                        <button type="button" className={styles.iconButton} title="Biểu cảm" disabled>
+                            <Smile size={20} color="#94a3b8" />
                         </button>
                     </>
                 }
                 rightElement={
                     <button
+                        type="button"
                         className={styles.sendButton}
                         onClick={handleSend}
-                        disabled={disabled || !message.trim()}
+                        disabled={!message.trim()}
                     >
                         <SendHorizontal size={20} color="white" />
                     </button>
@@ -86,7 +82,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                     placeholder="Nhập tin nhắn..."
                     rows={1}
                     value={message}
-                    disabled={disabled}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
@@ -97,11 +92,10 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                 />
             </ChatInputWrapper>
 
-            {/* MODAL (tách ra ngoài) — chỉ thợ mới tạo báo giá */}
-            {canQuote && (
+            {showQuoteAction && onCreateQuote && (
                 <QuoteCreateModal
-                    open={open}
-                    onClose={() => setOpen(false)}
+                    open={openQuote}
+                    onClose={() => setOpenQuote(false)}
                     onSubmit={onCreateQuote}
                 />
             )}
