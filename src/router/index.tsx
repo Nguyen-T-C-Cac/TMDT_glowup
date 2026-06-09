@@ -33,6 +33,7 @@ import TechnicianVerificationPage from '../pages/TechnicianVerificationPage'
 import TechnicianVerificationStatusPage from '../pages/TechnicianVerificationStatusPage'
 import TechnicianWalletPage from '../pages/TechnicianWalletPage'
 import TechnicianWalletTopUpPage from '../pages/TechnicianWalletTopUpPage'
+import TechnicianWalletTopUpResultPage from '../pages/TechnicianWalletTopUpResultPage'
 import TechnicianWalletWithdrawPage from '../pages/TechnicianWalletWithdrawPage'
 import VoucherRewardsPage from '../pages/VoucherRewardsPage'
 
@@ -56,6 +57,7 @@ export default function AppRouter() {
         <Route path="jobs" element={<TechnicianLayout activeItem="jobs"><OrderManagementPage role="technician" /></TechnicianLayout>} />
         <Route path="wallet" element={<TechnicianLayout activeItem="wallet"><TechnicianWalletPage /></TechnicianLayout>} />
         <Route path="wallet/topup" element={<TechnicianLayout activeItem="wallet"><TechnicianWalletTopUpPage /></TechnicianLayout>} />
+        <Route path="wallet/topup-result" element={<TechnicianLayout activeItem="wallet"><TechnicianWalletTopUpResultPage /></TechnicianLayout>} />
         <Route path="wallet/withdraw" element={<TechnicianLayout activeItem="wallet"><TechnicianWalletWithdrawPage /></TechnicianLayout>} />
         <Route path="profile" element={<TechnicianLayout activeItem="profile"><TechnicianProfileSettingsPage /></TechnicianLayout>} />
         <Route path="verification" element={<TechnicianVerificationPage />} />
