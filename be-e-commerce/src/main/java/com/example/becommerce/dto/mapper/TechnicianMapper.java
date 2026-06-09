@@ -40,6 +40,7 @@ public class TechnicianMapper {
                 .location(user == null ? null : user.getAddress())
                 .district(user == null ? null : user.getDistrict())
                 .skills(emptyToNull(profile.getSkills()))
+                .areas(emptyToNull(profile.getAreas()))
                 .pricePerHour(profile.getPricePerHour())
                 .isAvailable(profile.isAvailable())
                 .timeAvailable(profile.getTimeAvailable())

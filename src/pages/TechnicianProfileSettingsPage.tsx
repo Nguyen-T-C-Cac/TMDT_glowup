@@ -212,7 +212,7 @@ export default function TechnicianProfileSettingsPage() {
       if (userCode) {
         await technicianService.updateTechnicianProfile(userCode, {
           skills,
-          district: areas[0] || '',
+          areas, // Gửi danh sách khu vực (not just first item as district)
           bio: profile.bio,
         });
       }
