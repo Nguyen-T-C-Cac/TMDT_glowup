@@ -86,7 +86,9 @@
 
 /* QUOTATION CARD */
 .quotationCard {
-    width: 350px;
+    width: 100%;
+    max-width: 350px;
+    box-sizing: border-box;
     border-radius: 16px;
     background: var(--white);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);

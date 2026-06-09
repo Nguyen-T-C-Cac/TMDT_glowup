@@ -4,13 +4,17 @@ import { Avatar } from '../common/Avatar';
 import type { Contact } from '../../types/Message.ts';
 
 // Component Thẻ liên lạc
-export const ContactItem: React.FC<{ contact: Contact; isActive?: boolean }> = ({ contact, isActive }) => (
-  <div className={`${styles.contactItem} ${isActive ? styles.contactItemActive : ''}`}>
-    <Avatar 
-        src={contact.avatar} 
-        alt={contact.name} 
-        size={48} 
-        isOnline={contact.isOnline} 
+export const ContactItem: React.FC<{ contact: Contact; isActive?: boolean; onClick?: () => void }> = ({ contact, isActive, onClick }) => (
+  <div
+    className={`${styles.contactItem} ${isActive ? styles.contactItemActive : ''}`}
+    onClick={onClick}
+    style={onClick ? { cursor: 'pointer' } : undefined}
+  >
+    <Avatar
+        src={contact.avatar}
+        alt={contact.name}
+        size={48}
+        isOnline={contact.isOnline}
     />
     <div style={{ flex: 1 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>

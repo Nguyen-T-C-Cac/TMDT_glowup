@@ -32,6 +32,8 @@ export const ProviderProfile: React.FC = () => {
 
   const profileData = providerData ? {
     ...defaultProfile,
+    // Technician user code (e.g. USR-004) — needed to open a real conversation.
+    code: providerData.code || providerData.id,
     name: providerData.name,
     avatar: providerData.avatar,
     rating: providerData.rating || 4.9,
