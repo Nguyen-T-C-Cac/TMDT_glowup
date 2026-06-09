@@ -500,7 +500,12 @@ public class AdminServiceImpl implements AdminService {
         User technician = userRepository.findByCodeAndDeletedFalse(request.getTechnicianId())
                 .orElseThrow(() -> AppException.notFound("Không tìm thấy kỹ thuật viên"));
         Wallet wallet = walletRepository.findWithLockByUser_Id(technician.getId())
-                .orElseGet(() -> walletRepository.save(Wallet.builder().user(technician).currency("VND").build()));
+                .orElseGet(() -> walletRepository.save(Wallet.builder()
+                        .user(technician)
+                        .balance(BigDecimal.ZERO)
+                        .personalBalance(BigDecimal.ZERO)
+                        .currency("VND")
+                        .build()));
         BigDecimal newBalance = wallet.getBalance().add(request.getAmount());
         if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
             throw AppException.badRequest(ErrorCode.INSUFFICIENT_BALANCE, "Số dư ví không đủ để điều chỉnh");
