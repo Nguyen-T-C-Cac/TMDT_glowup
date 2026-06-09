@@ -10,6 +10,10 @@ const apiClient = axios.create({
     // KHÔNG đặt Content-Type mặc định ở đây.
     // Axios sẽ tự động đặt 'multipart/form-data' khi body là FormData,
     // và 'application/json' khi body là object thường.
+
+    headers: {
+        'Content-Type': 'application/json',
+    },
 });
 
 // ─── Request interceptor: gắn JWT Bearer token ───────────────────────────────

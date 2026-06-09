@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   FaArrowRight,
   FaArrowTrendDown,
@@ -9,92 +9,135 @@ import {
   FaMoneyBillTransfer,
   FaShieldHalved,
   FaWallet,
-} from 'react-icons/fa6';
-import './TechnicianWalletPage.css';
+} from 'react-icons/fa6'
+import {
+  getTechnicianWalletHistory,
+  getTechnicianWalletSummary,
+  type TechnicianWalletHistoryItem,
+  type TechnicianWalletSummary,
+} from '../services/walletService'
+import './TechnicianWalletPage.css'
 
-type WalletType = 'all' | 'credit' | 'personal';
+type WalletType = 'all' | 'credit' | 'personal'
 
 type HistoryRow = {
-  id: string;
-  date: string;
-  title: string;
-  category: string;
-  amount: number;
-  status: 'success' | 'pending';
-  walletType: Exclude<WalletType, 'all'>;
-  note: string;
-};
+  id: string
+  date: string
+  title: string
+  category: string
+  amount: number
+  status: 'success' | 'pending' | 'failed'
+  walletType: Exclude<WalletType, 'all'>
+  note: string
+}
 
-const walletBalances = {
-  credit: 900000,
-  personal: 650000,
-};
+const formatMoney = (amount: number, signed: boolean = false) => {
+  const value = Math.abs(amount).toLocaleString('vi-VN')
+  if (!signed) {
+    return `${value}đ`
+  }
 
-const historyData: HistoryRow[] = [
-  {
-    id: 'TX-240524-01',
-    date: '24/05/2024',
-    title: 'Nạp ví tín dụng qua MoMo',
-    category: 'NẠP TIỀN',
-    amount: 500000,
-    status: 'success',
-    walletType: 'credit',
-    note: 'Tăng số dư để hệ thống khấu trừ cho đơn tiền mặt.',
-  },
-  {
-    id: 'TX-240524-02',
-    date: '24/05/2024',
-    title: 'Khấu trừ đơn tiền mặt #102',
-    category: 'KHẤU TRỪ TỰ ĐỘNG',
-    amount: -50000,
-    status: 'success',
-    walletType: 'credit',
-    note: 'Backend trừ từ ví tín dụng sau khi hoàn tất giao dịch tiền mặt.',
-  },
-  {
-    id: 'TX-230524-01',
-    date: '23/05/2024',
-    title: 'Doanh thu chuyển về ví cá nhân',
-    category: 'ĐỐI SOÁT',
-    amount: 350000,
-    status: 'success',
-    walletType: 'personal',
-    note: 'Thu nhập khả dụng để rút về tài khoản ngân hàng.',
-  },
-  {
-    id: 'TX-230524-02',
-    date: '23/05/2024',
-    title: 'Rút tiền về Vietcombank',
-    category: 'RÚT TIỀN',
-    amount: -1000000,
-    status: 'pending',
-    walletType: 'personal',
-    note: 'Yêu cầu đang chờ xử lý và chỉ áp dụng cho ví cá nhân.',
-  },
-];
+  return `${amount < 0 ? '-' : '+'}${value}đ`
+}
 
-const formatMoney = (amount: number) =>
-  `${amount < 0 ? '-' : '+'}${Math.abs(amount).toLocaleString('vi-VN')}đ`;
+const formatDateLabel = (value: string) => {
+  if (!value) {
+    return '--'
+  }
 
-const walletFilterCounts: Record<WalletType, number> = {
-  all: historyData.length,
-  credit: historyData.filter((item) => item.walletType === 'credit').length,
-  personal: historyData.filter((item) => item.walletType === 'personal').length,
-};
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return date.toLocaleDateString('vi-VN')
+}
+
+const toHistoryRow = (item: TechnicianWalletHistoryItem): HistoryRow => ({
+  id: item.id,
+  date: formatDateLabel(item.createdAt),
+  title: item.title,
+  category: item.category || item.type,
+  amount: item.amount,
+  status: item.status,
+  walletType: item.walletGroup,
+  note: item.note || (item.relatedOrderCode ? `Đơn liên quan: ${item.relatedOrderCode}` : ''),
+})
+
+const defaultSummary: TechnicianWalletSummary = {
+  userId: '',
+  creditBalance: 0,
+  personalBalance: 0,
+  pendingBalance: 0,
+  totalEarned: 0,
+  totalWithdrawn: 0,
+  currency: 'VND',
+  status: 'normal',
+  updatedAt: '',
+}
 
 const TechnicianWalletPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [activeFilter, setActiveFilter] = useState<WalletType>('all');
+  const navigate = useNavigate()
+  const [activeFilter, setActiveFilter] = useState<WalletType>('all')
+  const [summary, setSummary] = useState<TechnicianWalletSummary>(defaultSummary)
+  const [historyItems, setHistoryItems] = useState<HistoryRow[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const totalBalance = walletBalances.credit + walletBalances.personal;
+  useEffect(() => {
+    let mounted = true
+
+    const loadWalletData = async () => {
+      setIsLoading(true)
+      setError('')
+
+      try {
+        const [walletSummary, walletHistory] = await Promise.all([
+          getTechnicianWalletSummary(),
+          getTechnicianWalletHistory(),
+        ])
+
+        if (!mounted) {
+          return
+        }
+
+        setSummary(walletSummary)
+        setHistoryItems(walletHistory.map(toHistoryRow))
+      } catch (loadError) {
+        if (!mounted) {
+          return
+        }
+
+        setError(loadError instanceof Error ? loadError.message : 'Không thể tải dữ liệu ví')
+      } finally {
+        if (mounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadWalletData()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const totalBalance = summary.creditBalance + summary.personalBalance
 
   const visibleHistory = useMemo(() => {
     if (activeFilter === 'all') {
-      return historyData;
+      return historyItems
     }
 
-    return historyData.filter((item) => item.walletType === activeFilter);
-  }, [activeFilter]);
+    return historyItems.filter((item) => item.walletType === activeFilter)
+  }, [activeFilter, historyItems])
+
+  const walletFilterCounts: Record<WalletType, number> = useMemo(() => ({
+    all: historyItems.length,
+    credit: historyItems.filter((item) => item.walletType === 'credit').length,
+    personal: historyItems.filter((item) => item.walletType === 'personal').length,
+  }), [historyItems])
 
   return (
     <div className="wallet-home">
@@ -103,20 +146,21 @@ const TechnicianWalletPage: React.FC = () => {
           <p className="wallet-home-kicker">GlowUp Service</p>
           <h1>Quản lý 2 ví của kỹ thuật viên</h1>
           <p className="wallet-home-subtitle">
-            Tách riêng ví dùng để nạp chi phí vận hành và ví nhận thu nhập rút về ngân hàng.
+            Tách riêng ví dùng để duy trì hoạt động trên hệ thống và ví nhận thu nhập để rút về ngân hàng.
           </p>
         </div>
       </header>
+
+      {error ? <div className="wallet-overview-card"><p>{error}</p></div> : null}
 
       <section className="wallet-overview-card">
         <div className="wallet-overview-copy">
           <span className="wallet-balance-label">
             <FaWallet /> Tổng số dư đang theo dõi
           </span>
-          <strong>{totalBalance.toLocaleString('vi-VN')}đ</strong>
+          <strong>{isLoading ? 'Đang tải...' : formatMoney(summary.personalBalance)}</strong>
           <p>
-            Ví tín dụng dùng để nạp tiền vào hệ thống và cho backend khấu trừ khi có giao dịch tiền mặt.
-            Ví cá nhân là nơi giữ thu nhập khả dụng để rút tiền.
+            Ví tín dụng dùng để duy trì số dư hoạt động và tự động trừ phí dịch vụ. Ví cá nhân là nơi nhận thu nhập để rút về ngân hàng.
           </p>
         </div>
 
@@ -124,15 +168,21 @@ const TechnicianWalletPage: React.FC = () => {
           <article>
             <FaShieldHalved />
             <div>
-              <strong>Khấu trừ đúng ví</strong>
-              <span>Giao dịch tiền mặt chỉ ảnh hưởng ví tín dụng.</span>
+              <strong>Trạng thái ví tín dụng</strong>
+              <span>
+                {summary.status === 'locked'
+                  ? 'Đang bị khóa nhận đơn do không đủ ngưỡng.'
+                  : summary.status === 'low_balance'
+                    ? 'Số dư đang thấp hơn mức an toàn.'
+                    : 'Đang đủ điều kiện hoạt động.'}
+              </span>
             </div>
           </article>
           <article>
-            <FaMoneyBillTransfer />
+            <FaWallet />
             <div>
-              <strong>Rút tiền rõ ràng</strong>
-              <span>Chỉ ví cá nhân mới có thể tạo yêu cầu rút tiền.</span>
+              <strong>Tiền có thể rút</strong>
+              <span>{formatMoney(summary.personalBalance)} sẵn sàng rút về tài khoản liên kết.</span>
             </div>
           </article>
         </div>
@@ -146,13 +196,13 @@ const TechnicianWalletPage: React.FC = () => {
             </span>
             <div>
               <p>Ví tín dụng</p>
-              <strong>{walletBalances.credit.toLocaleString('vi-VN')}đ</strong>
+              <strong>{formatMoney(summary.creditBalance)}</strong>
             </div>
           </div>
 
           <ul className="wallet-pocket-list">
             <li>Nạp tiền để duy trì số dư hoạt động trên hệ thống.</li>
-            <li>Backend tự động trừ khi hoàn tất đơn thanh toán tiền mặt.</li>
+            <li>Phí dịch vụ sẽ được tự động trừ sau mỗi đơn hoàn thành.</li>
             <li>Không dùng để rút tiền về ngân hàng.</li>
           </ul>
 
@@ -167,7 +217,7 @@ const TechnicianWalletPage: React.FC = () => {
             </button>
           </div>
 
-          <p className="wallet-pocket-note">Hệ thống chỉ sử dụng ví này để khấu trừ các đơn thanh toán tiền mặt.</p>
+          <p className="wallet-pocket-note">Ví này chỉ dùng cho chi phí hoạt động trên hệ thống.</p>
         </article>
 
         <article className="wallet-pocket-card personal">
@@ -177,7 +227,7 @@ const TechnicianWalletPage: React.FC = () => {
             </span>
             <div>
               <p>Ví cá nhân</p>
-              <strong>{walletBalances.personal.toLocaleString('vi-VN')}đ</strong>
+              <strong>{formatMoney(summary.personalBalance)}</strong>
             </div>
           </div>
 
@@ -199,26 +249,6 @@ const TechnicianWalletPage: React.FC = () => {
           </div>
 
           <p className="wallet-pocket-note">Số dư ví cá nhân có thể dùng để rút về tài khoản ngân hàng đã liên kết.</p>
-        </article>
-      </section>
-
-      <section className="wallet-rules-grid">
-        <article className="wallet-rule-card">
-          <p className="wallet-section-kicker">Luồng nạp tiền</p>
-          <h2>Ví tín dụng phục vụ vận hành</h2>
-          <p>
-            Khi kỹ thuật viên nạp tiền, hệ thống cộng vào ví tín dụng. Số dư này chỉ dành cho các
-            khoản backend cần khấu trừ sau đơn hàng thu tiền mặt.
-          </p>
-        </article>
-
-        <article className="wallet-rule-card">
-          <p className="wallet-section-kicker">Luồng rút tiền</p>
-          <h2>Ví cá nhân phục vụ thanh toán ra ngoài</h2>
-          <p>
-            Thu nhập sau đối soát được đưa vào ví cá nhân. Người dùng có thể chủ động rút tiền về
-            ngân hàng mà không làm ảnh hưởng số dư vận hành.
-          </p>
         </article>
       </section>
 
@@ -265,32 +295,48 @@ const TechnicianWalletPage: React.FC = () => {
               <span>
                 <strong>{item.title}</strong>
                 <small>{item.category}</small>
-                <em>{item.note}</em>
+                <em>{item.note || 'Giao dịch ví'}</em>
               </span>
               <span>
                 <b className={`wallet-chip ${item.walletType}`}>
                   {item.walletType === 'credit' ? 'Ví tín dụng' : 'Ví cá nhân'}
                 </b>
               </span>
-              <span className={item.amount > 0 ? 'amount-in' : 'amount-out'}>{formatMoney(item.amount)}</span>
+              <span className={item.amount > 0 ? 'amount-in' : 'amount-out'}>{formatMoney(item.amount, true)}</span>
               <span>
                 <b className={`wallet-status ${item.status}`}>
-                  {item.status === 'success' ? 'Thành công' : 'Đang xử lý'}
+                  {item.status === 'success' ? 'Thành công' : item.status === 'failed' ? 'Thất bại' : 'Đang xử lý'}
                 </b>
               </span>
             </div>
           ))}
+
+          {!isLoading && visibleHistory.length === 0 ? (
+            <div className="wallet-history-row">
+              <span>--</span>
+              <span>
+                <strong>Chưa có giao dịch</strong>
+                <small>Lịch sử sẽ hiển thị sau khi phát sinh nạp tiền, hoàn thành đơn hoặc rút tiền.</small>
+                <em />
+              </span>
+              <span>--</span>
+              <span>0đ</span>
+              <span>--</span>
+            </div>
+          ) : null}
         </div>
 
         <div className="wallet-history-footer">
-          <span>Hiển thị lịch sử mẫu cho 2 loại ví</span>
-          <button type="button">
-            Xem tất cả lịch sử <FaArrowRight />
+          <span>
+            {isLoading ? 'Đang tải lịch sử giao dịch...' : `Đã tải ${historyItems.length} giao dịch gần nhất`}
+          </span>
+          <button type="button" onClick={() => window.location.reload()}>
+            Tải lại <FaArrowRight />
           </button>
         </div>
       </section>
     </div>
-  );
-};
+  )
+}
 
-export default TechnicianWalletPage;
+export default TechnicianWalletPage

@@ -1,6 +1,5 @@
 package com.example.becommerce.entity;
 
-import com.example.becommerce.entity.enums.WalletStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -45,6 +44,10 @@ public class Wallet {
     @Builder.Default
     private BigDecimal pendingBalance = BigDecimal.ZERO;
 
+    @Column(name = "personal_balance", nullable = true, precision = 19, scale = 0)
+    @Builder.Default
+    private BigDecimal personalBalance = BigDecimal.ZERO;
+
     @Column(name = "total_earned", nullable = false, precision = 19, scale = 0)
     @Builder.Default
     private BigDecimal totalEarned = BigDecimal.ZERO;
@@ -72,5 +75,28 @@ public class Wallet {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-}
 
+    public void normalizeForPersistence() {
+        if (balance == null) {
+            balance = BigDecimal.ZERO;
+        }
+        if (pendingBalance == null) {
+            pendingBalance = BigDecimal.ZERO;
+        }
+        if (personalBalance == null) {
+            personalBalance = BigDecimal.ZERO;
+        }
+        if (totalEarned == null) {
+            totalEarned = BigDecimal.ZERO;
+        }
+        if (totalWithdrawn == null) {
+            totalWithdrawn = BigDecimal.ZERO;
+        }
+        if (currency == null || currency.isBlank()) {
+            currency = "VND";
+        }
+        if (version == null) {
+            version = 0L;
+        }
+    }
+}

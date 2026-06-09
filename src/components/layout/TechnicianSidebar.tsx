@@ -9,8 +9,8 @@ import './technicianSidebar.css';
 const DEFAULT_AVATAR = 'https://i.pravatar.cc/150?img=28';
 
 interface SidebarProps {
-    activeItem?: string;
-    onNavigate?: (page: string) => void;
+  activeItem?: string
+  onNavigate?: (page: string) => void
 }
 
 export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashboard', onNavigate }) => {
