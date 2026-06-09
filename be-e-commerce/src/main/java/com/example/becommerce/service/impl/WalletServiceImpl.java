@@ -26,6 +26,7 @@ import com.example.becommerce.entity.enums.PaymentMethod;
 import com.example.becommerce.entity.enums.TransactionStatus;
 import com.example.becommerce.entity.enums.TransactionType;
 import com.example.becommerce.entity.enums.WalletStatus;
+import com.example.becommerce.entity.enums.WalletType;
 import com.example.becommerce.exception.AppException;
 import com.example.becommerce.repository.BankAccountRepository;
 import com.example.becommerce.repository.SystemSettingRepository;
@@ -146,6 +147,7 @@ public class WalletServiceImpl implements WalletService {
                 .transactionCode(transactionCode)
                 .wallet(wallet)
                 .type(TransactionType.TOPUP)
+                .walletType(WalletType.CREDIT)
                 .category(MoneyUtils.buildCategory(TransactionType.TOPUP))
                 .title("Nạp tiền vào ví")
                 .amount(amount)
@@ -238,6 +240,7 @@ public class WalletServiceImpl implements WalletService {
                 .transactionCode(transactionCode)
                 .wallet(wallet)
                 .type(TransactionType.WITHDRAW)
+                .walletType(WalletType.PERSONAL)
                 .category(MoneyUtils.buildCategory(TransactionType.WITHDRAW))
                 .title("Yêu cầu rút tiền về ngân hàng")
                 .amount(amount)
@@ -455,7 +458,6 @@ public class WalletServiceImpl implements WalletService {
                 .orElseThrow(() -> AppException.notFound("Không tìm thấy người dùng hiện tại"));
     }
 }
-
 
 
 

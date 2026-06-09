@@ -27,6 +27,7 @@ import com.example.becommerce.entity.enums.PriceAdjustmentStatus;
 import com.example.becommerce.entity.enums.Role;
 import com.example.becommerce.entity.enums.TransactionStatus;
 import com.example.becommerce.entity.enums.TransactionType;
+import com.example.becommerce.entity.enums.WalletType;
 import com.example.becommerce.exception.AppException;
 import com.example.becommerce.repository.OrderPriceAdjustmentRepository;
 import com.example.becommerce.repository.OrderRepository;
@@ -428,6 +429,7 @@ public class OrderServiceImpl implements OrderService {
                 .wallet(wallet)
                 .order(order)
                 .type(TransactionType.COMMISSION)
+                .walletType(WalletType.PERSONAL)
                 .category("REVENUE")
                 .title("Thu nhập đơn hoàn thành")
                 .amount(finalPrice)
@@ -452,6 +454,7 @@ public class OrderServiceImpl implements OrderService {
                 .wallet(wallet)
                 .order(order)
                 .type(TransactionType.COMMISSION)
+                .walletType(WalletType.CREDIT)
                 .category("COMMISSION_DEDUCTION")
                 .title("Trừ phí hoa hồng")
                 .amount(commissionFee.negate())
@@ -762,6 +765,7 @@ public class OrderServiceImpl implements OrderService {
                 .transactionCode(transactionCodeGenerator.generateTransactionCode(TransactionType.PAYMENT))
                 .wallet(wallet)
                 .type(TransactionType.PAYMENT)
+                .walletType(WalletType.PERSONAL)
                 .category("PAYMENT")
                 .title("Thanh toán đơn hàng " + order.getCode())
                 .amount(finalPrice)

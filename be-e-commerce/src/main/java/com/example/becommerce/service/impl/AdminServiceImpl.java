@@ -26,6 +26,7 @@ import com.example.becommerce.entity.enums.TransactionStatus;
 import com.example.becommerce.entity.enums.TransactionType;
 import com.example.becommerce.entity.enums.UserStatus;
 import com.example.becommerce.entity.enums.WalletStatus;
+import com.example.becommerce.entity.enums.WalletType;
 import com.example.becommerce.exception.AppException;
 import com.example.becommerce.repository.CategoryRepository;
 import com.example.becommerce.repository.OrderRepository;
@@ -517,6 +518,7 @@ public class AdminServiceImpl implements AdminService {
                 .transactionCode(transactionCodeGenerator.generateTransactionCode(TransactionType.COMMISSION))
                 .wallet(wallet)
                 .type(TransactionType.COMMISSION)
+                .walletType(WalletType.CREDIT)
                 .category(request.getType())
                 .title(request.getReason())
                 .amount(request.getAmount())
