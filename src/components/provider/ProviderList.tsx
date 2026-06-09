@@ -1,197 +1,176 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import './ProviderList.css';
-import { ProviderCard, type ProviderProps } from './ProviderCard';
+import { ProviderCard } from './ProviderCard';
 import { PremiumProviderCard } from './PremiumProviderCard';
 import { ChevronDownIcon } from '../common/Icons';
-import RepairRequestModal from "../modal/RepairRequestModal.tsx";
-import { getAllTechnicians } from '../../services/providerService';
-import { mapTechnicianToProviderListItem, type ProviderListItemView } from '../../services/technicianMapper';
-
-type ProviderListItem = ProviderListItemView;
+import RepairRequestModal from '../modal/RepairRequestModal.tsx';
+import { technicianService } from '../../services/technician/technicianService';
+import {
+  mapListItemToProviderEntry,
+  type ProviderListEntry,
+} from '../../utils/technicianMappers';
 
 interface Props {
-    onNavigate?: (page: string, data?: any) => void;
-    selectedService?: string;
-    currentPage?: number;
-    setCurrentPage?: (page: number) => void;
-    setTotalPages?: (total: number) => void;
+  onNavigate?: (page: string, data?: unknown) => void;
+  selectedService?: string;
+  currentPage?: number;
+  setCurrentPage?: (page: number) => void;
+  setTotalPages?: (total: number) => void;
 }
 
 export const ProviderList: React.FC<Props> = ({
-    onNavigate,
-    selectedService,
-    setCurrentPage,
-    setTotalPages
+  onNavigate,
+  selectedService,
+  currentPage = 1,
+  setCurrentPage,
+  setTotalPages,
 }) => {
-    const [isSortOpen, setIsSortOpen] = useState(false);
-    const [selectedSort, setSelectedSort] = useState('PHỔ BIẾN NHẤT');
-    const [providers, setProviders] = useState<ProviderListItem[]>([]);
-    const [selectedProvider, setSelectedProvider] = useState<ProviderProps | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [totalProviders, setTotalProviders] = useState(0);
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [selectedSort, setSelectedSort] = useState('PHỔ BIẾN NHẤT');
+  const ITEMS_PER_PAGE = 7;
+  const [selectedProvider, setSelectedProvider] = useState<ProviderListEntry | null>(null);
+  const [providers, setProviders] = useState<ProviderListEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [resultTotal, setResultTotal] = useState(0);
 
-    const sortProviders = (items: ProviderListItem[]) => {
-        const sorted = [...items];
+  const handleNavigate = (page: string, data?: unknown) => {
+    if (page === 'open-modal') {
+      setSelectedProvider(data as ProviderListEntry);
+      return;
+    }
+    onNavigate?.(page, data);
+  };
 
-        sorted.sort((a, b) => {
-            if (!selectedService) {
-                if (a.type === 'premium' && b.type !== 'premium') return -1;
-                if (b.type === 'premium' && a.type !== 'premium') return 1;
-            }
+  const loadProviders = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
 
-            if (selectedSort === 'PHỔ BIẾN NHẤT') {
-                return (b.reviewCount ?? 0) - (a.reviewCount ?? 0);
-            }
+    try {
+      const minRating = selectedSort === 'ĐÁNH GIÁ CAO NHẤT' ? 4.5 : undefined;
+      const data = await technicianService.listTechnicians({
+        service: selectedService,
+        page: currentPage,
+        limit: ITEMS_PER_PAGE,
+        minRating,
+      });
 
-            if (selectedSort === 'ĐÁNH GIÁ CAO NHẤT') {
-                return (b.rating ?? 0) - (a.rating ?? 0);
-            }
+      let items = data.items.map(mapListItemToProviderEntry);
 
-            if (selectedSort === 'GIÁ THẤP NHẤT') {
-                const getPriceValue = (item: ProviderListItem) => {
-                    if (item.type === 'premium') return Number.MAX_SAFE_INTEGER;
-                    const raw = item.price.replace(/[^0-9]/g, '');
-                    return Number(raw || Number.MAX_SAFE_INTEGER);
-                };
-
-                return getPriceValue(a) - getPriceValue(b);
-            }
-
-            return 0;
+      if (selectedSort === 'GIÁ THẤP NHẤT') {
+        items = [...items].sort((a, b) => {
+          const priceA =
+            a.kind === 'normal'
+              ? Number.parseInt(a.price.replace(/\D/g, ''), 10) || Number.MAX_SAFE_INTEGER
+              : Number.MAX_SAFE_INTEGER;
+          const priceB =
+            b.kind === 'normal'
+              ? Number.parseInt(b.price.replace(/\D/g, ''), 10) || Number.MAX_SAFE_INTEGER
+              : Number.MAX_SAFE_INTEGER;
+          return priceA - priceB;
         });
+      }
 
-        return sorted;
-    };
+      setProviders(items);
+      setResultTotal(data.pagination.total);
+      setTotalPages?.(Math.max(1, data.pagination.totalPages));
+    } catch (error) {
+      setProviders([]);
+      setResultTotal(0);
+      setTotalPages?.(1);
+      setLoadError(
+        error instanceof Error ? error.message : 'Không thể tải danh sách thợ'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, selectedService, selectedSort, setTotalPages]);
 
-    const handleNavigate = (page: string, data?: any) => {
-        if (page === 'open-modal') {
-            setSelectedProvider(data);
-            return;
-        }
-        onNavigate?.(page, data);
-    };
+  useEffect(() => {
+    loadProviders();
+  }, [loadProviders]);
 
-    useEffect(() => {
-        let isMounted = true;
+  useEffect(() => {
+    setCurrentPage?.(1);
+  }, [selectedService, selectedSort, setCurrentPage]);
 
-        const fetchProviders = async () => {
-            try {
-                setLoading(true);
-                setError(null);
+  const pageTitle = selectedService
+    ? `Thợ chuyên ${selectedService}`
+    : 'Thợ sửa chữa chuyên nghiệp';
 
-                const technicians = await getAllTechnicians({
-                    service: selectedService,
-                });
+  const resultCount = useMemo(
+    () => providers.filter((p) => p.kind !== 'premium').length,
+    [providers]
+  );
 
-                if (!isMounted) return;
-
-                setProviders(technicians.map(mapTechnicianToProviderListItem));
-                setTotalProviders(technicians.length);
-                if (setTotalPages) setTotalPages(1);
-            } catch (fetchError) {
-                console.error('Failed to fetch providers:', fetchError);
-                if (isMounted) {
-                    setError('Không thể tải danh sách thợ');
-                    setProviders([]);
-                    setTotalProviders(0);
-                    if (setTotalPages) setTotalPages(1);
-                }
-            } finally {
-                if (isMounted) {
-                    setLoading(false);
-                }
-            }
-        };
-
-        fetchProviders();
-
-        return () => {
-            isMounted = false;
-        };
-    }, [selectedService, setTotalPages]);
-
-    const sortedProviders = useMemo(() => sortProviders(providers), [providers, selectedSort, selectedService]);
-
-    const pageTitle = selectedService
-        ? `Thợ chuyên ${selectedService}`
-        : 'Thợ sửa chữa chuyên nghiệp';
-
-    const resultCount = totalProviders;
-
-    useEffect(() => {
-        if (setCurrentPage) setCurrentPage(1);
-    }, [selectedService, selectedSort, setCurrentPage]);
-
-    return (
-        <div className="provider-list-container">
-            <div className="pl-header">
-                <div className="pl-header-left">
-                    <h1 className="pl-title">{pageTitle}</h1>
-                    <p className="pl-subtitle">
-                        Tìm thấy {resultCount} chuyên gia
-                        {selectedService && <span className="pl-service-tag">{selectedService}</span>}
-                        {' '}tại khu vực TP.HCM
-                    </p>
-                </div>
-                <div className="pl-sort" style={{ position: 'relative' }}>
-                    <span className="sort-label">SẮP XẾP:</span>
-                    <button className="sort-btn" onClick={() => setIsSortOpen(!isSortOpen)}>
-                        {selectedSort} <ChevronDownIcon size={14} className="sort-icon" />
-                    </button>
-
-                    {isSortOpen && (
-                        <div className="sort-dropdown">
-                            {['PHỔ BIẾN NHẤT', 'ĐÁNH GIÁ CAO NHẤT', 'GIÁ THẤP NHẤT'].map(option => (
-                                <div
-                                    key={option}
-                                    className={`sort-option ${selectedSort === option ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setSelectedSort(option);
-                                        setIsSortOpen(false);
-                                    }}
-                                >
-                                    {option}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            <div className="pl-cards">
-                {loading && (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px 20px' }}>
-                        <p>Đang tải danh sách thợ...</p>
-                    </div>
-                )}
-
-                {error && (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px 20px', color: '#e74c3c' }}>
-                        <p>{error}</p>
-                    </div>
-                )}
-
-                {!loading && !error && sortedProviders.map((p) => {
-                    if (p.type === 'premium') {
-                        return <PremiumProviderCard key={p.id} provider={p} onNavigate={onNavigate} />;
-                    }
-                    return <ProviderCard key={p.id} provider={p} onNavigate={handleNavigate} />;
-                })}
-            </div>
-
-            {!loading && !error && resultCount === 0 && (
-                <div className="pl-empty">
-                    <p>Hiện chưa có thợ nào cho dịch vụ "{selectedService}".</p>
-                    <p>Hãy thử tìm kiếm dịch vụ khác.</p>
-                </div>
-            )}
-
-            <RepairRequestModal
-                open={!!selectedProvider}
-                onClose={() => setSelectedProvider(null)}
-                provider={selectedProvider || undefined}
-            />
+  return (
+    <div className="provider-list-container">
+      <div className="pl-header">
+        <div className="pl-header-left">
+          <h1 className="pl-title">{pageTitle}</h1>
+          <p className="pl-subtitle">
+            Tìm thấy {resultTotal || resultCount} chuyên gia
+            {selectedService && <span className="pl-service-tag">{selectedService}</span>}{' '}
+            tại khu vực TP.HCM
+          </p>
         </div>
-    );
+        <div className="pl-sort" style={{ position: 'relative' }}>
+          <span className="sort-label">SẮP XẾP:</span>
+          <button className="sort-btn" type="button" onClick={() => setIsSortOpen(!isSortOpen)}>
+            {selectedSort} <ChevronDownIcon size={14} className="sort-icon" />
+          </button>
+
+          {isSortOpen && (
+            <div className="sort-dropdown">
+              {['PHỔ BIẾN NHẤT', 'ĐÁNH GIÁ CAO NHẤT', 'GIÁ THẤP NHẤT'].map((option) => (
+                <div
+                  key={option}
+                  className={`sort-option ${selectedSort === option ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedSort(option);
+                    setIsSortOpen(false);
+                  }}
+                >
+                  {option}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="pl-cards">
+        {isLoading && <p className="pl-empty">Đang tải danh sách thợ...</p>}
+        {!isLoading && loadError && <p className="pl-empty">{loadError}</p>}
+        {!isLoading &&
+          !loadError &&
+          providers.map((p) =>
+            p.kind === 'premium' ? (
+              <PremiumProviderCard
+                key={p.id}
+                provider={p}
+                onNavigate={(page, data) =>
+                  onNavigate?.(page, data ?? { id: p.id, name: p.name, avatar: p.avatar })
+                }
+              />
+            ) : (
+              <ProviderCard key={p.id} provider={p} onNavigate={handleNavigate} />
+            )
+          )}
+      </div>
+
+      {!isLoading && !loadError && providers.length === 0 && (
+        <div className="pl-empty">
+          <p>Hiện chưa có thợ nào{selectedService ? ` cho dịch vụ "${selectedService}"` : ''}.</p>
+          <p>Hãy thử tìm kiếm dịch vụ khác.</p>
+        </div>
+      )}
+
+      <RepairRequestModal
+        open={!!selectedProvider}
+        onClose={() => setSelectedProvider(null)}
+        technicianId={selectedProvider?.id}
+      />
+    </div>
+  );
 };
