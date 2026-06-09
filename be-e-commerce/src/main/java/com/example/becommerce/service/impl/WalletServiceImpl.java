@@ -26,8 +26,10 @@ import com.example.becommerce.entity.enums.PaymentMethod;
 import com.example.becommerce.entity.enums.TransactionStatus;
 import com.example.becommerce.entity.enums.TransactionType;
 import com.example.becommerce.entity.enums.WalletStatus;
+import com.example.becommerce.entity.enums.WalletType;
 import com.example.becommerce.exception.AppException;
 import com.example.becommerce.repository.BankAccountRepository;
+import com.example.becommerce.repository.SystemSettingRepository;
 import com.example.becommerce.repository.UserRepository;
 import com.example.becommerce.repository.WalletRepository;
 import com.example.becommerce.repository.WalletTransactionRepository;
@@ -67,6 +69,7 @@ public class WalletServiceImpl implements WalletService {
     private final WalletTransactionRepository walletTransactionRepository;
     private final BankAccountRepository bankAccountRepository;
     private final UserRepository userRepository;
+    private final SystemSettingRepository systemSettingRepository;
     private final WalletTransactionMapper walletTransactionMapper;
     private final BankAccountMapper bankAccountMapper;
     private final TransactionCodeGenerator transactionCodeGenerator;
@@ -144,6 +147,7 @@ public class WalletServiceImpl implements WalletService {
                 .transactionCode(transactionCode)
                 .wallet(wallet)
                 .type(TransactionType.TOPUP)
+                .walletType(WalletType.CREDIT)
                 .category(MoneyUtils.buildCategory(TransactionType.TOPUP))
                 .title("Nạp tiền vào ví")
                 .amount(amount)
@@ -216,7 +220,8 @@ public class WalletServiceImpl implements WalletService {
             throw AppException.badRequest(ErrorCode.WITHDRAW_AMOUNT_TOO_SMALL, "Số tiền rút phải lớn hơn phí rút");
         }
 
-        if (wallet.getBalance().compareTo(amount) < 0) {
+        BigDecimal personalBalance = safePersonalBalance(wallet);
+        if (personalBalance.compareTo(amount) < 0) {
             throw AppException.badRequest(ErrorCode.INSUFFICIENT_BALANCE, "Số dư ví không đủ để thực hiện rút tiền");
         }
 
@@ -225,7 +230,7 @@ public class WalletServiceImpl implements WalletService {
                 .orElseThrow(() -> AppException.notFound("Không tìm thấy tài khoản ngân hàng"));
 
         BigDecimal netAmount = amount.subtract(withdrawFee);
-        wallet.setBalance(wallet.getBalance().subtract(amount));
+        wallet.setPersonalBalance(personalBalance.subtract(amount));
         wallet.setPendingBalance(wallet.getPendingBalance().add(netAmount));
         wallet.setTotalWithdrawn(wallet.getTotalWithdrawn().add(amount));
         walletRepository.save(wallet);
@@ -235,12 +240,13 @@ public class WalletServiceImpl implements WalletService {
                 .transactionCode(transactionCode)
                 .wallet(wallet)
                 .type(TransactionType.WITHDRAW)
+                .walletType(WalletType.PERSONAL)
                 .category(MoneyUtils.buildCategory(TransactionType.WITHDRAW))
                 .title("Yêu cầu rút tiền về ngân hàng")
                 .amount(amount)
                 .fee(withdrawFee)
                 .netAmount(netAmount)
-                .afterBalance(wallet.getBalance().subtract(amount).longValueExact())
+                .afterBalance(safePersonalBalance(wallet).longValueExact())
                 .note("Yêu cầu rút tiền về tài khoản ngân hàng")
                 .actor(currentUser.getRole().name())
                 .status(TransactionStatus.PENDING)
@@ -340,6 +346,7 @@ public class WalletServiceImpl implements WalletService {
                                 .user(user)
                                 .balance(BigDecimal.ZERO)
                                 .pendingBalance(BigDecimal.ZERO)
+                                .personalBalance(BigDecimal.ZERO)
                                 .totalEarned(BigDecimal.ZERO)
                                 .totalWithdrawn(BigDecimal.ZERO)
                                 .currency(defaultCurrency)
@@ -359,6 +366,7 @@ public class WalletServiceImpl implements WalletService {
                                 .user(user)
                                 .balance(BigDecimal.ZERO)
                                 .pendingBalance(BigDecimal.ZERO)
+                                .personalBalance(BigDecimal.ZERO)
                                 .totalEarned(BigDecimal.ZERO)
                                 .totalWithdrawn(BigDecimal.ZERO)
                                 .currency(defaultCurrency)
@@ -374,6 +382,8 @@ public class WalletServiceImpl implements WalletService {
         return WalletResponse.builder()
                 .userId(wallet.getUser() != null ? wallet.getUser().getCode() : null)
                 .balance(wallet.getBalance())
+                .creditBalance(wallet.getBalance())
+                .personalBalance(safePersonalBalance(wallet))
                 .status(resolveWalletStatus(wallet.getBalance()).apiValue())
                 .pendingBalance(wallet.getPendingBalance())
                 .totalEarned(wallet.getTotalEarned())
@@ -384,7 +394,23 @@ public class WalletServiceImpl implements WalletService {
     }
 
     private WalletStatus resolveWalletStatus(BigDecimal balance) {
-        return WalletStatus.fromBalance(balance);
+        return WalletStatus.fromBalance(balance, getMinimumCommissionBalance());
+    }
+
+    private BigDecimal getMinimumCommissionBalance() {
+        return systemSettingRepository.findByKey("minimum_commission_balance")
+                .map(setting -> {
+                    try {
+                        return new BigDecimal(setting.getValue());
+                    } catch (Exception ex) {
+                        return BigDecimal.ZERO;
+                    }
+                })
+                .orElse(BigDecimal.ZERO);
+    }
+
+    private BigDecimal safePersonalBalance(Wallet wallet) {
+        return wallet.getPersonalBalance() == null ? BigDecimal.ZERO : wallet.getPersonalBalance();
     }
 
     private void ensureTopUpTransactionCanBeConfirmed(WalletTransaction transaction) {
@@ -432,10 +458,6 @@ public class WalletServiceImpl implements WalletService {
                 .orElseThrow(() -> AppException.notFound("Không tìm thấy người dùng hiện tại"));
     }
 }
-
-
-
-
 
 
 

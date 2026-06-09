@@ -1,4 +1,9 @@
 /* --- TECHNICIAN LAYOUT STYLES --- */
+:root {
+    --technician-sidebar-width: 232px;
+    --technician-sidebar-collapsed-width: 84px;
+}
+
 .app-wrapper {
     display: flex;
     flex-direction: column;
@@ -15,12 +20,30 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    width: calc(100% - var(--technician-sidebar-width));
+    max-width: calc(100% - var(--technician-sidebar-width));
+    margin-left: var(--technician-sidebar-width);
+    min-width: 0;
 }
 
 .tech-content-area {
     flex: 1;
     padding: 24px;
     background-color: var(--plate-white);
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+    .tech-main-wrapper {
+        width: calc(100% - var(--technician-sidebar-collapsed-width));
+        max-width: calc(100% - var(--technician-sidebar-collapsed-width));
+        margin-left: var(--technician-sidebar-collapsed-width);
+    }
+
+    .tech-content-area {
+        padding: 20px 16px;
+    }
 }
 
 /* --- CUSTOMER LAYOUT STYLES --- */

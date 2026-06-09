@@ -26,6 +26,7 @@ import com.example.becommerce.entity.enums.TransactionStatus;
 import com.example.becommerce.entity.enums.TransactionType;
 import com.example.becommerce.entity.enums.UserStatus;
 import com.example.becommerce.entity.enums.WalletStatus;
+import com.example.becommerce.entity.enums.WalletType;
 import com.example.becommerce.exception.AppException;
 import com.example.becommerce.repository.CategoryRepository;
 import com.example.becommerce.repository.OrderRepository;
@@ -500,7 +501,12 @@ public class AdminServiceImpl implements AdminService {
         User technician = userRepository.findByCodeAndDeletedFalse(request.getTechnicianId())
                 .orElseThrow(() -> AppException.notFound("Không tìm thấy kỹ thuật viên"));
         Wallet wallet = walletRepository.findWithLockByUser_Id(technician.getId())
-                .orElseGet(() -> walletRepository.save(Wallet.builder().user(technician).currency("VND").build()));
+                .orElseGet(() -> walletRepository.save(Wallet.builder()
+                        .user(technician)
+                        .balance(BigDecimal.ZERO)
+                        .personalBalance(BigDecimal.ZERO)
+                        .currency("VND")
+                        .build()));
         BigDecimal newBalance = wallet.getBalance().add(request.getAmount());
         if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
             throw AppException.badRequest(ErrorCode.INSUFFICIENT_BALANCE, "Số dư ví không đủ để điều chỉnh");
@@ -512,6 +518,7 @@ public class AdminServiceImpl implements AdminService {
                 .transactionCode(transactionCodeGenerator.generateTransactionCode(TransactionType.COMMISSION))
                 .wallet(wallet)
                 .type(TransactionType.COMMISSION)
+                .walletType(WalletType.CREDIT)
                 .category(request.getType())
                 .title(request.getReason())
                 .amount(request.getAmount())

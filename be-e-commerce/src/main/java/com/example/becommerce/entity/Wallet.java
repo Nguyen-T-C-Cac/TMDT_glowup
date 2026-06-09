@@ -44,6 +44,10 @@ public class Wallet {
     @Builder.Default
     private BigDecimal pendingBalance = BigDecimal.ZERO;
 
+    @Column(name = "personal_balance", nullable = true, precision = 19, scale = 0)
+    @Builder.Default
+    private BigDecimal personalBalance = BigDecimal.ZERO;
+
     @Column(name = "total_earned", nullable = false, precision = 19, scale = 0)
     @Builder.Default
     private BigDecimal totalEarned = BigDecimal.ZERO;
@@ -68,4 +72,3 @@ public class Wallet {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }
-
