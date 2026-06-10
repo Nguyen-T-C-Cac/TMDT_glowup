@@ -35,13 +35,13 @@ const ProviderDashboard: React.FC = () => {
         <div className="pd-top-bar">
           <div className="pd-greeting">
             <span className="pd-greeting-text">CHÀO BUỔI SÁNG, MINH</span>
-            <h1 className="pd-page-title">Overview Dashboard</h1>
+            <h1 className="pd-page-title">Tổng quan công việc</h1>
           </div>
           <div className="pd-availability">
-            <span className="pd-availability-label">AVAILABILITY</span>
+            <span className="pd-availability-label">TRẠNG THÁI</span>
             <span className="pd-availability-status">
               <span className="status-dot-green"></span>
-              Accepting Jobs
+              Đang nhận việc
             </span>
           </div>
         </div>

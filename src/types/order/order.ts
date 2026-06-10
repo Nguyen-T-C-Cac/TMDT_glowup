@@ -61,7 +61,9 @@ export interface OrderResponse {
 
 export interface OrderListQuery {
     page?: number;
-    size?: number;
+    limit?: number;
+    status?: string;
+    keyword?: string;
 }
 
 export interface CreateOrderPayload {

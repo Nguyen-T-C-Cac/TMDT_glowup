@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import "./modal.css";
 
 interface Props {
@@ -8,10 +9,11 @@ interface Props {
 }
 
 const Modal = ({ open, onClose, children }: Props) => {
-    // ❌ Không render khi đóng
-    if (!open) return null;
-
     useEffect(() => {
+        if (!open) {
+            return;
+        }
+
         // khóa scroll nền
         document.body.style.overflow = "hidden";
 
@@ -25,9 +27,12 @@ const Modal = ({ open, onClose, children }: Props) => {
             document.body.style.overflow = "auto";
             window.removeEventListener("keydown", handleEsc);
         };
-    }, [onClose]);
+    }, [onClose, open]);
 
-    return (
+    // ❌ Không render khi đóng
+    if (!open) return null;
+
+    return createPortal(
         <div className="modal-overlay" onClick={onClose}>
             <div
                 className="modal-container"
@@ -37,7 +42,8 @@ const Modal = ({ open, onClose, children }: Props) => {
                     {children}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
