@@ -102,6 +102,173 @@
 }
 
 .btn-submit {
-    background: var(--blueberry-skin);
+    background: #16a34a;
     color: white;
+}
+
+/* ===== Sections ===== */
+.qsection {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+}
+
+.qsection-title {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #16a34a;
+    text-align: left;
+}
+
+.field-label-sm {
+    font-size: var(--fs-sm);
+    text-align: left;
+    font-weight: var(--fw-semibold);
+    color: var(--text-secondary, #475569);
+}
+
+.req {
+    color: #dc2626;
+}
+
+select.input {
+    appearance: auto;
+    cursor: pointer;
+}
+
+.ta-right { text-align: right; }
+.ta-center { text-align: center; }
+
+/* ===== Line-item table ===== */
+.qitem-head,
+.qitem-row {
+    display: grid;
+    grid-template-columns: 1fr 56px 110px 92px 30px;
+    gap: 8px;
+    align-items: center;
+}
+
+.qitem-head {
+    font-size: 12px;
+    font-weight: var(--fw-semibold);
+    color: var(--stem-grey, #64748b);
+    text-align: left;
+    padding: 0 2px;
+}
+
+.qitem-input {
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.qitem-total {
+    text-align: right;
+    font-size: 13px;
+    font-weight: var(--fw-semibold);
+    color: var(--text-primary, #1e293b);
+}
+
+.qitem-del {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+.qitem-del:hover {
+    color: #dc2626;
+    background: #fef2f2;
+}
+
+.qadd-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    background: transparent;
+    color: #16a34a;
+    font-weight: var(--fw-semibold);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.qadd-btn:hover {
+    background: #f0fdf4;
+    border-color: #16a34a;
+}
+
+/* ===== Other fees ===== */
+.qfee-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-secondary, #475569);
+    text-align: left;
+}
+
+.qfee-input {
+    width: 120px;
+    flex: 0 0 auto;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+/* ===== Totals ===== */
+.qtotals {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+
+.qtotals-title {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #16a34a;
+    text-align: left;
+    margin-bottom: 2px;
+}
+
+.qtotal-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text-secondary, #475569);
+}
+
+.qtotal-grand {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-bold);
+    color: #16a34a;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+}
+
+.quote-error {
+    color: #dc2626;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
 }
