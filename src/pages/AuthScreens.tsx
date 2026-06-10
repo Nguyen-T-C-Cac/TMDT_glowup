@@ -334,8 +334,34 @@ function loginSideItems(): InfoItem[] {
   ]
 }
 
+function resolveRedirectPathByRole(role?: string | null) {
+  const normalizedRole = role?.toLowerCase()
+
+  if (normalizedRole === 'admin') {
+    return '/admin/dashboard'
+  }
+
+  if (normalizedRole === 'technician') {
+    return '/technician/provider-dashboard'
+  }
+
+  return '/'
+}
+
 export function LoginPage() {
   const navigate = useNavigate()
+  const storedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null
+  let storedRole: string | null = null
+
+  if (storedUser) {
+    try {
+      const parsed = JSON.parse(storedUser) as { user?: { role?: string } } | { role?: string }
+      storedRole = ('user' in parsed && parsed.user ? parsed.user.role : parsed.role) ?? null
+    } catch {
+      localStorage.removeItem('user')
+    }
+  }
+
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(true)
@@ -343,6 +369,10 @@ export function LoginPage() {
   const [errors, setErrors] = useState<FieldError>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
+
+  if (storedRole) {
+    return <Navigate to={resolveRedirectPathByRole(storedRole)} replace />
+  }
 
   const validate = () => {
     const nextErrors: FieldError = {}
@@ -377,13 +407,7 @@ export function LoginPage() {
         identifier: identifier.trim(),
         password: password
       })
-      const role = loginResponse.data.user.role.toLowerCase()
-      let redirectPath = '/'
-      if (role === 'admin') {
-        redirectPath = '/admin/dashboard'
-      } else if (role === 'technician') {
-        redirectPath = '/technician/provider-dashboard'
-      }
+      const redirectPath = resolveRedirectPathByRole(loginResponse.data.user.role)
 
       window.setTimeout(() => {
         setIsSubmitting(false)
@@ -391,7 +415,7 @@ export function LoginPage() {
         navigate(redirectPath)
       }, 1100)
 
-    } catch (error) {
+    } catch {
       setIsSubmitting(false)
       setSuccessMessage('Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.')
     }

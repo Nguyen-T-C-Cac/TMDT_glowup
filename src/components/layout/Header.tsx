@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import './Header.css';
 import { SearchIcon } from '../common/Icons';
 import NotificationMenu from '../common/NotificationMenu';
-import { logoutUser, isAuthenticated } from '../../services/auth';
+import { logoutUser, isAuthenticated, getStoredUser } from '../../services/auth';
 import { customerPageMap } from './customerNavigation';
 import { useUserProfile } from '../../contexts/UserProfileContext';
 
@@ -26,6 +26,8 @@ export const Header: React.FC<HeaderProps> = ({
   const navigate = useNavigate();
   const currentPath = location.pathname;
   const { profile, isProfileLoaded, clearProfile } = useUserProfile();
+  const storedUser = getStoredUser();
+  const userRole = storedUser?.role?.toLowerCase();
 
   // Kiểm tra trạng thái đăng nhập: kết hợp token trong localStorage VÀ profile đã load
   const loggedIn = isAuthenticated() && isProfileLoaded;
@@ -40,6 +42,15 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const goToProfile = () => navigate(customerPageMap['customer-settings']);
+  const goToMessages = () => {
+    if (!loggedIn) {
+      onNavigate && onNavigate('login');
+      return;
+    }
+
+    navigate(userRole === 'technician' ? '/technician/chat' : '/customer/chat');
+  };
+
   const goToLogout = () => {
     logoutUser();
     clearProfile();
@@ -75,6 +86,15 @@ export const Header: React.FC<HeaderProps> = ({
             <p className="profile-menu__sub">{userEmail || 'Quản lý thông tin cá nhân'}</p>
           </div>
         </div>
+
+        <button
+          className="profile-menu__item"
+          type="button"
+          onClick={goToMessages}
+          role="menuitem"
+        >
+          Tin nhắn
+        </button>
 
         <button
           className="profile-menu__item"
@@ -150,6 +170,13 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('provider'); }}
           >
             Chuyên gia
+          </a>
+          <a
+            href="#"
+            className={`nav-item ${isActive('/customer/chat') || isActive('/technician/chat') ? 'active' : ''}`}
+            onClick={(e) => { e.preventDefault(); goToMessages(); }}
+          >
+            Tin nhắn
           </a>
           <a
             href="#"
