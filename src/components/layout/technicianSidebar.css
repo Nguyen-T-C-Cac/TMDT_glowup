@@ -95,14 +95,23 @@
   padding-top: 18px;
 }
 
+.technician-account-menu {
+  position: relative;
+}
+
 .technician-user-profile {
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
   padding: 10px 12px;
   border-radius: 16px;
   cursor: pointer;
   transition: background 0.2s;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  color: inherit;
 }
 
 .technician-user-profile:hover {
@@ -130,6 +139,8 @@
 .technician-user-info {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 .technician-user-name {
@@ -142,6 +153,54 @@
   font-size: 12px;
   color: var(--text-light);
   text-align: left;
+}
+
+.technician-user-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.75);
+  transition: transform 0.2s ease;
+}
+
+.technician-user-chevron.open {
+  transform: rotate(180deg);
+}
+
+.technician-account-dropdown {
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 14px;
+  background: rgba(12, 20, 34, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.24);
+}
+
+.technician-account-action {
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  color: #fff;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.technician-account-action:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.technician-account-action--danger {
+  color: #ffd5d5;
+}
+
+.technician-account-action--danger:hover {
+  background: rgba(220, 38, 38, 0.16);
+  color: #fff;
 }
 
 @media (max-width: 900px) {
@@ -159,6 +218,10 @@
   .technician-sidebar-badge,
   .technician-nav-label,
   .technician-user-info {
+    display: none;
+  }
+
+  .technician-user-chevron {
     display: none;
   }
 

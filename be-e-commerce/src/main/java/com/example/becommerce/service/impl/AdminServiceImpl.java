@@ -579,7 +579,7 @@ public class AdminServiceImpl implements AdminService {
         User user = transaction.getWallet().getUser();
         String orderCode = transaction.getOrder() != null ? transaction.getOrder().getCode() : (transaction.getRelatedOrderCode() != null ? transaction.getRelatedOrderCode() : "");
 
-        WalletStatus walletStatus = resolveCommissionWalletStatus(transaction.getWallet().getBalance(), getConfiguredMinimumCommissionBalance());
+        WalletStatus walletStatus = resolveCommissionWalletStatus(transaction.getWallet().getBalance(), getMinimumCommissionBalance());
 
         return AdminTransactionsResponse.Item.builder()
                 .id(transaction.getTransactionCode())
@@ -642,11 +642,7 @@ public class AdminServiceImpl implements AdminService {
                         .orElse(null);
             }
         }
-        WalletStatus computedStatus = resolveCommissionWalletStatus(wallet.getBalance(), minimumBalance);
-
-
-        LocalDateTime lastOrderAt = walletTransactionRepository.findLastOrderActivityAt(wallet.getId());
-        WalletStatus walletStatus = resolveCommissionWalletStatus(wallet.getBalance(), minimumCommissionBalance);
+        WalletStatus walletStatus = resolveCommissionWalletStatus(wallet.getBalance(), minimumBalance);
 
         return CommissionWalletsResponse.Item.builder()
                 .technicianId(wallet.getUser().getId())

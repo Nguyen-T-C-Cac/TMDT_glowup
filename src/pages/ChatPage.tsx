@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import styles from './ChatPage.module.css';
@@ -73,6 +73,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
     const [loadError, setLoadError] = useState<string | null>(null);
     const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
     const [isPriceConfirmOpen, setIsPriceConfirmOpen] = useState(false);
+    const messageListRef = useRef<HTMLElement | null>(null);
 
     const currentUser = getStoredUser();
     const currentUserCode = currentUser?.code ?? '';
@@ -340,6 +341,18 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
         }
     }, [linkedOrder, role]);
 
+    useEffect(() => {
+        if (!activeConversationId || isLoading) return;
+
+        const frameId = window.requestAnimationFrame(() => {
+            const messageList = messageListRef.current;
+            if (!messageList) return;
+            messageList.scrollTop = messageList.scrollHeight;
+        });
+
+        return () => window.cancelAnimationFrame(frameId);
+    }, [activeConversationId, isLoading, messages]);
+
     const handleSelectConversation = async (conversationId: string) => {
         setActiveConversationId(conversationId);
         setConversations((prev) =>
@@ -355,7 +368,12 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
     const handleSendMessage = async (text: string) => {
         if (!activeConversationId) return;
         const sent = await chatService.sendMessage(activeConversationId, text);
-        setMessages((prev) => [...prev, { ...sent, isRead: true }]);
+        setMessages((prev) => {
+            if (prev.some((message) => message.id === sent.id)) {
+                return prev;
+            }
+            return [...prev, { ...sent, isRead: true }];
+        });
         await refreshConversations();
     };
 
@@ -482,7 +500,9 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
           };
 
     return (
-        <div className={styles.container}>
+        <div
+            className={`${styles.container} ${role === 'technician' ? styles.containerEmbedded : ''}`}
+        >
             {role === 'customer' && <Header onNavigate={onNavigate} />}
 
             <div className={styles.mainLayout}>
@@ -535,7 +555,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                         </div>
                     </header>
 
-                    <section className={styles.messageList}>
+                    <section ref={messageListRef} className={styles.messageList}>
                         {isLoading && <p className={styles.emptyChat}>Đang tải hội thoại...</p>}
 
                         {!isLoading && loadError && (

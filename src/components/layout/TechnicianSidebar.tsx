@@ -1,7 +1,8 @@
 
 import { useNavigate } from 'react-router-dom';
 import { useUserProfile } from '../../contexts/UserProfileContext';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { authService } from '../../services/authService';
 import './technicianSidebar.css';
 //import { fetchCurrentUser, getStoredUser, type User } from '../../services/auth';
 
@@ -15,6 +16,8 @@ interface SidebarProps {
 
 export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashboard', onNavigate }) => {
     const navigate = useNavigate();
+    const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+    const accountMenuRef = useRef<HTMLDivElement | null>(null);
 
     // Tính năng 3: Sidebar sử dụng chung Global State (UserProfileContext) với trang Profile
     // Khi avatar thay đổi ở trang Profile → setAvatar/updateProfile cập nhật context
@@ -51,7 +54,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashbo
 
     const menuItems = [
         {
-            id: 'dashboard', label: 'Dashboard', icon: (
+            id: 'dashboard', label: 'Tổng quan', icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                     strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
@@ -62,7 +65,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashbo
             )
         },
         {
-            id: 'jobs', label: 'Order Management', icon: (
+            id: 'jobs', label: 'Quản lý đơn', icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                     strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -73,7 +76,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashbo
             )
         },
         {
-            id: 'messages', label: 'Messages', icon: (
+            id: 'chat', label: 'Tin nhắn', icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                     strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -81,7 +84,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashbo
             )
         },
         {
-            id: 'wallet', label: 'My Wallet', icon: (
+            id: 'wallet', label: 'Ví của tôi', icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                     strokeLinecap="round" strokeLinejoin="round">
                     <rect x="2" y="5" width="20" height="14" rx="2"></rect>
@@ -90,7 +93,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashbo
             )
         },
         {
-            id: 'profile', label: 'Technician Profile', icon: (
+            id: 'profile', label: 'Hồ sơ thợ', icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                     strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -103,64 +106,101 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashbo
     const pageMap: Record<string, string> = {
         dashboard: '/technician/provider-dashboard',
         jobs: '/technician/jobs',
-        messages: '/technician/chat',
+        chat: '/technician/chat',
         wallet: '/technician/wallet',
         profile: '/technician/profile',
     };
 
     const handleNavigate = (itemId: string) => {
+        setIsAccountMenuOpen(false);
+
         if (onNavigate) {
             onNavigate(itemId);
             return;
         }
 
-        const target = pageMap[itemId] || '/provider-dashboard';
+        const target = pageMap[itemId] || '/technician/provider-dashboard';
         navigate(target);
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (!accountMenuRef.current?.contains(event.target as Node)) {
+                setIsAccountMenuOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    const handleLogout = () => {
+        authService.logout();
+        setIsAccountMenuOpen(false);
+        navigate('/auth/login');
     };
 
     // Xử lý avatar: dùng avatar từ context, fallback sang ảnh mặc định nếu chưa có
     const displayAvatar = profile?.avatar || DEFAULT_AVATAR;
 
     return (
-        <aside className="db-sidebar">
-            <div className="db-sidebar-top">
-                <div className="db-sidebar-brand">
-                    <h2 className="db-sidebar-logo">GlowUp</h2>
-                    <span className="db-sidebar-badge">Verified Provider</span>
+        <aside className="technician-sidebar">
+            <div className="technician-sidebar-top">
+                <div className="technician-sidebar-brand">
+                    <h2 className="technician-sidebar-logo">GlowUp</h2>
+                    <span className="technician-sidebar-badge">Thợ đã xác minh</span>
                 </div>
 
-                <nav className="db-sidebar-nav">
+                <nav className="technician-sidebar-nav">
                     {menuItems.map(item => (
                         <button
                             key={item.id}
-                            className={`db-nav-item ${activeItem === item.id ? 'active' : ''}`}
+                            className={`technician-nav-item ${activeItem === item.id ? 'active' : ''}`}
                             onClick={() => handleNavigate(item.id)}
                         >
-                            <span className="db-nav-icon">{item.icon}</span>
-                            <span className="db-nav-label">{item.label}</span>
+                            <span className="technician-nav-icon">{item.icon}</span>
+                            <span className="technician-nav-label">{item.label}</span>
                         </button>
                     ))}
                 </nav>
             </div>
 
-            <div className="db-sidebar-bottom">
-                <div className="db-user-profile" style={{ marginBottom: '12px' }}>
-                    {/* Tính năng 3: Avatar đồng bộ realtime từ UserProfileContext
-                        - Khi upload avatar mới ở trang Profile → context cập nhật → sidebar re-render
-                        - onError: nếu URL ảnh bị lỗi (404, mất kết nối), fallback về ảnh mặc định */}
-                    <img
-                        src={displayAvatar}
-                        alt={profile?.fullName || 'Technician'}
-                        className="db-user-avatar"
-                        onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).src = DEFAULT_AVATAR;
-                        }}
-                    />
-                    <div className="db-user-info">
-                        <span className="db-user-name">{profile?.fullName || 'Technician'}</span>
-                        <span className="db-user-id">ID: #{profile?.code ? `TECH-${profile.id}` : 'GP-8829'}</span>
+            <div className="technician-sidebar-bottom">
+                <div className="technician-account-menu" ref={accountMenuRef} style={{ marginBottom: '12px' }}>
+                    <button
+                        type="button"
+                        className="technician-user-profile"
+                        onClick={() => setIsAccountMenuOpen((prev) => !prev)}
+                    >
+                        <img
+                            src={displayAvatar}
+                            alt={profile?.fullName || 'Thợ'}
+                            className="technician-user-avatar"
+                            onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).src = DEFAULT_AVATAR;
+                            }}
+                        />
+                        <div className="technician-user-info">
+                            <span className="technician-user-name">{profile?.fullName || 'Thợ kỹ thuật'}</span>
+                            <span className="technician-user-id">Mã: {profile?.code || 'GP-8829'}</span>
+                        </div>
+                        <span className={`technician-user-chevron ${isAccountMenuOpen ? 'open' : ''}`} aria-hidden="true">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </span>
+                    </button>
 
-                    </div>
+                    {isAccountMenuOpen ? (
+                        <div className="technician-account-dropdown">
+                            <button type="button" className="technician-account-action technician-account-action--danger" onClick={handleLogout}>
+                                Đăng xuất
+                            </button>
+                        </div>
+                    ) : null}
                 </div>
             </div>
         </aside>
