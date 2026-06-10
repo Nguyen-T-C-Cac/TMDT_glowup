@@ -64,6 +64,19 @@ export interface OrderListQuery {
     size?: number;
 }
 
+export interface CreateOrderPayload {
+    serviceName?: string;
+    subService?: string;
+    serviceCategory: string;
+    deviceName: string;
+    description: string;
+    address: string;
+    estimatedPrice?: number;
+    expectedTime?: string;
+    images?: string[];
+    technicianId?: string;
+}
+
 export interface OrderPageResponse {
     items: OrderResponse[];
     page: number;

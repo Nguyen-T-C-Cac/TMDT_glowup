@@ -501,22 +501,22 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
 
     return (
         <div
-            className={`${styles.container} ${role === 'technician' ? styles.containerEmbedded : ''}`}
+            className={`${styles.container} ${role === 'technician' ? styles.containerEmbedded : ''} ${role === 'customer' ? styles.containerCustomer : ''}`}
         >
             {role === 'customer' && <Header onNavigate={onNavigate} />}
 
-            <div className={styles.mainLayout}>
+            <div className={`${styles.mainLayout} ${role === 'customer' ? styles.mainLayoutCustomer : ''}`}>
                 <aside
-                    className={`${styles.sidebar} ${!isSidebarOpen ? styles.sidebarClosed : ''}`}
+                    className={`${styles.sidebar} ${role === 'customer' ? styles.sidebarCustomer : ''} ${!isSidebarOpen ? styles.sidebarClosed : ''}`}
                 >
-                    <div style={{ padding: '16px' }}>
+                    <div className={styles.sidebarSearch}>
                         <SearchBar
                             value={searchQuery}
                             onChange={setSearchQuery}
                             placeholder="Tìm kiếm hội thoại..."
                         />
                     </div>
-                    <div style={{ padding: '0 8px' }}>
+                    <div className={styles.conversationList}>
                         {filteredConversations.map((conversation) => (
                             <ContactItem
                                 key={conversation.id}
@@ -533,7 +533,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
 
                 <main className={styles.chatArea}>
                     <header className={styles.chatHeader}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div className={styles.chatHeaderIdentity}>
                             {role === 'technician' && (
                                 <button
                                     type="button"
@@ -544,10 +544,10 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                                 </button>
                             )}
                             <Avatar src={activeContact.avatar} size={40} isOnline={activeContact.isOnline} />
-                            <div>
-                                <strong>{activeContact.name}</strong>
+                            <div className={styles.chatHeaderMeta}>
+                                <strong className={styles.chatHeaderName}>{activeContact.name}</strong>
                                 {linkedOrder && (
-                                    <span style={{ fontSize: 12, color: '#64748b', display: 'block' }}>
+                                    <span className={styles.chatHeaderSubline}>
                                         Đơn {linkedOrder.id}
                                     </span>
                                 )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { technicianService } from '../services/technicianService';
 import { useCustomerNavigate } from '../components/layout/useCustomerNavigate';
 import { ProfileHeader } from '../components/provider-profile/ProfileHeader';
@@ -9,19 +9,19 @@ import { ScheduleTab } from '../components/provider-profile/ScheduleTab';
 import { ProjectsTab } from '../components/provider-profile/ProjectsTab';
 import { ScheduleSidebar, VerificationSidebar, MapSidebar } from '../components/provider-profile/SidebarWidgets';
 import { ChangePasswordTab } from '../components/provider-profile/ChangePasswordTab';
+import { resolveTechnicianIdFromLocation } from '../utils/providerNavigation';
 import './ProviderProfile.css';
 
 export const ProviderProfile: React.FC = () => {
   const onNavigate = useCustomerNavigate();
   const location = useLocation();
   const providerData = location.state as any;
-
-  const { id } = useParams<{ id: string }>();
+  const searchParams = new URLSearchParams(location.search);
+  const providerId = resolveTechnicianIdFromLocation(searchParams, providerData);
   const [activeTab, setActiveTab] = useState(() => providerData?.activeTab || 'about');
   const [fetchedData, setFetchedData] = useState<any>(null);
   
   useEffect(() => {
-    const providerId = id || providerData?.id;
     if (providerId) {
       technicianService.getTechnicianById(providerId)
         .then(res => {
@@ -29,7 +29,7 @@ export const ProviderProfile: React.FC = () => {
         })
         .catch(err => console.error('Lỗi khi lấy thông tin thợ', err));
     }
-  }, [id, providerData]);
+  }, [providerId]);
 
   const defaultProfile = {
     name: 'Nguyễn Văn Hùng',
@@ -47,6 +47,7 @@ export const ProviderProfile: React.FC = () => {
   const sourceData = fetchedData || providerData;
   const profileData = sourceData ? {
     ...defaultProfile,
+    technicianId: sourceData.id || sourceData.technicianId || providerId || undefined,
     name: sourceData.name || sourceData.fullName || defaultProfile.name,
     avatar: sourceData.avatar || defaultProfile.avatar,
     rating: sourceData.rating || defaultProfile.rating,

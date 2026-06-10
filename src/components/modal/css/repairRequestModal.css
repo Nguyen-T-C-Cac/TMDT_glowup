@@ -1,14 +1,14 @@
 .repair-modal {
-    --repair-navy: #071a52;
+    --repair-navy: #17306b;
     --repair-ink: #0f172a;
     --repair-soft-ink: #475569;
     --repair-bg: #f8fafc;
-    --repair-line: #dbe3f1;
+    --repair-line: #d9e4f5;
     --repair-card: #ffffff;
-    width: min(1080px, 100vw - 20px);
-    max-height: min(92vh, 900px);
-    border-radius: 24px;
-    background: linear-gradient(160deg, #f8fbff 0%, #f1f5fb 100%);
+    width: min(1040px, 100vw - 28px);
+    max-height: min(90vh, 880px);
+    border-radius: 28px;
+    background: linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
     color: var(--repair-ink);
     display: flex;
     flex-direction: column;
@@ -40,17 +40,17 @@
 }
 
 .repair-headline {
-    padding: 28px 28px 20px;
+    padding: 30px 28px 22px;
     display: flex;
-    gap: 16px;
+    gap: 18px;
     justify-content: space-between;
     border-bottom: 1px solid var(--repair-line);
-    background: radial-gradient(circle at 20% -30%, rgba(9, 49, 136, 0.28), transparent 55%), #fff;
+    background: radial-gradient(circle at 18% -30%, rgba(77, 119, 214, 0.24), transparent 55%), #fff;
 }
 
 .repair-headline h2 {
     margin: 0;
-    font-size: 1.9rem;
+    font-size: 1.8rem;
     line-height: 1.1;
     color: var(--repair-navy);
 }
@@ -58,20 +58,21 @@
 .repair-headline p {
     margin: 8px 0 0;
     color: var(--repair-soft-ink);
-    max-width: 530px;
+    max-width: 560px;
+    line-height: 1.45;
 }
 
 .provider-mini-card {
-    min-width: 210px;
-    max-width: 230px;
-    border-radius: 18px;
-    padding: 12px;
+    min-width: 224px;
+    max-width: 250px;
+    border-radius: 22px;
+    padding: 14px;
     display: flex;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
     background: #ffffff;
     border: 1px solid var(--repair-line);
-    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.09);
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
 }
 
 .provider-mini-card img {
@@ -104,32 +105,36 @@
 .repair-layout {
     flex: 1;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 280px;
-    gap: 18px;
+    grid-template-columns: minmax(0, 1fr) 288px;
+    gap: 20px;
     overflow: hidden;
-    padding: 18px;
+    padding: 20px;
 }
 
 .repair-body {
     overflow: auto;
     display: grid;
-    gap: 14px;
-    padding-right: 4px;
+    gap: 16px;
+    padding-right: 6px;
+    min-width: 0;
+    align-content: start;
 }
 
 .repair-section {
-    border-radius: 22px;
+    width: 100%;
+    min-width: 0;
+    border-radius: 24px;
     border: 1px solid var(--repair-line);
     background: var(--repair-card);
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
-    padding: 18px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04);
+    padding: 18px 18px 20px;
     display: grid;
-    gap: 12px;
+    gap: 14px;
 }
 
 .repair-section h3 {
     margin: 0;
-    font-size: 1rem;
+    font-size: 1.05rem;
     color: var(--repair-navy);
 }
 
@@ -179,9 +184,12 @@
 
 .inline-label,
 .input-label {
-    font-size: 0.84rem;
+    display: inline-block;
+    margin-bottom: 8px;
+    font-size: 0.82rem;
     font-weight: 600;
     color: #334155;
+    letter-spacing: 0.03em;
 }
 
 .radio-grid {
@@ -206,9 +214,10 @@
 .repair-modal input,
 .repair-modal select {
     width: 100%;
+    box-sizing: border-box;
     border-radius: 14px;
     border: 1px solid var(--repair-line);
-    padding: 11px 12px;
+    padding: 13px 14px;
     background: #fff;
     color: var(--repair-ink);
     font-size: 0.95rem;
@@ -244,15 +253,38 @@
 }
 
 .upload-box {
+    width: 100%;
+    min-height: 152px;
+    box-sizing: border-box;
     border: 2px dashed #c7d6f0;
-    border-radius: 18px;
+    border-radius: 20px;
     display: grid;
-    place-items: center;
+    justify-items: center;
+    align-content: center;
     text-align: center;
-    gap: 5px;
-    padding: 20px;
+    gap: 10px;
+    padding: 22px;
     background: linear-gradient(180deg, #fbfdff 0%, #f4f8ff 100%);
     cursor: pointer;
+    appearance: none;
+    outline: none;
+    color: inherit;
+}
+
+.upload-box:hover {
+    border-color: #93b1ec;
+    background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+}
+
+.upload-box-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(29, 78, 216, 0.08);
+    color: #1d4ed8;
 }
 
 .upload-box input {
@@ -260,14 +292,16 @@
 }
 
 .upload-box strong {
-    font-size: 0.95rem;
+    font-size: 1rem;
     color: var(--repair-navy);
 }
 
 .upload-box p {
     margin: 0;
     color: #64748b;
-    font-size: 0.86rem;
+    font-size: 0.9rem;
+    max-width: 420px;
+    line-height: 1.5;
 }
 
 .preview-grid {
@@ -327,7 +361,7 @@
     gap: 8px;
     border: 1px solid var(--repair-line);
     border-radius: 14px;
-    padding: 0 10px;
+    padding: 0 12px;
     background: #fff;
 }
 
@@ -389,17 +423,21 @@
     min-height: 52px;
     border-radius: 16px;
     border: none;
-    background: linear-gradient(120deg, #071a52 0%, #0b3b9e 100%);
+    background: linear-gradient(120deg, #3657a7 0%, #6785d4 100%);
     color: #fff;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 16px 30px rgba(6, 23, 73, 0.32);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 16px 28px rgba(62, 95, 176, 0.28);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .btn-submit:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 20px 34px rgba(6, 23, 73, 0.35);
+    box-shadow: 0 20px 34px rgba(62, 95, 176, 0.32);
 }
 
 .btn-submit:disabled {
@@ -413,11 +451,11 @@
 }
 
 .repair-summary {
-    border-radius: 22px;
+    border-radius: 24px;
     border: 1px solid var(--repair-line);
     background: #fff;
-    padding: 16px;
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+    padding: 16px 16px 18px;
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
     align-self: start;
     position: sticky;
     top: 8px;
@@ -473,7 +511,7 @@
     }
 
     .repair-summary {
-        display: none;
+        position: static;
     }
 
     .provider-mini-card {
