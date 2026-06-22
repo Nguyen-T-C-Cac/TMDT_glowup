@@ -18,7 +18,7 @@ const tasks: TaskItem[] = [
     customerName: 'Nguyễn Thị Lan',
     machineType: 'Máy lạnh Daikin',
     description: 'Vệ sinh máy lạnh Daikin',
-    address: '45 Lê Thánh Tôn, Quận 1, HCMC',
+    address: '45 Lê Thánh Tôn, Quận 1, TP.HCM',
     price: '450.000 đ',
     status: 'URGENT',
     icon: (
@@ -36,7 +36,7 @@ const tasks: TaskItem[] = [
     customerName: 'Trần Văn Bảo',
     machineType: 'Tủ lạnh Samsung',
     description: 'Sửa board mạch tủ lạnh Samsung',
-    address: '122 Võ Văn Tần, Quận 3, HCMC',
+    address: '122 Võ Văn Tần, Quận 3, TP.HCM',
     price: '1.200.000 đ',
     status: 'SCHEDULED',
     icon: (
@@ -52,7 +52,7 @@ const tasks: TaskItem[] = [
     customerName: 'Lê Minh Phương',
     machineType: 'Máy giặt LG',
     description: 'Máy giặt không vắt, rung lắc mạnh',
-    address: '88 Nguyễn Huệ, Quận 1, HCMC',
+    address: '88 Nguyễn Huệ, Quận 1, TP.HCM',
     price: '650.000 đ',
     status: 'NEW',
     icon: (
@@ -68,7 +68,7 @@ const tasks: TaskItem[] = [
     customerName: 'Hoàng Đức Anh',
     machineType: 'Điều hòa Panasonic',
     description: 'Điều hòa chảy nước, không mát',
-    address: '201 Trần Hưng Đạo, Quận 5, HCMC',
+    address: '201 Trần Hưng Đạo, Quận 5, TP.HCM',
     price: '500.000 đ',
     status: 'URGENT',
     icon: (
@@ -84,17 +84,17 @@ const tasks: TaskItem[] = [
 ];
 
 const statusConfig = {
-  URGENT: { label: 'URGENT', color: '#ef4444', bg: '#fef2f2' },
-  SCHEDULED: { label: 'SCHEDULED', color: '#3b82f6', bg: '#eff6ff' },
-  NEW: { label: 'NEW', color: '#10b981', bg: '#ecfdf5' },
+  URGENT: { label: 'Khẩn cấp', color: '#ef4444', bg: '#fef2f2' },
+  SCHEDULED: { label: 'Đã hẹn lịch', color: '#3b82f6', bg: '#eff6ff' },
+  NEW: { label: 'Mới', color: '#10b981', bg: '#ecfdf5' },
 };
 
 export const AvailableTasks: React.FC = () => {
   return (
     <div className="available-tasks-card">
       <div className="available-tasks-header">
-        <h3 className="available-tasks-title">Available Tasks in District 1 & 3</h3>
-        <a href="#" className="view-all-tasks">View all</a>
+        <h3 className="available-tasks-title">Công việc khả dụng tại Quận 1 & 3</h3>
+        <a href="#" className="view-all-tasks">Xem tất cả</a>
       </div>
 
       <div className="tasks-list">

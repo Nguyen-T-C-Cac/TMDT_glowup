@@ -1,63 +1,137 @@
 .quote-modal {
-    width: 896px;
-    max-width: 100%;
+    width: min(1100px, calc(100vw - 40px));
     max-height: 90vh;
-    display: flex;
-    background: var(--white);
-    border-radius: 24px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    background: linear-gradient(180deg, #fbfdff 0%, #f4f8ff 100%);
+    border-radius: 28px;
     overflow: hidden;
+    position: relative;
+    box-shadow: 0 28px 64px rgba(15, 23, 42, 0.18);
 }
 
-/* LEFT SIDE — cuộn riêng khi form dài hơn modal */
+.modal-inner > .quote-modal {
+    overflow-y: hidden;
+}
+
+.quote-close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.96);
+    color: #51627f;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 3;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.quote-close:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+}
+
 .quote-left {
-    flex: 1;
     min-width: 0;
     min-height: 0;
     overflow-y: auto;
-    padding: 28px;
+    padding: 28px 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    background: rgba(255, 255, 255, 0.94);
+}
+
+.quote-shell-header {
+    padding-right: 44px;
+}
+
+.quote-shell-title {
+    font-size: 32px;
+    line-height: 1.1;
+    font-weight: 800;
+    color: #22304d;
+    text-align: left;
+}
+
+.quote-shell-subtitle {
+    margin-top: 8px;
+    color: #6b7a93;
+    font-size: 15px;
+    text-align: left;
+}
+
+.preview-title {
+    text-align: left;
+    font-size: 24px;
+    font-weight: 800;
+    color: #22304d;
+}
+
+.preview-sub {
+    text-align: left;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b7a93;
+    margin-top: 6px;
+}
+
+.quote-right {
+    box-sizing: border-box;
+    background:
+        radial-gradient(circle at top, rgba(111, 191, 132, 0.12), transparent 26%),
+        linear-gradient(180deg, #f6fbf7 0%, #eef6f2 100%);
+    padding: 28px 24px 24px;
+    border-left: 1px solid rgba(197, 198, 208, 0.18);
     display: flex;
     flex-direction: column;
     gap: 20px;
 }
 
-.preview-title {
-    text-align: left;
-    font-size: var(--fs-md);
-    font-weight: var(--fw-bold);
-}
-
-.preview-sub {
-    text-align: left;
-    font-size: var(--fs-sm);
-    font-weight: var(--fw-normal);
-    color: var(--text-secondary);
-}
-
-/* RIGHT SIDE */
-.quote-right {
-    width: 360px;
-    flex-shrink: 0;
-    box-sizing: border-box;
-    background: var(--plate-white);
-    padding: 24px;
-    border-left: 1px solid rgba(197, 198, 208, 0.2);
+.preview-header-text {
+    padding-right: 24px;
 }
 
 
-/* RESPONSIVE */
-@media (max-width: 768px) {
+@media (max-width: 960px) {
     .quote-modal {
-        flex-direction: column;
-        width: 100%;
+        width: min(100%, calc(100vw - 24px));
+        grid-template-columns: 1fr;
+        max-height: 94vh;
     }
 
     .quote-right {
-        width: 100%;
         border-left: none;
         border-top: 1px solid rgba(197, 198, 208, 0.2);
+        padding-top: 20px;
     }
 
     .quote-left {
-        max-height: none;
+        padding: 22px 18px 20px;
+    }
+
+    .quote-shell-title,
+    .preview-title {
+        font-size: 24px;
+    }
+}
+
+@media (max-width: 640px) {
+    .quote-modal {
+        width: 100%;
+        max-height: 100vh;
+        border-radius: 24px 24px 0 0;
+    }
+
+    .quote-left,
+    .quote-right {
+        padding-left: 16px;
+        padding-right: 16px;
     }
 }

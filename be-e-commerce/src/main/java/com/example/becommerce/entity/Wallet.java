@@ -1,5 +1,6 @@
 package com.example.becommerce.entity;
 
+import com.example.becommerce.entity.enums.WalletStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -61,7 +61,22 @@ export interface OrderResponse {
 
 export interface OrderListQuery {
     page?: number;
-    size?: number;
+    limit?: number;
+    status?: string;
+    keyword?: string;
+}
+
+export interface CreateOrderPayload {
+    serviceName?: string;
+    subService?: string;
+    serviceCategory: string;
+    deviceName: string;
+    description: string;
+    address: string;
+    estimatedPrice?: number;
+    expectedTime?: string;
+    images?: string[];
+    technicianId?: string;
 }
 
 export interface OrderPageResponse {

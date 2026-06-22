@@ -10,10 +10,19 @@
     min-height: 100vh;
 }
 
+.app-wrapper--chat {
+    height: 100vh;
+    overflow: hidden;
+}
 
 .tech-layout-container {
     display: flex;
     flex: 1;
+}
+
+.tech-layout-container--chat {
+    min-height: 100vh;
+    overflow: hidden;
 }
 
 .tech-main-wrapper {
@@ -26,12 +35,22 @@
     min-width: 0;
 }
 
+.tech-main-wrapper--chat {
+    min-height: 100vh;
+    overflow: hidden;
+}
+
 .tech-content-area {
     flex: 1;
     padding: 24px;
     background-color: var(--plate-white);
     min-width: 0;
     box-sizing: border-box;
+}
+
+.tech-content-area--chat {
+    min-height: 0;
+    overflow: hidden;
 }
 
 @media (max-width: 900px) {

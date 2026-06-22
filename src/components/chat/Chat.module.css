@@ -2,32 +2,41 @@
 .contactItem {
     display: flex;
     gap: 12px;
-    padding: 10px;
-    margin: 15px 0;
-    border-radius: 12px;
+    padding: 14px 12px;
+    margin: 8px 0;
+    border-radius: 18px;
     cursor: pointer;
-    transition: background 0.2s;
+    border: 1px solid transparent;
+    transition: background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 
 .contactItemActive {
-    background: var(--white);
+    background: #ffffff;
+    border-color: rgba(39, 174, 96, 0.18);
+    box-shadow: 0 14px 28px rgba(39, 174, 96, 0.1);
+}
+
+.contactItem:hover {
+    background: rgba(255, 255, 255, 0.78);
+    border-color: rgba(203, 213, 225, 0.72);
+    transform: translateX(2px);
 }
 
 .contactName {
-    font-weight: var(--fw-semibold);
+    font-weight: 700;
     margin-bottom: 3px;
-    color: var(--text-main);
+    color: #22304d;
 }
 
 .contactTime {
     font-size: var(--fs-xs);
-    color: var(--text-sub);
+    color: #7b8aa4;
 }
 
 .lastMessageSnippet {
-    font-size: var(--fs-sm);
+    font-size: 14px;
     display: flex;
-    color: var(--text-sub);
+    color: #7b8aa4;
 }
 
 .onlineStatus {
@@ -45,11 +54,12 @@
 .inputContainer {
     display: flex;
     align-items: center;
-    gap: 8px;
-    background: var(--white);
-    border-radius: 16px;
-    padding: 8px 12px;
-    border: 1px solid var(--border);
+    gap: 10px;
+    background: #ffffff;
+    border-radius: 22px;
+    padding: 10px 14px;
+    border: 1px solid rgba(203, 213, 225, 0.8);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
 }
 
 .iconGroup {
@@ -61,6 +71,17 @@
     border: none;
     background: transparent;
     cursor: pointer;
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+
+.iconButton:hover:not(:disabled) {
+    background: rgba(39, 174, 96, 0.08);
 }
 
 .textAreaWrapper {
@@ -73,15 +94,32 @@
     border: none;
     outline: none;
     resize: none;
-    font-size: var(--fs-sm);
+    font-size: 15px;
+    background: transparent;
+    color: #22304d;
+}
+
+.textInput::placeholder {
+    color: #94a3b8;
 }
 
 .sendButton {
-    background: var(--blueberry-skin);
+    background: linear-gradient(135deg, #6fbf84 0%, #5da874 100%);
     border: none;
-    border-radius: 12px;
-    padding: 8px;
+    border-radius: 14px;
+    width: 42px;
+    height: 42px;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 12px 24px rgba(93, 168, 116, 0.3);
+}
+
+.sendButton:disabled {
+    opacity: 0.55;
+    box-shadow: none;
+    cursor: not-allowed;
 }
 
 /* QUOTATION CARD */

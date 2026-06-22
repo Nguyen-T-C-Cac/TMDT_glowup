@@ -22,8 +22,8 @@ const statsData: StatCard[] = [
       </svg>
     ),
     value: '04',
-    label: 'New Jobs Assigned',
-    badge: '+2 new',
+    label: 'Đơn mới được giao',
+    badge: '+2 đơn mới',
     badgeColor: '#10b981',
   },
   {
@@ -35,8 +35,8 @@ const statsData: StatCard[] = [
       </svg>
     ),
     value: '12',
-    label: 'Jobs Completed',
-    badge: 'Today',
+    label: 'Đơn đã hoàn thành',
+    badge: 'Hôm nay',
     badgeColor: '#6366f1',
   },
   {
@@ -48,8 +48,8 @@ const statsData: StatCard[] = [
       </svg>
     ),
     value: '8.420.000 đ',
-    label: 'Total Earnings',
-    badge: 'This Week',
+    label: 'Tổng thu nhập',
+    badge: 'Tuần này',
     highlight: true,
   },
 ];

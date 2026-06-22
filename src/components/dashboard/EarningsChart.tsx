@@ -2,20 +2,20 @@ import React, { useState } from 'react';
 import './EarningsChart.css';
 
 const earningsData7Days = [
-  { day: 'Mon', value: 420 },
-  { day: 'Tue', value: 580 },
-  { day: 'Wed', value: 350 },
-  { day: 'Thu', value: 750 },
-  { day: 'Today', value: 680 },
-  { day: 'Sat', value: 520 },
-  { day: 'Sun', value: 300 },
+  { day: 'T2', value: 420 },
+  { day: 'T3', value: 580 },
+  { day: 'T4', value: 350 },
+  { day: 'T5', value: 750 },
+  { day: 'Hôm nay', value: 680 },
+  { day: 'T7', value: 520 },
+  { day: 'CN', value: 300 },
 ];
 
 const earningsData30Days = [
-  { day: 'W1', value: 2800 },
-  { day: 'W2', value: 3200 },
-  { day: 'W3', value: 2900 },
-  { day: 'W4', value: 3600 },
+  { day: 'Tuần 1', value: 2800 },
+  { day: 'Tuần 2', value: 3200 },
+  { day: 'Tuần 3', value: 2900 },
+  { day: 'Tuần 4', value: 3600 },
 ];
 
 export const EarningsChart: React.FC = () => {
@@ -26,19 +26,19 @@ export const EarningsChart: React.FC = () => {
   return (
     <div className="earnings-chart-card">
       <div className="earnings-chart-header">
-        <h3 className="earnings-chart-title">Earnings Overview</h3>
+        <h3 className="earnings-chart-title">Tổng quan thu nhập</h3>
         <div className="earnings-period-toggle">
           <button
             className={`period-btn ${period === '7' ? 'active' : ''}`}
             onClick={() => setPeriod('7')}
           >
-            7 Days
+            7 ngày
           </button>
           <button
             className={`period-btn ${period === '30' ? 'active' : ''}`}
             onClick={() => setPeriod('30')}
           >
-            30 Days
+            30 ngày
           </button>
         </div>
       </div>
@@ -47,7 +47,7 @@ export const EarningsChart: React.FC = () => {
         <div className="chart-bars-container">
           {data.map((item, index) => {
             const heightPercent = (item.value / maxValue) * 100;
-            const isToday = item.day === 'Today';
+            const isToday = item.day === 'Hôm nay';
             return (
               <div key={index} className="chart-bar-wrapper">
                 <div className="chart-bar-group">

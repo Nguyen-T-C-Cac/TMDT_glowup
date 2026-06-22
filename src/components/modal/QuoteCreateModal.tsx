@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { X } from "lucide-react";
 import Modal from "../common/Modal";
 import QuoteForm from "../quote/QuoteForm";
 import { QuotationCard } from "../chat/QuotationCard";
@@ -32,7 +33,21 @@ const QuoteCreateModal: React.FC<QuoteCreateModalProps> = ({ open, onClose, onSu
     return (
         <Modal open={open} onClose={onClose}>
             <div className="quote-modal">
+                <button
+                    type="button"
+                    className="quote-close"
+                    onClick={onClose}
+                    aria-label="Đóng báo giá"
+                >
+                    <X size={20} />
+                </button>
                 <div className="quote-left">
+                    <div className="quote-shell-header">
+                        <div>
+                            <div className="quote-shell-title">Tạo báo giá</div>
+                            <div className="quote-shell-subtitle">Soạn báo giá rõ ràng trước khi gửi cho khách hàng.</div>
+                        </div>
+                    </div>
                     <QuoteForm
                         quote={quote}
                         setQuote={setQuote}
@@ -41,7 +56,7 @@ const QuoteCreateModal: React.FC<QuoteCreateModalProps> = ({ open, onClose, onSu
                     />
                 </div>
                 <div className="quote-right">
-                    <div className="preview-header-text" style={{ marginBottom: '24px' }}>
+                    <div className="preview-header-text">
                         <div className="preview-title">XEM TRƯỚC BÁO GIÁ</div>
                         <div className="preview-sub">Giao diện khách hàng sẽ nhận</div>
                     </div>

@@ -67,17 +67,19 @@ const normalizeOrder = (payload: unknown): OrderResponse => unwrap<OrderResponse
 
 export const orderService = {
     listOrders: async (query: OrderListQuery = {}): Promise<OrderPageResponse> => {
-        const page = query.page ?? 0;
-        const size = query.size ?? 10;
+        const page = query.page ?? 1;
+        const limit = query.limit ?? 10;
 
         const response = await apiClient.get('/api/orders', {
             params: {
                 page,
-                size,
+                limit,
+                status: query.status,
+                keyword: query.keyword,
             },
         });
 
-        return normalizePage(response.data, { page, size });
+        return normalizePage(response.data, { page, size: limit });
     },
 
     getOrderById: async (id: string): Promise<OrderResponse> => {
