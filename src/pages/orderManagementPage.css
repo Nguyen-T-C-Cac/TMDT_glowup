@@ -72,17 +72,62 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    margin-top: 24px;
-    padding: 16px 20px;
-    border-radius: 16px;
-    border: 1px solid var(--border);
-    background: var(--white);
+    gap: 12px;
+    margin-top: 10px;
+    padding: 6px 4px 0;
+    border: none;
+    background: transparent;
 }
 
-.order-pagination span {
-    color: var(--text-sub);
-    font-size: var(--fs-sm);
+.order-pagination-summary {
+    color: #8a94a6;
+    font-size: 12px;
+    line-height: 1.2;
+}
+
+.order-pagination-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.order-pagination-btn {
+    width: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+    min-height: 34px;
+    font-size: 12px;
+    line-height: 1.2;
+    font-weight: 600;
+    border-radius: 999px;
+    box-sizing: border-box;
+    white-space: nowrap;
+    flex: 0 0 34px;
+    border: 1px solid #dfe6ee;
+    background: #ffffff;
+    color: #94a3b8;
+    box-shadow: none;
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.order-pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.order-pagination-btn:not(:disabled):hover {
+    background: #f8fafc;
+    border-color: #cfd8e3;
+    color: #64748b;
+}
+
+.order-pagination-btn-icon {
+    font-size: 16px;
+    line-height: 1;
+    margin-top: -1px;
 }
 
 .card-actions {
@@ -417,8 +462,12 @@
     }
 
     .order-pagination {
-        flex-direction: column;
-        align-items: stretch;
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .order-pagination-actions {
+        justify-content: flex-end;
     }
 
     .order-cancel-modal-content {
