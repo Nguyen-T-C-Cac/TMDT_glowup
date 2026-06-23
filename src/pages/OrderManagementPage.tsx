@@ -22,6 +22,8 @@ import { InProgressCard } from '../components/orderManagement/InProgressCard.tsx
 import { CompletedCard } from '../components/orderManagement/CompletedCard.tsx';
 import { CancelledCard } from '../components/orderManagement/CancelledCard.tsx';
 import { OrderDetailPanel } from '../components/orderManagement/OrderDetailPanel.tsx';
+import ReviewModal from '../components/modal/ReviewModal.tsx';
+import ReportModal from '../components/modal/ReportModal.tsx';
 
 interface OrderPageProps {
     role: UserRole;
@@ -53,6 +55,11 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
     const [cancelReason, setCancelReason] = useState('');
+
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [showReportModal, setShowReportModal] = useState(false);
+    const [reviewOrder, setReviewOrder] = useState<OrderResponse | null>(null);
+    const [reportOrder, setReportOrder] = useState<OrderResponse | null>(null);
 
     const loadOrders = useCallback(async () => {
         setLoadingList(true);
@@ -162,6 +169,33 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
         }
     };
 
+    const handleOpenReview = (order: OrderResponse) => {
+        setReviewOrder(order);
+        setShowReviewModal(true);
+    };
+
+    const handleOpenReport = (order: OrderResponse) => {
+        setReportOrder(order);
+        setShowReportModal(true);
+    };
+
+    const handleReviewSuccess = () => {
+        setShowReviewModal(false);
+        setReviewOrder(null);
+        if (selectedOrder) {
+            setSelectedOrder({
+                ...selectedOrder,
+                reviewed: true,
+                myRating: selectedOrder.myRating ?? 5,
+            });
+        }
+    };
+
+    const handleReportSuccess = () => {
+        setShowReportModal(false);
+        setReportOrder(null);
+    };
+
     const visibleOrders = useMemo(() => filterOrdersBySearch(orders, search), [orders, search]);
 
     const renderedCards = useMemo(() => {
@@ -231,6 +265,8 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                                 role={role}
                                 onBack={() => setSelectedOrder(null)}
                                 onCancel={handleOpenCancelModal}
+                                onReview={handleOpenReview}
+                                onReport={handleOpenReport}
                             />
                         )}
 
@@ -350,6 +386,21 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                                 </div>
                             </div>
                         )}
+
+                        <ReviewModal
+                            open={showReviewModal}
+                            onClose={() => { setShowReviewModal(false); setReviewOrder(null); }}
+                            orderId={reviewOrder?.id ?? ''}
+                            technicianName={reviewOrder?.technician?.fullName}
+                            onSuccess={handleReviewSuccess}
+                        />
+
+                        <ReportModal
+                            open={showReportModal}
+                            onClose={() => { setShowReportModal(false); setReportOrder(null); }}
+                            orderId={reportOrder?.id ?? ''}
+                            onSuccess={handleReportSuccess}
+                        />
                     </div>
                 </main>
             </div>

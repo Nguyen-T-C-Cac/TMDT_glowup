@@ -55,6 +55,9 @@ export interface OrderResponse {
     cancelReason?: string;
     cancelledAt?: string;
 
+    reviewed?: boolean;
+    myRating?: number;
+
     createdAt?: string;
     updatedAt?: string;
 }

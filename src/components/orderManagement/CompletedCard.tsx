@@ -12,6 +12,7 @@ export interface CompletedOrder {
     completionDate: string;
     totalPrice: number;
     rating: number;
+    reviewed?: boolean;
 }
 
 interface CompletedCardProps {
@@ -22,7 +23,6 @@ interface CompletedCardProps {
 
 export const CompletedCard: React.FC<CompletedCardProps> = ({ data, role, onViewDetail }) => {
     return (
-        // Gắn onClick vào cả thẻ card
         <div className="cmp-list-card" onClick={() => onViewDetail(data.id)}>
             <div className="cmp-icon-box">
                 <FaWrench />
@@ -38,12 +38,20 @@ export const CompletedCard: React.FC<CompletedCardProps> = ({ data, role, onView
                     <span className="cmp-date">
                         <FaRegCalendar /> {data.completionDate}
                     </span>
-                    {data.rating > 0 && (
+                    {data.reviewed ? (
                         <div className="cmp-stars">
                             {[...Array(5)].map((_, i) => (
                                 <FaStar key={i} className={i < data.rating ? 'star-filled' : 'star-empty'} />
                             ))}
                         </div>
+                    ) : (
+                        data.rating > 0 && (
+                            <div className="cmp-stars">
+                                {[...Array(5)].map((_, i) => (
+                                    <FaStar key={i} className={i < data.rating ? 'star-filled' : 'star-empty'} />
+                                ))}
+                            </div>
+                        )
                     )}
                 </div>
             </div>
@@ -53,6 +61,9 @@ export const CompletedCard: React.FC<CompletedCardProps> = ({ data, role, onView
                     <span className="price-label">TỔNG CHI PHÍ</span>
                     <span className="price-value">{data.totalPrice.toLocaleString('vi-VN')} VND</span>
                 </div>
+                {data.reviewed && (
+                    <span className="cmp-reviewed-badge">Đã đánh giá</span>
+                )}
             </div>
         </div>
     );

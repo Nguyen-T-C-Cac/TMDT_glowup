@@ -1,79 +1,139 @@
-import React from "react";
-import Modal from "../common/Modal";
-import "./css/reportModal.css";
-import { X } from "lucide-react";
+import React, { useState } from 'react';
+import Modal from '../common/Modal';
+import { X, CheckCircle } from 'lucide-react';
+import { reportService } from '../../services/reportService';
+import './css/reportModal.css';
+
+const SUGGESTED_REASONS = [
+    { value: 'extra_fee', label: 'Thợ thu thêm phụ phí ngoài hệ thống', icon: '💰' },
+    { value: 'bad_attitude', label: 'Thợ có thái độ không tốt, bất lịch sự', icon: '😤' },
+    { value: 'no_show', label: 'Thợ không đến đúng giờ hoặc không đến', icon: '⏰' },
+    { value: 'poor_quality', label: 'Chất lượng sửa chữa kém, không đạt yêu cầu', icon: '🔧' },
+    { value: 'fraud', label: 'Thợ gian lận, lừa đảo', icon: '⚠️' },
+    { value: 'other', label: 'Lý do khác', icon: '📝' },
+];
 
 interface ReportModalProps {
     open: boolean;
     onClose: () => void;
+    orderId: string;
+    onSuccess: () => void;
 }
 
-const ReportModal: React.FC<ReportModalProps> = ({ open, onClose }) => {
+const ReportModal: React.FC<ReportModalProps> = ({ open, onClose, orderId, onSuccess }) => {
+    const [reason, setReason] = useState('');
+    const [description, setDescription] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState(false);
+
+    const handleSubmit = async () => {
+        if (!reason) return;
+        if (!description.trim()) return;
+
+        setSubmitting(true);
+        setError(null);
+        try {
+            await reportService.createReport(orderId, {
+                reason,
+                description: description.trim(),
+            });
+            setSuccess(true);
+            setTimeout(() => {
+                onSuccess();
+                handleReset();
+            }, 1500);
+        } catch (err: unknown) {
+            const message =
+                err && typeof err === 'object' && 'response' in err
+                    ? String((err as { response: { data?: { message?: string } } }).response?.data?.message ?? '')
+                    : '';
+            setError(message || 'Không thể gửi báo cáo. Vui lòng thử lại sau.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleReset = () => {
+        setReason('');
+        setDescription('');
+        setError(null);
+        setSuccess(false);
+        onClose();
+    };
+
     return (
-        <Modal open={open} onClose={onClose}>
+        <Modal open={open} onClose={submitting ? () => {} : handleReset}>
             <div className="report-modal">
-                {/* HEADER */}
                 <header className="report-header">
                     <div className="header-info">
-                        <h2 className="title text-danger">BÁO CÁO SỰ CỐ / KHIẾU NẠI</h2>
-                        <span className="sub">Đơn hàng #GU-99210</span>
+                        <h2 className="title">BÁO CÁO SỰ CỐ / KHIẾU NẠI</h2>
+                        <span className="sub">Đơn hàng #{orderId}</span>
                     </div>
-
-                    <button
-                        className="close-btn"
-                        onClick={onClose}
-                        aria-label="Đóng"
-                    >
+                    <button className="close-btn" onClick={handleReset} disabled={submitting} aria-label="Đóng">
                         <X size={24} />
                     </button>
                 </header>
 
-                {/* BODY */}
-                <div className="report-body">
-                    <div className="notice danger-notice">
-                        Đội ngũ GlowUp sẽ tiếp nhận và xử lý khiếu nại của bạn trong vòng 24h làm việc.
+                {success ? (
+                    <div className="review-success">
+                        <CheckCircle className="success-icon" size={48} />
+                        <h3>Đã gửi báo cáo thành công!</h3>
+                        <p>Đội ngũ GlowUp sẽ xử lý khiếu nại trong vòng 24h làm việc.</p>
                     </div>
+                ) : (
+                    <>
+                        <div className="report-body">
+                            <div className="notice danger-notice">
+                                Đội ngũ GlowUp sẽ tiếp nhận và xử lý khiếu nại của bạn trong vòng 24h làm việc.
+                            </div>
 
-                    {/* LÝ DO KHIẾU NẠI */}
-                    <div className="form-group">
-                        <label htmlFor="report-reason">VẤN ĐỀ BẠN GẶP PHẢI</label>
-                        <select id="report-reason" className="report-select">
-                            <option value="">-- Chọn lý do --</option>
-                            <option value="attitude">Thợ có thái độ không tốt/bất lịch sự</option>
-                            <option value="extra_fee">Thợ yêu cầu thu thêm phụ phí ngoài hệ thống</option>
-                            <option value="incomplete">Thợ chưa sửa xong nhưng đã báo hoàn thành</option>
-                            <option value="damage">Thợ làm hư hỏng tài sản/thiết bị</option>
-                            <option value="other">Lý do khác</option>
-                        </select>
-                    </div>
+                            {error && <div className="danger-notice">{error}</div>}
 
-                    {/* MÔ TẢ CHI TIẾT */}
-                    <div className="form-group">
-                        <label htmlFor="report-desc">MÔ TẢ CHI TIẾT</label>
-                        <textarea
-                            id="report-desc"
-                            placeholder="Vui lòng cung cấp thêm thông tin chi tiết để GlowUp hỗ trợ bạn tốt nhất..."
-                        />
-                    </div>
+                            <div className="form-group">
+                                <label>VẤN ĐỀ BẠN GẶP PHẢI</label>
+                                <div className="report-reason-list">
+                                    {SUGGESTED_REASONS.map((r) => (
+                                        <button
+                                            key={r.value}
+                                            type="button"
+                                            className={`report-reason-item ${reason === r.value ? 'selected' : ''}`}
+                                            onClick={() => setReason(r.value)}
+                                        >
+                                            <span className="reason-icon">{r.icon}</span>
+                                            <span className="reason-label">{r.label}</span>
+                                            {reason === r.value && <span className="reason-check">✓</span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
 
-                    {/* BẰNG CHỨNG */}
-                    <div className="form-group">
-                        <label>BẰNG CHỨNG (HÌNH ẢNH/VIDEO)</label>
-                        <div className="upload-box" role="button" tabIndex={0}>
-                            TẢI ẢNH LÊN
+                            <div className="form-group">
+                                <label htmlFor="report-desc">MÔ TẢ CHI TIẾT</label>
+                                <textarea
+                                    id="report-desc"
+                                    placeholder="Vui lòng cung cấp thêm thông tin chi tiết để GlowUp hỗ trợ bạn tốt nhất..."
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    maxLength={2000}
+                                />
+                            </div>
                         </div>
-                    </div>
-                </div>
 
-                {/* FOOTER */}
-                <footer className="report-footer">
-                    <button className="btn-text" onClick={onClose}>
-                        Hủy bỏ
-                    </button>
-                    <button className="btn-solid-danger" onClick={() => console.log("Đã gửi khiếu nại!")}>
-                        Gửi khiếu nại
-                    </button>
-                </footer>
+                        <footer className="report-footer">
+                            <button className="btn-text" onClick={handleReset} disabled={submitting}>
+                                Hủy bỏ
+                            </button>
+                            <button
+                                className="btn-solid-danger"
+                                onClick={handleSubmit}
+                                disabled={!reason || !description.trim() || submitting}
+                            >
+                                {submitting ? 'Đang gửi...' : 'Gửi khiếu nại'}
+                            </button>
+                        </footer>
+                    </>
+                )}
             </div>
         </Modal>
     );
