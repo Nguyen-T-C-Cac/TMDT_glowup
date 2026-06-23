@@ -10,6 +10,7 @@ interface OrderDetailPanelProps {
     onBack: () => void;
     onCancel: (id: string) => void;
     onReview?: (order: OrderResponse) => void;
+    onEditReview?: (order: OrderResponse) => void;
     onReport?: (order: OrderResponse) => void;
 }
 
@@ -28,7 +29,7 @@ const formatDateTime = (value?: string): string => {
 
 const formatMoney = (value?: number): string => (value ?? 0).toLocaleString('vi-VN');
 
-export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({ order, role, onBack, onCancel, onReview, onReport }) => {
+export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({ order, role, onBack, onCancel, onReview, onEditReview, onReport }) => {
     const partner = role === 'technician' ? order.customer : order.technician;
     const canCancel = !['completed', 'cancelled', 'warranty'].includes(order.status.toLowerCase());
     const isCompleted = order.status.toLowerCase() === 'completed';
@@ -140,6 +141,9 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({ order, role,
                                     ))}
                                 </div>
                                 <span>Bạn đã đánh giá dịch vụ này</span>
+                                <button className="detail-edit-review-btn" onClick={() => onEditReview?.(order)}>
+                                    Chỉnh sửa
+                                </button>
                             </div>
                         ) : (
                             <button className="detail-review-btn" onClick={() => onReview?.(order)}>

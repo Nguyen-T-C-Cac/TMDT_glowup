@@ -133,4 +133,24 @@ export const orderService = {
         unwrap(response.data);
         return orderService.getOrderById(orderId);
     },
+
+    updateStatus: async (orderId: string, status: string): Promise<OrderResponse> => {
+        const response = await apiClient.patch(`/api/orders/${orderId}/status`, { status });
+        unwrap(response.data);
+        return orderService.getOrderById(orderId);
+    },
+
+    createInvoice: async (orderId: string): Promise<void> => {
+        await apiClient.post(`/api/orders/${orderId}/invoice`);
+    },
+
+    createVnpayCheckout: async (orderId: string): Promise<string> => {
+        const response = await apiClient.post(`/api/orders/${orderId}/invoice/vnpay-checkout`);
+        const data = unwrap<{ checkoutUrl: string }>(response.data);
+        return data.checkoutUrl;
+    },
+
+    confirmCashPayment: async (orderId: string): Promise<void> => {
+        await apiClient.post(`/api/orders/${orderId}/invoice/confirm-cash`);
+    },
 };

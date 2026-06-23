@@ -1,27 +1,51 @@
 import React from 'react';
 import {
     FaLocationDot, FaWrench, FaMessage,
-    FaUserTie, FaRegClock, FaCircleExclamation
+    FaUserTie, FaRegClock, FaCircleExclamation, FaCheck,
+    FaFileInvoiceDollar
 } from 'react-icons/fa6';
 import './inProgressCard.css';
 import type {InProgressOrder} from "../../types/InProgressOrder.ts";
+import type {UserRole} from '../../types/UserRole.ts';
 import { useNavigate } from 'react-router-dom';
 import { navigateToChat } from '../../utils/chatNavigation';
 
 interface InProgressCardProps {
     data: InProgressOrder;
+    role: UserRole;
     onViewDetail: (id: string) => void;
+    onUpdateStatus?: (id: string, status: string) => void;
+    onCreateInvoice?: (id: string) => Promise<void>;
 }
 
-export const InProgressCard: React.FC<InProgressCardProps> = ({data, onViewDetail}) => {
+export const InProgressCard: React.FC<InProgressCardProps> = ({data, role, onViewDetail, onUpdateStatus, onCreateInvoice}) => {
     const navigate = useNavigate();
+    const [invoiceLoading, setInvoiceLoading] = React.useState(false);
 
     const handleChatClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        navigateToChat(navigate, 'customer', {
-            technicianId: data.technicianId,
+        if (role === 'customer' && data.technicianId) {
+            navigateToChat(navigate, 'customer', {
+                technicianId: data.technicianId,
+                orderId: data.id,
+            });
+            return;
+        }
+        navigateToChat(navigate, 'technician', {
             orderId: data.id,
+            customerId: data.customerId,
         });
+    };
+
+    const handleSendInvoice = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!onCreateInvoice || invoiceLoading) return;
+        setInvoiceLoading(true);
+        try {
+            await onCreateInvoice(data.id);
+        } finally {
+            setInvoiceLoading(false);
+        }
     };
 
     return (
@@ -73,9 +97,21 @@ export const InProgressCard: React.FC<InProgressCardProps> = ({data, onViewDetai
                 <button className="btn-primary" onClick={() => onViewDetail(data.id)}>
                     <FaWrench/> Xem tiến độ
                 </button>
-                <button type="button" className="btn-secondary" onClick={handleChatClick}>
-                    <FaMessage/> Chat với thợ
-                </button>
+                {role === 'technician' && (
+                    <>
+                        <button className="btn-warning" onClick={handleSendInvoice} disabled={invoiceLoading}>
+                            <FaFileInvoiceDollar/> {invoiceLoading ? 'Đang gửi...' : 'Gửi hoá đơn'}
+                        </button>
+                        <button className="btn-success" onClick={(e) => { e.stopPropagation(); onUpdateStatus?.(data.id, 'completed'); }}>
+                            <FaCheck/> Hoàn thành
+                        </button>
+                    </>
+                )}
+                {role === 'customer' && (
+                    <button type="button" className="btn-secondary" onClick={handleChatClick}>
+                        <FaMessage/> Chat với thợ
+                    </button>
+                )}
             </div>
         </div>
     );

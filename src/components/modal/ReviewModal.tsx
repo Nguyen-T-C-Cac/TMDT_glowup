@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../common/Modal';
 import { X, Star, CheckCircle } from 'lucide-react';
 import { reviewService } from '../../services/reviewService';
@@ -18,29 +18,45 @@ interface ReviewModalProps {
     onClose: () => void;
     orderId: string;
     technicianName?: string;
-    onSuccess: () => void;
+    onSuccess: (rating: number) => void;
+    editData?: { rating: number; content?: string };
 }
 
-const ReviewModal: React.FC<ReviewModalProps> = ({ open, onClose, orderId, technicianName, onSuccess }) => {
-    const [rating, setRating] = useState(0);
+const ReviewModal: React.FC<ReviewModalProps> = ({ open, onClose, orderId, technicianName, onSuccess, editData }) => {
+    const [rating, setRating] = useState(editData?.rating ?? 0);
     const [hoverRating, setHoverRating] = useState(0);
-    const [content, setContent] = useState('');
+    const [content, setContent] = useState(editData?.content ?? '');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
+    const isEditing = !!editData;
+
+    useEffect(() => {
+        setRating(editData?.rating ?? 0);
+        setContent(editData?.content ?? '');
+        setError(null);
+        setSuccess(false);
+    }, [editData, open]);
 
     const handleSubmit = async () => {
         if (rating < 1) return;
         setSubmitting(true);
         setError(null);
         try {
-            await reviewService.createReview(orderId, {
-                rating,
-                content: content.trim() || undefined,
-            });
+            if (isEditing) {
+                await reviewService.updateReview(orderId, {
+                    rating,
+                    content: content.trim() || undefined,
+                });
+            } else {
+                await reviewService.createReview(orderId, {
+                    rating,
+                    content: content.trim() || undefined,
+                });
+            }
             setSuccess(true);
             setTimeout(() => {
-                onSuccess();
+                onSuccess(rating);
                 handleReset();
             }, 1500);
         } catch (err: unknown) {
@@ -68,7 +84,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ open, onClose, orderId, techn
             <div className="review-modal">
                 <header className="review-header">
                     <div className="header-info">
-                        <h2 className="title">ĐÁNH GIÁ DỊCH VỤ</h2>
+                        <h2 className="title">{isEditing ? 'CHỈNH SỬA ĐÁNH GIÁ' : 'ĐÁNH GIÁ DỊCH VỤ'}</h2>
                         <span className="sub">Đơn hàng #{orderId}{technicianName ? ` - Thợ: ${technicianName}` : ''}</span>
                     </div>
                     <button className="close-btn" onClick={handleReset} disabled={submitting} aria-label="Đóng">
@@ -130,7 +146,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ open, onClose, orderId, techn
                                 onClick={handleSubmit}
                                 disabled={rating < 1 || submitting}
                             >
-                                {submitting ? 'Đang gửi...' : 'Gửi đánh giá'}
+                                {submitting ? 'Đang gửi...' : isEditing ? 'Cập nhật đánh giá' : 'Gửi đánh giá'}
                             </button>
                         </footer>
                     </>

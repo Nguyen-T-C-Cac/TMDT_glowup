@@ -40,6 +40,7 @@ import TechnicianWalletTopUpPage from '../pages/TechnicianWalletTopUpPage'
 import TechnicianWalletTopUpResultPage from '../pages/TechnicianWalletTopUpResultPage'
 import TechnicianWalletWithdrawPage from '../pages/TechnicianWalletWithdrawPage'
 import VoucherRewardsPage from '../pages/VoucherRewardsPage'
+import OrderPaymentResultPage from '../pages/OrderPaymentResultPage'
 
 
 export default function AppRouter() {
@@ -96,6 +97,8 @@ export default function AppRouter() {
         <Route path="complaints" element={<AdminComplaintsPage />} />
         <Route path="complaints/:complaintId/resolve" element={<AdminComplaintResolvePage />} />
       </Route>
+
+      <Route path="/orders/:code" element={<OrderPaymentResultPage />} />
 
       <Route path="/auth">
         <Route index element={<Navigate to="login" replace />} />

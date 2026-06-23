@@ -14,6 +14,7 @@ import {
     mapOrderToScheduledOrder,
 } from '../stores/orderStore.ts';
 import { orderService } from '../services/order/orderService.ts';
+import { reviewService } from '../services/reviewService.ts';
 
 import OrderTabs from '../components/orderManagement/OrderTabs.tsx';
 import RequestCard from '../components/orderManagement/RequestCard.tsx';
@@ -49,6 +50,7 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
     const [loadingList, setLoadingList] = useState(false);
     const [loadingDetail, setLoadingDetail] = useState(false);
     const [submittingCancel, setSubmittingCancel] = useState(false);
+    const [submittingStatus, setSubmittingStatus] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [selectedOrder, setSelectedOrder] = useState<OrderResponse | null>(null);
 
@@ -59,6 +61,7 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
     const [reviewOrder, setReviewOrder] = useState<OrderResponse | null>(null);
+    const [reviewEditData, setReviewEditData] = useState<{ rating: number; content?: string } | undefined>(undefined);
     const [reportOrder, setReportOrder] = useState<OrderResponse | null>(null);
 
     const loadOrders = useCallback(async () => {
@@ -169,8 +172,57 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
         }
     };
 
+    const handleCreateInvoice = async (orderId: string) => {
+        setError(null);
+        try {
+            await orderService.createInvoice(orderId);
+            alert('Hoá đơn đã được gửi vào chat thành công!');
+        } catch (err: unknown) {
+            const axiosError = err as { response?: { data?: { error?: { message?: string } } } };
+            const serverMsg = axiosError?.response?.data?.error?.message;
+            const msg = serverMsg || (err instanceof Error ? err.message : 'Không thể gửi hoá đơn');
+            setError(msg);
+        }
+    };
+
+    const handleUpdateStatus = async (orderId: string, status: string) => {
+        setSubmittingStatus(orderId);
+        setError(null);
+        try {
+            const updated = await orderService.updateStatus(orderId, status);
+            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updated } : o));
+            if (selectedOrder?.id === orderId) {
+                setSelectedOrder(updated);
+            }
+            if (status === 'completed' || status === 'in-progress') {
+                await loadOrders();
+            }
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Không thể cập nhật trạng thái';
+            setError(msg);
+        } finally {
+            setSubmittingStatus(null);
+        }
+    };
+
     const handleOpenReview = (order: OrderResponse) => {
+        setReviewEditData(undefined);
         setReviewOrder(order);
+        setShowReviewModal(true);
+    };
+
+    const handleOpenEditReview = async (order: OrderResponse) => {
+        setReviewOrder(order);
+        try {
+            const res = await reviewService.getMyReview(order.id);
+            const review = res.data || res;
+            setReviewEditData({
+                rating: review.rating ?? order.myRating ?? 5,
+                content: review.content || '',
+            });
+        } catch {
+            setReviewEditData({ rating: order.myRating ?? 5 });
+        }
         setShowReviewModal(true);
     };
 
@@ -179,15 +231,19 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
         setShowReportModal(true);
     };
 
-    const handleReviewSuccess = () => {
+    const handleReviewSuccess = (rating: number) => {
         setShowReviewModal(false);
+        setReviewEditData(undefined);
         setReviewOrder(null);
         if (selectedOrder) {
             setSelectedOrder({
                 ...selectedOrder,
                 reviewed: true,
-                myRating: selectedOrder.myRating ?? 5,
+                myRating: rating,
             });
+            setOrders(prev => prev.map(o =>
+                o.id === selectedOrder.id ? { ...o, reviewed: true, myRating: rating } : o
+            ));
         }
     };
 
@@ -219,6 +275,7 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                     role={role}
                     onViewDetail={handleSelectOrder}
                     onCancel={handleOpenCancelModal}
+                    onUpdateStatus={handleUpdateStatus}
                 />
             ));
         }
@@ -228,7 +285,10 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                 <InProgressCard
                     key={order.id}
                     data={mapOrderToInProgressOrder(order)}
+                    role={role}
                     onViewDetail={handleSelectOrder}
+                    onUpdateStatus={handleUpdateStatus}
+                    onCreateInvoice={role === 'technician' ? handleCreateInvoice : undefined}
                 />
             ));
         }
@@ -260,14 +320,15 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                 <main className="page-body bg-plate-white">
                     <div className="orders-container">
                         {selectedOrder && (
-                            <OrderDetailPanel
-                                order={selectedOrder}
-                                role={role}
-                                onBack={() => setSelectedOrder(null)}
-                                onCancel={handleOpenCancelModal}
-                                onReview={handleOpenReview}
-                                onReport={handleOpenReport}
-                            />
+            <OrderDetailPanel
+                order={selectedOrder}
+                role={role}
+                onBack={() => setSelectedOrder(null)}
+                onCancel={handleOpenCancelModal}
+                onReview={handleOpenReview}
+                onEditReview={handleOpenEditReview}
+                onReport={handleOpenReport}
+            />
                         )}
 
                         {!selectedOrder && (
@@ -389,10 +450,11 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
 
                         <ReviewModal
                             open={showReviewModal}
-                            onClose={() => { setShowReviewModal(false); setReviewOrder(null); }}
+                            onClose={() => { setShowReviewModal(false); setReviewEditData(undefined); setReviewOrder(null); }}
                             orderId={reviewOrder?.id ?? ''}
                             technicianName={reviewOrder?.technician?.fullName}
                             onSuccess={handleReviewSuccess}
+                            editData={reviewEditData}
                         />
 
                         <ReportModal

@@ -4,6 +4,7 @@ import { Header } from '../components/layout/Header';
 import styles from './ChatPage.module.css';
 import { ContactItem } from '../components/chat/ContactItem';
 import { QuotationCard } from '../components/chat/QuotationCard';
+import { InvoiceCard } from '../components/chat/InvoiceCard';
 import { MessageInput } from '../components/chat/MessageInput';
 import { SearchBar } from '../components/chat/SearchBar';
 import { Avatar } from '../components/common/Avatar';
@@ -74,6 +75,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
     const [loadError, setLoadError] = useState<string | null>(null);
     const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
     const [isPriceConfirmOpen, setIsPriceConfirmOpen] = useState(false);
+    const [invoiceInfo, setInvoiceInfo] = useState<{ invoiceCode: string; totalPrice: number } | null>(null);
     const messageListRef = useRef<HTMLElement | null>(null);
 
     const currentUser = getStoredUser();
@@ -128,8 +130,11 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
 
             if (isActive) {
                 setMessages((prev) => {
-                    if (prev.some((m) => m.id === incoming.id)) {
-                        return prev;
+                    const idx = prev.findIndex((m) => m.id === incoming.id);
+                    if (idx >= 0) {
+                        const next = [...prev];
+                        next[idx] = incoming;
+                        return next;
                     }
                     return [...prev, incoming];
                 });
@@ -141,7 +146,9 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                     const preview =
                         incoming.type === 'quotation'
                             ? 'Báo giá mới'
-                            : incoming.content ?? '';
+                            : incoming.type === 'invoice'
+                                ? 'Hoá đơn mới'
+                                : incoming.content ?? '';
                     return {
                         ...c,
                         lastMessage: {
@@ -486,6 +493,43 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
         }
     };
 
+    const handleCreateInvoice = async () => {
+        if (!linkedOrder?.id) return;
+        try {
+            await orderService.createInvoice(linkedOrder.id);
+            setInvoiceInfo(null);
+            if (activeConversationId) {
+                await loadMessages(activeConversationId);
+            }
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Không thể xuất hoá đơn');
+        }
+    };
+
+    const handlePayViaVNPay = async (orderId: string) => {
+        try {
+            const checkoutUrl = await orderService.createVnpayCheckout(orderId);
+            window.open(checkoutUrl, '_blank');
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Không thể tạo thanh toán VNPay');
+        }
+    };
+
+    const handleConfirmCash = async (orderId: string) => {
+        try {
+            await orderService.confirmCashPayment(orderId);
+            if (linkedOrder?.id === orderId) {
+                const updated = await orderService.getOrderById(orderId);
+                setLinkedOrder(updated);
+            }
+            if (activeConversationId) {
+                await loadMessages(activeConversationId);
+            }
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Xác nhận tiền mặt thất bại');
+        }
+    };
+
     const onNavigate = (page: string, data?: unknown) => {
         const path = pageMap[page] || '/';
         navigate(path, { state: data });
@@ -493,6 +537,8 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
 
     const orderStatus = linkedOrder?.status?.toLowerCase() ?? '';
     const showPriceAdjustAction =
+        role === 'technician' && orderStatus === 'in_progress';
+    const showInvoiceAction =
         role === 'technician' && orderStatus === 'in_progress';
     const showRepairCard = Boolean(
         linkedOrder &&
@@ -599,6 +645,15 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                             messages.map((message) => {
                                 const isMe = message.senderId === currentUserCode;
                                 const isQuotation = message.type === 'quotation' && message.quotation;
+                                const isInvoice = message.type === 'invoice';
+                                let invoiceParsed: Record<string, unknown> | null = null;
+                                if (isInvoice && message.content) {
+                                    try {
+                                        invoiceParsed = JSON.parse(message.content);
+                                    } catch {
+                                        invoiceParsed = null;
+                                    }
+                                }
 
                                 return (
                                     <div
@@ -609,7 +664,20 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                                             <Avatar src={activeContact.avatar} size={32} isOnline={false} />
                                         )}
                                         <div className={styles.messageContent}>
-                                            {isQuotation ? (
+                                            {isInvoice && invoiceParsed ? (
+                                                <InvoiceCard
+                                                    invoiceData={invoiceParsed as any}
+                                                    orderId={linkedOrder?.id ?? ''}
+                                                    isCustomer={role === 'customer'}
+                                                    isTechnician={role === 'technician'}
+                                                    onPayViaVNPay={
+                                                        role === 'customer' ? handlePayViaVNPay : undefined
+                                                    }
+                                                    onConfirmCash={
+                                                        role === 'technician' ? handleConfirmCash : undefined
+                                                    }
+                                                />
+                                            ) : isQuotation ? (
                                                 <QuotationCard
                                                     serviceName={message.quotation!.serviceName}
                                                     description={message.quotation!.description}
@@ -662,6 +730,8 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                                 showQuoteAction={role === 'technician'}
                                 showPriceAdjustAction={showPriceAdjustAction}
                                 onOpenPriceAdjust={() => setIsAdjustmentOpen(true)}
+                                showInvoiceAction={showInvoiceAction}
+                                onCreateInvoice={handleCreateInvoice}
                             />
                         </footer>
                     )}
