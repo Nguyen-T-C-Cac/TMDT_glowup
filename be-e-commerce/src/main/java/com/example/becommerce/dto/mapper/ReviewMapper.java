@@ -23,6 +23,7 @@ public class ReviewMapper {
                 .content(review.getContent())
                 .attachedImages(images != null && !images.isEmpty() ? images : null)
                 .createdAt(review.getCreatedAt())
+                .updatedAt(review.getUpdatedAt())
                 .build();
     }
 }

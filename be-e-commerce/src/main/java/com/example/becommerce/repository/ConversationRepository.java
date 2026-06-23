@@ -19,6 +19,8 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
 
     long count();
 
+    Optional<Conversation> findByOrder_Id(Long orderId);
+
     /** Conversation between this exact (customer, technician) pair, regardless of order link. */
     Optional<Conversation> findByCustomer_IdAndTechnician_Id(Long customerId, Long technicianId);
 

@@ -1,6 +1,7 @@
 package com.example.becommerce.repository;
 
 import com.example.becommerce.entity.Message;
+import com.example.becommerce.entity.enums.MessageType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -10,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -20,6 +22,8 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     long count();
 
     Page<Message> findByConversation_IdOrderBySentAtDesc(Long conversationId, Pageable pageable);
+
+    List<Message> findByConversation_IdAndTypeOrderBySentAtDesc(Long conversationId, MessageType type);
 
     @EntityGraph(attributePaths = {"sender", "quotation"})
     Optional<Message> findTopByConversation_IdOrderBySentAtDesc(Long conversationId);

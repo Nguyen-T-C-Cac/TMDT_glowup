@@ -42,6 +42,58 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional
+    public ReviewResponse updateReview(String orderCode, CreateReviewRequest request) {
+        User customer = getCurrentUser();
+        Order order = findOrder(orderCode);
+
+        if (customer.getRole() != Role.CUSTOMER) {
+            throw AppException.forbidden("Chỉ khách hàng mới có thể chỉnh sửa đánh giá");
+        }
+        if (order.getCustomer() == null || !order.getCustomer().getId().equals(customer.getId())) {
+            throw AppException.forbidden("Bạn không phải khách hàng của đơn này");
+        }
+
+        Review review = reviewRepository.findByOrder_Id(order.getId())
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy đánh giá cho đơn này"));
+
+        review.setRating(request.getRating());
+        if (request.getContent() != null) {
+            review.setContent(request.getContent());
+        }
+
+        review.getAttachedImages().clear();
+        if (request.getAttachedImages() != null) {
+            request.getAttachedImages().stream()
+                    .filter(s -> s != null && !s.isBlank())
+                    .map(String::trim)
+                    .forEach(review.getAttachedImages()::add);
+        }
+
+        Review saved = reviewRepository.save(review);
+
+        // Refresh denormalized averageRating on the technician.
+        User technician = order.getTechnician();
+        Double avg = reviewRepository.averageRatingByTechnician(technician.getId());
+        technician.setAverageRating(avg == null ? 0d : avg);
+        userRepository.save(technician);
+
+        log.info("Review {} updated on order {} by customer {}", saved.getCode(), order.getCode(), customer.getCode());
+        return reviewMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ReviewResponse getMyReview(String orderCode) {
+        User customer = getCurrentUser();
+        Order order = findOrder(orderCode);
+
+        Review review = reviewRepository.findByOrder_Id(order.getId())
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy đánh giá cho đơn này"));
+        return reviewMapper.toResponse(review);
+    }
+
+    @Override
+    @Transactional
     public ReviewResponse createReview(String orderCode, CreateReviewRequest request) {
         User customer = getCurrentUser();
         Order order = findOrder(orderCode);

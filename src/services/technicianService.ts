@@ -49,8 +49,8 @@ export const technicianService = {
    */
   getTechnicianReviews: async (
     id: string
-  ): Promise<{ success: boolean; data: any[] }> => {
-    const response = await apiClient.get<{ success: boolean; data: any[] }>(
+  ): Promise<{ success: boolean; data: { items: any[]; averageRating?: number; totalReviews?: number; pagination?: any } }> => {
+    const response = await apiClient.get<{ success: boolean; data: { items: any[]; averageRating?: number; totalReviews?: number; pagination?: any } }>(
       `/api/technicians/${id}/reviews`
     );
     return response.data;

@@ -1,0 +1,196 @@
+.payment-result-page {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 24px 16px 60px;
+    font-family: var(--font-family);
+}
+
+.payment-result-header {
+    margin-bottom: 24px;
+}
+
+.payment-result-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    color: var(--blueberry-skin, #2563eb);
+    font-size: var(--fs-sm, 14px);
+    cursor: pointer;
+    padding: 8px 0;
+    font-family: var(--font-family);
+}
+
+.payment-result-kicker {
+    font-size: var(--fs-xs, 12px);
+    color: var(--text-sub, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 8px 0 4px;
+}
+
+.payment-result-header h1 {
+    font-size: var(--fs-xl, 22px);
+    font-weight: var(--fw-bold, 700);
+    color: var(--text-main, #1e293b);
+    margin: 0;
+}
+
+.payment-result-card {
+    background: var(--white, #fff);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid var(--border, #e2e8f0);
+}
+
+.payment-result-card.success {
+    border-color: #22c55e;
+}
+
+.payment-result-card.failed {
+    border-color: #ef4444;
+}
+
+.payment-result-card.pending {
+    border-color: #f59e0b;
+}
+
+.payment-result-status {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.payment-result-icon {
+    font-size: 32px;
+    flex-shrink: 0;
+    margin-top: 4px;
+}
+
+.payment-result-card.success .payment-result-icon {
+    color: #22c55e;
+}
+
+.payment-result-card.failed .payment-result-icon {
+    color: #ef4444;
+}
+
+.payment-result-card.pending .payment-result-icon {
+    color: #f59e0b;
+}
+
+.payment-result-status h2 {
+    margin: 0 0 4px;
+    font-size: var(--fs-lg, 18px);
+    color: var(--text-main, #1e293b);
+}
+
+.payment-result-status p {
+    margin: 0;
+    font-size: var(--fs-sm, 14px);
+    color: var(--text-sub, #64748b);
+}
+
+.payment-result-amount {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    border-top: 1px solid var(--border, #e2e8f0);
+    margin-bottom: 16px;
+}
+
+.payment-result-amount span {
+    font-size: var(--fs-sm, 14px);
+    color: var(--text-sub, #64748b);
+}
+
+.payment-result-amount strong {
+    font-size: var(--fs-lg, 18px);
+    color: var(--text-main, #1e293b);
+}
+
+.payment-result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 16px 0;
+    border-top: 1px solid var(--border, #e2e8f0);
+}
+
+.payment-result-grid article {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.payment-result-grid article span {
+    font-size: var(--fs-xs, 12px);
+    color: var(--text-sub, #64748b);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.payment-result-grid article strong {
+    font-size: var(--fs-sm, 14px);
+    color: var(--text-main, #1e293b);
+    word-break: break-all;
+}
+
+.payment-result-note {
+    padding: 12px 0;
+    border-top: 1px solid var(--border, #e2e8f0);
+}
+
+.payment-result-note p {
+    margin: 0;
+    font-size: var(--fs-xs, 12px);
+    color: var(--text-sub, #64748b);
+    font-style: italic;
+}
+
+.payment-result-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.payment-result-primary-btn,
+.payment-result-secondary-btn {
+    flex: 1;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: var(--fs-sm, 14px);
+    font-weight: var(--fw-semibold, 600);
+    cursor: pointer;
+    border: none;
+    font-family: var(--font-family);
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.payment-result-primary-btn {
+    background: var(--blueberry-skin, #2563eb);
+    color: var(--white, #fff);
+}
+
+.payment-result-primary-btn:hover {
+    background: var(--berry-bloom, #1d4ed8);
+}
+
+.payment-result-secondary-btn {
+    background: var(--white, #fff);
+    color: var(--text-sub, #64748b);
+    border: 1px solid var(--border, #e2e8f0);
+}
+
+.payment-result-secondary-btn:hover {
+    color: var(--text-main, #1e293b);
+    border-color: var(--stem-grey, #94a3b8);
+}

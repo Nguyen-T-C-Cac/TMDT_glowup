@@ -169,6 +169,25 @@
     border-color: var(--stem-grey);
 }
 
+.btn-success {
+    background: #16a34a;
+    color: var(--white);
+}
+
+.btn-success:hover {
+    background: #15803d;
+}
+
+.btn-warning {
+    background: #f59e0b;
+    color: var(--white);
+}
+
+.btn-warning:hover {
+    background: #d97706;
+}
+}
+
 .btn-large-primary, .btn-large-secondary {
     padding: 14px 24px;
     flex: 1;
@@ -450,6 +469,86 @@
 .order-cancel-btn-confirm {
     border: none;
     color: var(--white);
+}
+
+.detail-review-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.detail-review-btn,
+.detail-report-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-family: var(--font-family);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+    transition: 0.2s;
+    border: none;
+}
+
+.detail-review-btn {
+    background: var(--blueberry-skin);
+    color: var(--white);
+}
+
+.detail-review-btn:hover {
+    opacity: 0.9;
+}
+
+.detail-report-btn {
+    background: var(--white);
+    color: #ef4444;
+    border: 1px solid #fecaca;
+}
+
+.detail-report-btn:hover {
+    background: #fef2f2;
+}
+
+.detail-reviewed-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+    color: #16a34a;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+}
+
+.detail-reviewed-stars {
+    display: flex;
+    gap: 4px;
+    font-size: 18px;
+}
+
+.detail-edit-review-btn {
+    background: none;
+    border: 1px solid #bbf7d0;
+    color: #16a34a;
+    padding: 6px 16px;
+    border-radius: 8px;
+    font-family: var(--font-family);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.detail-edit-review-btn:hover {
+    background: #f0fdf4;
 }
 
 @media (max-width: 900px) {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Paperclip, Image, Smile, SendHorizontal, Coins } from 'lucide-react';
+import { Paperclip, Image, Smile, SendHorizontal, Coins, Receipt } from 'lucide-react';
 import styles from './Chat.module.css';
 import QuoteCreateModal from '../modal/QuoteCreateModal';
 import { ChatInputWrapper } from './ChatInputWrapper';
@@ -13,6 +13,8 @@ interface MessageInputProps {
     showQuoteAction?: boolean;
     showPriceAdjustAction?: boolean;
     onOpenPriceAdjust?: () => void;
+    showInvoiceAction?: boolean;
+    onCreateInvoice?: () => void;
 }
 
 export const MessageInput: React.FC<MessageInputProps> = ({
@@ -22,6 +24,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     showQuoteAction = false,
     showPriceAdjustAction = false,
     onOpenPriceAdjust,
+    showInvoiceAction = false,
+    onCreateInvoice,
 }) => {
     const [message, setMessage] = useState('');
     const [openQuote, setOpenQuote] = useState(false);
@@ -56,6 +60,16 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                                 onClick={onOpenPriceAdjust}
                             >
                                 <Coins size={20} color="#4A5E8B" />
+                            </button>
+                        )}
+                        {showInvoiceAction && role === 'technician' && (
+                            <button
+                                type="button"
+                                className={styles.iconButton}
+                                title="Xuất hoá đơn"
+                                onClick={onCreateInvoice}
+                            >
+                                <Receipt size={20} color="#4A5E8B" />
                             </button>
                         )}
                         <button type="button" className={styles.iconButton} title="Gửi hình ảnh" disabled>

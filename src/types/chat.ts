@@ -1,4 +1,4 @@
-export type ChatMessageType = 'text' | 'image' | 'quotation' | 'system';
+export type ChatMessageType = 'text' | 'image' | 'quotation' | 'system' | 'invoice';
 
 export type EmbeddedQuotation = {
   id: string;

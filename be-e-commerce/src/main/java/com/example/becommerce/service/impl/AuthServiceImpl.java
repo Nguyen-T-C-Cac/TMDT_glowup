@@ -87,7 +87,7 @@ public class AuthServiceImpl implements AuthService {
                     .fullName(fullName)
                     .avatar(avatar)
 
-                    .phone("GG-" + System.currentTimeMillis())
+                    .phone("GG-" + UUID.randomUUID().toString().replaceAll("-", "").substring(0, 11))
 
                     .password("GOOGLE_LOGIN")
 
@@ -200,6 +200,9 @@ public class AuthServiceImpl implements AuthService {
 //        }
 
         // 4. Check account status
+        if (user.getStatus() == UserStatus.PENDING) {
+            throw AppException.badRequest(ErrorCode.EMAIL_NOT_VERIFIED, "Vui lòng xác thực email trước khi đăng nhập");
+        }
         if (user.getStatus() == UserStatus.LOCKED) {
             throw AppException.badRequest(ErrorCode.ACCOUNT_LOCKED, "Tài khoản đã bị khóa");
         }

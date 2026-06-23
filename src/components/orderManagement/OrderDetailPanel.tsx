@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaArrowLeft, FaCalendarCheck, FaClock, FaMoneyBillWave, FaUser, FaUsers, FaImage, FaLocationDot } from 'react-icons/fa6';
+import { FaArrowLeft, FaCalendarCheck, FaClock, FaMoneyBillWave, FaUser, FaUsers, FaImage, FaLocationDot, FaStar, FaTriangleExclamation } from 'react-icons/fa6';
 import type { UserRole } from '../../types/UserRole.ts';
 import type { OrderResponse } from '../../types/order/order.ts';
 import { getOrderStatusLabel } from '../../stores/orderStore.ts';
@@ -9,14 +9,15 @@ interface OrderDetailPanelProps {
     role: UserRole;
     onBack: () => void;
     onCancel: (id: string) => void;
+    onReview?: (order: OrderResponse) => void;
+    onEditReview?: (order: OrderResponse) => void;
+    onReport?: (order: OrderResponse) => void;
 }
 
 const formatDateTime = (value?: string): string => {
     if (!value) return 'Chưa cập nhật';
-
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) return value;
-
     return parsed.toLocaleString('vi-VN', {
         day: '2-digit',
         month: '2-digit',
@@ -28,9 +29,11 @@ const formatDateTime = (value?: string): string => {
 
 const formatMoney = (value?: number): string => (value ?? 0).toLocaleString('vi-VN');
 
-export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({ order, role, onBack, onCancel }) => {
+export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({ order, role, onBack, onCancel, onReview, onEditReview, onReport }) => {
     const partner = role === 'technician' ? order.customer : order.technician;
-    const canCancel = !['completed', 'cancelled'].includes(order.status.toLowerCase());
+    const canCancel = !['completed', 'cancelled', 'warranty'].includes(order.status.toLowerCase());
+    const isCompleted = order.status.toLowerCase() === 'completed';
+    const isCustomer = role === 'customer';
     const hasImages = (order.images?.length ?? 0) > 0;
 
     return (
@@ -119,12 +122,40 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({ order, role,
                 <button className="btn-large-secondary" onClick={onBack}>
                     Quay lại
                 </button>
-                {canCancel && (
+                {canCancel && onCancel && (
                     <button className="btn-large-primary danger-button" onClick={() => onCancel(order.id)}>
                         Hủy đơn
                     </button>
                 )}
             </div>
+
+            {isCompleted && isCustomer && (
+                <div className="detail-card mt-24">
+                    <span className="detail-label">Đánh giá & hỗ trợ</span>
+                    <div className="detail-review-actions">
+                        {order.reviewed ? (
+                            <div className="detail-reviewed-info">
+                                <div className="detail-reviewed-stars">
+                                    {[1, 2, 3, 4, 5].map((i) => (
+                                        <FaStar key={i} className={i <= (order.myRating ?? 0) ? 'star-filled' : 'star-empty'} />
+                                    ))}
+                                </div>
+                                <span>Bạn đã đánh giá dịch vụ này</span>
+                                <button className="detail-edit-review-btn" onClick={() => onEditReview?.(order)}>
+                                    Chỉnh sửa
+                                </button>
+                            </div>
+                        ) : (
+                            <button className="detail-review-btn" onClick={() => onReview?.(order)}>
+                                <FaStar /> Đánh giá dịch vụ
+                            </button>
+                        )}
+                        <button className="detail-report-btn" onClick={() => onReport?.(order)}>
+                            <FaTriangleExclamation /> Báo cáo sự cố
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -18,6 +18,7 @@ import com.example.becommerce.entity.OrderImage;
 import com.example.becommerce.entity.OrderPriceAdjustment;
 import com.example.becommerce.entity.OrderPriceAdjustmentPart;
 import com.example.becommerce.entity.OrderStatusHistory;
+import com.example.becommerce.entity.Review;
 import com.example.becommerce.entity.User;
 import com.example.becommerce.entity.Wallet;
 import com.example.becommerce.entity.WalletTransaction;
@@ -31,6 +32,7 @@ import com.example.becommerce.entity.enums.WalletType;
 import com.example.becommerce.exception.AppException;
 import com.example.becommerce.repository.OrderPriceAdjustmentRepository;
 import com.example.becommerce.repository.OrderRepository;
+import com.example.becommerce.repository.ReviewRepository;
 import com.example.becommerce.repository.SystemSettingRepository;
 import com.example.becommerce.repository.UserRepository;
 import com.example.becommerce.repository.WalletRepository;
@@ -80,6 +82,7 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository                 orderRepository;
     private final OrderPriceAdjustmentRepository  adjustmentRepository;
+    private final ReviewRepository                reviewRepository;
     private final UserRepository                  userRepository;
     private final WalletRepository                walletRepository;
     private final WalletTransactionRepository     walletTransactionRepository;
@@ -112,6 +115,7 @@ public class OrderServiceImpl implements OrderService {
 
         List<OrderResponse> items = ordersPage.getContent().stream()
                 .map(orderMapper::toListItem)
+                .map(r -> enrichWithReview(r, current))
                 .toList();
 
         return PagedResponse.of(items, page, limit, ordersPage.getTotalElements());
@@ -120,9 +124,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     public OrderResponse getOrderById(String code) {
+        User current = getCurrentUser();
         Order order = findOrder(code);
-        ensureCanRead(order, getCurrentUser());
-        return orderMapper.toDetailResponse(order);
+        ensureCanRead(order, current);
+        return enrichWithReview(orderMapper.toDetailResponse(order), current);
     }
 
     // ===============================================================
@@ -690,6 +695,52 @@ public class OrderServiceImpl implements OrderService {
     // ===============================================================
     // Internal utilities
     // ===============================================================
+
+    /**
+     * Attach review metadata (reviewed + myRating) to an order response
+     * based on the current user's review, if one exists.
+     */
+    private OrderResponse enrichWithReview(OrderResponse response, User user) {
+        if (response == null || user == null) return response;
+
+        Order order = orderRepository.findByCodeAndDeletedFalse(response.getId()).orElse(null);
+        if (order == null) return response;
+
+        Review review = reviewRepository.findByOrder_IdAndAuthor_Id(order.getId(), user.getId()).orElse(null);
+        if (review != null) {
+            return OrderResponse.builder()
+                    .id(response.getId())
+                    .status(response.getStatus())
+                    .serviceName(response.getServiceName())
+                    .subService(response.getSubService())
+                    .serviceCategory(response.getServiceCategory())
+                    .deviceName(response.getDeviceName())
+                    .description(response.getDescription())
+                    .address(response.getAddress())
+                    .scheduledAt(response.getScheduledAt())
+                    .expectedTime(response.getExpectedTime())
+                    .startedAt(response.getStartedAt())
+                    .completedAt(response.getCompletedAt())
+                    .estimatedPrice(response.getEstimatedPrice())
+                    .finalPrice(response.getFinalPrice())
+                    .paymentMethod(response.getPaymentMethod())
+                    .warrantyMonths(response.getWarrantyMonths())
+                    .customer(response.getCustomer())
+                    .technician(response.getTechnician())
+                    .priceAdjustment(response.getPriceAdjustment())
+                    .images(response.getImages())
+                    .cancelledBy(response.getCancelledBy())
+                    .cancelReason(response.getCancelReason())
+                    .cancelledAt(response.getCancelledAt())
+                    .reviewed(true)
+                    .myRating(review.getRating())
+                    .createdAt(response.getCreatedAt())
+                    .updatedAt(response.getUpdatedAt())
+                    .build();
+        }
+
+        return response;
+    }
 
     private Order findOrder(String code) {
         return orderRepository.findByCodeAndDeletedFalse(code)

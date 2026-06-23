@@ -14,6 +14,7 @@ import {
     mapOrderToScheduledOrder,
 } from '../stores/orderStore.ts';
 import { orderService } from '../services/order/orderService.ts';
+import { reviewService } from '../services/reviewService.ts';
 
 import OrderTabs from '../components/orderManagement/OrderTabs.tsx';
 import RequestCard from '../components/orderManagement/RequestCard.tsx';
@@ -22,6 +23,8 @@ import { InProgressCard } from '../components/orderManagement/InProgressCard.tsx
 import { CompletedCard } from '../components/orderManagement/CompletedCard.tsx';
 import { CancelledCard } from '../components/orderManagement/CancelledCard.tsx';
 import { OrderDetailPanel } from '../components/orderManagement/OrderDetailPanel.tsx';
+import ReviewModal from '../components/modal/ReviewModal.tsx';
+import ReportModal from '../components/modal/ReportModal.tsx';
 
 interface OrderPageProps {
     role: UserRole;
@@ -47,12 +50,19 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
     const [loadingList, setLoadingList] = useState(false);
     const [loadingDetail, setLoadingDetail] = useState(false);
     const [submittingCancel, setSubmittingCancel] = useState(false);
+    const [submittingStatus, setSubmittingStatus] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [selectedOrder, setSelectedOrder] = useState<OrderResponse | null>(null);
 
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
     const [cancelReason, setCancelReason] = useState('');
+
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [showReportModal, setShowReportModal] = useState(false);
+    const [reviewOrder, setReviewOrder] = useState<OrderResponse | null>(null);
+    const [reviewEditData, setReviewEditData] = useState<{ rating: number; content?: string } | undefined>(undefined);
+    const [reportOrder, setReportOrder] = useState<OrderResponse | null>(null);
 
     const loadOrders = useCallback(async () => {
         setLoadingList(true);
@@ -162,6 +172,86 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
         }
     };
 
+    const handleCreateInvoice = async (orderId: string) => {
+        setError(null);
+        try {
+            await orderService.createInvoice(orderId);
+            alert('Hoá đơn đã được gửi vào chat thành công!');
+        } catch (err: unknown) {
+            const axiosError = err as { response?: { data?: { error?: { message?: string } } } };
+            const serverMsg = axiosError?.response?.data?.error?.message;
+            const msg = serverMsg || (err instanceof Error ? err.message : 'Không thể gửi hoá đơn');
+            setError(msg);
+        }
+    };
+
+    const handleUpdateStatus = async (orderId: string, status: string) => {
+        setSubmittingStatus(orderId);
+        setError(null);
+        try {
+            const updated = await orderService.updateStatus(orderId, status);
+            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updated } : o));
+            if (selectedOrder?.id === orderId) {
+                setSelectedOrder(updated);
+            }
+            if (status === 'completed' || status === 'in-progress') {
+                await loadOrders();
+            }
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Không thể cập nhật trạng thái';
+            setError(msg);
+        } finally {
+            setSubmittingStatus(null);
+        }
+    };
+
+    const handleOpenReview = (order: OrderResponse) => {
+        setReviewEditData(undefined);
+        setReviewOrder(order);
+        setShowReviewModal(true);
+    };
+
+    const handleOpenEditReview = async (order: OrderResponse) => {
+        setReviewOrder(order);
+        try {
+            const res = await reviewService.getMyReview(order.id);
+            const review = res.data || res;
+            setReviewEditData({
+                rating: review.rating ?? order.myRating ?? 5,
+                content: review.content || '',
+            });
+        } catch {
+            setReviewEditData({ rating: order.myRating ?? 5 });
+        }
+        setShowReviewModal(true);
+    };
+
+    const handleOpenReport = (order: OrderResponse) => {
+        setReportOrder(order);
+        setShowReportModal(true);
+    };
+
+    const handleReviewSuccess = (rating: number) => {
+        setShowReviewModal(false);
+        setReviewEditData(undefined);
+        setReviewOrder(null);
+        if (selectedOrder) {
+            setSelectedOrder({
+                ...selectedOrder,
+                reviewed: true,
+                myRating: rating,
+            });
+            setOrders(prev => prev.map(o =>
+                o.id === selectedOrder.id ? { ...o, reviewed: true, myRating: rating } : o
+            ));
+        }
+    };
+
+    const handleReportSuccess = () => {
+        setShowReportModal(false);
+        setReportOrder(null);
+    };
+
     const visibleOrders = useMemo(() => filterOrdersBySearch(orders, search), [orders, search]);
 
     const renderedCards = useMemo(() => {
@@ -185,6 +275,7 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                     role={role}
                     onViewDetail={handleSelectOrder}
                     onCancel={handleOpenCancelModal}
+                    onUpdateStatus={handleUpdateStatus}
                 />
             ));
         }
@@ -194,7 +285,10 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                 <InProgressCard
                     key={order.id}
                     data={mapOrderToInProgressOrder(order)}
+                    role={role}
                     onViewDetail={handleSelectOrder}
+                    onUpdateStatus={handleUpdateStatus}
+                    onCreateInvoice={role === 'technician' ? handleCreateInvoice : undefined}
                 />
             ));
         }
@@ -226,12 +320,15 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                 <main className="page-body bg-plate-white">
                     <div className="orders-container">
                         {selectedOrder && (
-                            <OrderDetailPanel
-                                order={selectedOrder}
-                                role={role}
-                                onBack={() => setSelectedOrder(null)}
-                                onCancel={handleOpenCancelModal}
-                            />
+            <OrderDetailPanel
+                order={selectedOrder}
+                role={role}
+                onBack={() => setSelectedOrder(null)}
+                onCancel={handleOpenCancelModal}
+                onReview={handleOpenReview}
+                onEditReview={handleOpenEditReview}
+                onReport={handleOpenReport}
+            />
                         )}
 
                         {!selectedOrder && (
@@ -350,6 +447,22 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                                 </div>
                             </div>
                         )}
+
+                        <ReviewModal
+                            open={showReviewModal}
+                            onClose={() => { setShowReviewModal(false); setReviewEditData(undefined); setReviewOrder(null); }}
+                            orderId={reviewOrder?.id ?? ''}
+                            technicianName={reviewOrder?.technician?.fullName}
+                            onSuccess={handleReviewSuccess}
+                            editData={reviewEditData}
+                        />
+
+                        <ReportModal
+                            open={showReportModal}
+                            onClose={() => { setShowReportModal(false); setReportOrder(null); }}
+                            orderId={reportOrder?.id ?? ''}
+                            onSuccess={handleReportSuccess}
+                        />
                     </div>
                 </main>
             </div>

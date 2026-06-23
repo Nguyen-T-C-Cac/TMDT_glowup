@@ -403,7 +403,8 @@ export const mapOrderToCompletedOrder = (order: OrderResponse): CompletedOrder =
     technicianName: pickPersonName(order.technician, 'Chưa phân công'),
     completionDate: formatDateTime(order.completedAt ?? order.updatedAt ?? order.createdAt),
     totalPrice: formatMoney(order.finalPrice ?? order.estimatedPrice),
-    rating: 0,
+    rating: order.myRating ?? 0,
+    reviewed: order.reviewed ?? false,
 });
 
 export const mapOrderToCancelledOrder = (order: OrderResponse): CancelledOrder => ({
