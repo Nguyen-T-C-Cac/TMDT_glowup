@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import {
@@ -17,8 +17,9 @@ import {
   Sparkles,
   UserRound,
 } from 'lucide-react'
-import { loginUser, registerUser } from '../services/auth'
+import { loginUser, registerUser, API_URL } from '../services/auth'
 import { authService } from '../services/authService'
+import { loadTokenFromStorage, removeToken, removeRefreshToken } from '../utils/token'
 import './AuthScreens.css'
 type AccountType = 'customer' | 'technician'
 
@@ -350,17 +351,8 @@ function resolveRedirectPathByRole(role?: string | null) {
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const storedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null
-  let storedRole: string | null = null
-
-  if (storedUser) {
-    try {
-      const parsed = JSON.parse(storedUser) as { user?: { role?: string } } | { role?: string }
-      storedRole = ('user' in parsed && parsed.user ? parsed.user.role : parsed.role) ?? null
-    } catch {
-      localStorage.removeItem('user')
-    }
-  }
+  const [redirectTo, setRedirectTo] = useState<string | null>(null)
+  const [checkingSession, setCheckingSession] = useState(true)
 
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
@@ -370,8 +362,54 @@ export function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
 
-  if (storedRole) {
-    return <Navigate to={resolveRedirectPathByRole(storedRole)} replace />
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user')
+    if (!storedUser) {
+      setCheckingSession(false)
+      return
+    }
+
+    let storedRole: string | null = null
+    try {
+      const parsed = JSON.parse(storedUser) as { user?: { role?: string } } | { role?: string }
+      storedRole = ('user' in parsed && parsed.user ? parsed.user.role : parsed.role) ?? null
+    } catch {
+      localStorage.removeItem('user')
+      setCheckingSession(false)
+      return
+    }
+
+    if (!storedRole) {
+      setCheckingSession(false)
+      return
+    }
+
+    fetch(`${API_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${loadTokenFromStorage()}` },
+    })
+      .then((res) => {
+        if (res.ok) {
+          setRedirectTo(resolveRedirectPathByRole(storedRole))
+        } else {
+          localStorage.removeItem('user')
+          removeToken()
+          removeRefreshToken()
+        }
+      })
+      .catch(() => {
+        localStorage.removeItem('user')
+        removeToken()
+        removeRefreshToken()
+      })
+      .finally(() => setCheckingSession(false))
+  }, [])
+
+  if (redirectTo) {
+    return <Navigate to={redirectTo} replace />
+  }
+
+  if (checkingSession) {
+    return null
   }
 
   const validate = () => {

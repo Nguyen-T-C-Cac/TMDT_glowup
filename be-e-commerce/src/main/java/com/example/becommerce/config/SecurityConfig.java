@@ -70,6 +70,7 @@ public class SecurityConfig {
                 .requestMatchers(ApiConstant.AUTH_BASE + "/**").permitAll()
                 .requestMatchers("/api/payments/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/categories").permitAll()
+                .requestMatchers("/api/search/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 // WebSocket handshake — STOMP CONNECT carries its own JWT (see WebSocketAuthInterceptor).
                 .requestMatchers("/ws/**", "/ws-stomp", "/ws-stomp/**").permitAll()

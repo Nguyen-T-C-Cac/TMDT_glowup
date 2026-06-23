@@ -31,6 +31,18 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<CategoryResponse> searchCategories(String keyword) {
+        if (!StringUtils.hasText(keyword)) {
+            return List.of();
+        }
+        return categoryRepository.findByTitleContainingIgnoreCaseAndDeletedFalse(keyword.trim())
+                .stream()
+                .map(categoryMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public CategoryListResponse getCategories(String status) {
         List<Category> categories;
         if (StringUtils.hasText(status) && !"all".equalsIgnoreCase(status)) {
