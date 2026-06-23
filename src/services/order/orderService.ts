@@ -19,6 +19,11 @@ type ApiPageLike = {
     };
 };
 
+type NormalizedPageQuery = {
+    page: number;
+    limit: number;
+};
+
 const unwrap = <T,>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'success' in payload && (payload as { success?: boolean }).success && 'data' in payload) {
         return (payload as { data: T }).data;
@@ -31,14 +36,14 @@ const unwrap = <T,>(payload: unknown): T => {
     return payload as T;
 };
 
-const normalizePage = (payload: unknown, fallbackQuery: Required<OrderListQuery>): OrderPageResponse => {
+const normalizePage = (payload: unknown, fallbackQuery: NormalizedPageQuery): OrderPageResponse => {
     const resolved = unwrap<ApiPageLike | OrderResponse[] | null>(payload);
 
     if (Array.isArray(resolved)) {
         return {
             items: resolved,
             page: fallbackQuery.page,
-            size: fallbackQuery.size,
+            size: fallbackQuery.limit,
             totalPages: 1,
             totalElements: resolved.length,
             first: fallbackQuery.page <= 0,
@@ -48,7 +53,7 @@ const normalizePage = (payload: unknown, fallbackQuery: Required<OrderListQuery>
 
     const items = resolved?.content ?? resolved?.items ?? (Array.isArray(resolved?.data) ? resolved.data : []) ?? [];
     const page = resolved?.page ?? resolved?.number ?? resolved?.pageable?.pageNumber ?? fallbackQuery.page;
-    const size = resolved?.size ?? resolved?.pageable?.pageSize ?? fallbackQuery.size;
+    const size = resolved?.size ?? resolved?.pageable?.pageSize ?? fallbackQuery.limit;
     const totalPages = resolved?.totalPages ?? 1;
     const totalElements = resolved?.totalElements ?? resolved?.numberOfElements ?? items.length;
 
@@ -79,7 +84,7 @@ export const orderService = {
             },
         });
 
-        return normalizePage(response.data, { page, size: limit });
+        return normalizePage(response.data, { page, limit });
     },
 
     getOrderById: async (id: string): Promise<OrderResponse> => {

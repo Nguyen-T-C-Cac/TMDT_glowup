@@ -15,6 +15,7 @@ import { chatService } from '../services/chat/chatService';
 import { mapWsMessageToChatMessage } from '../services/chat/chatRealtimeClient';
 import { orderService } from '../services/order/orderService';
 import { getStoredUser } from '../services/auth';
+import { userService } from '../services/userService';
 import { useChatRealtime } from '../hooks/useChatRealtime';
 import type { Contact } from '../types/Message';
 import type { UserRole } from '../types/UserRole';
@@ -396,6 +397,21 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
     };
 
     const handleAcceptQuote = async (quotationId: string) => {
+        if (role === 'customer') {
+            try {
+                const me = await userService.getMe();
+                const address = me.data?.address?.trim();
+                if (!address) {
+                    alert('Bạn cần cập nhật địa chỉ trong tài khoản trước khi chấp nhận báo giá.');
+                    navigate('/customer/account-settings');
+                    return;
+                }
+            } catch {
+                alert('Không thể kiểm tra địa chỉ tài khoản lúc này. Vui lòng thử lại.');
+                return;
+            }
+        }
+
         const result = await chatService.acceptQuotation(quotationId);
         if (activeConversationId) {
             await loadMessages(activeConversationId);
