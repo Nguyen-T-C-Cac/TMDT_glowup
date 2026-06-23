@@ -1,6 +1,7 @@
 package com.example.becommerce.service;
 
 import com.example.becommerce.dto.request.*;
+import com.example.becommerce.dto.request.Login.GoogleLoginRequest;
 import com.example.becommerce.dto.response.AuthResponse;
 import com.example.becommerce.dto.response.TokenRefreshResponse;
 import com.example.becommerce.dto.response.UserResponse;
@@ -33,4 +34,6 @@ public interface AuthService {
 
     /** Verify email with confirmation token. */
     void verifyEmail(VerifyEmailRequest request);
+
+    AuthResponse googleCustomerLogin( GoogleLoginRequest request);
 }

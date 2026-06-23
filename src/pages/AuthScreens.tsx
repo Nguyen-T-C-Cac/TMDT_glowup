@@ -1,6 +1,8 @@
+
 import { useState, useEffect } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { useGoogleLogin } from '@react-oauth/google'
 import {
   ArrowLeft,
   BadgeCheck,
@@ -17,7 +19,7 @@ import {
   Sparkles,
   UserRound,
 } from 'lucide-react'
-import { loginUser, registerUser, API_URL } from '../services/auth'
+import { loginUser, registerUser, API_URL, googleLogin} from '../services/auth'
 import { authService } from '../services/authService'
 import { loadTokenFromStorage, removeToken, removeRefreshToken } from '../utils/token'
 import './AuthScreens.css'
@@ -361,6 +363,30 @@ export function LoginPage() {
   const [errors, setErrors] = useState<FieldError>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
+  const [googleLoggingIn, setGoogleLoggingIn] = useState(false)
+
+  const googleLoginAction = useGoogleLogin({
+    onStart: () => setGoogleLoggingIn(true),
+    onSuccess: async (tokenResponse) => {
+      try {
+        const res = await googleLogin(tokenResponse.access_token)
+        const redirectPath = resolveRedirectPathByRole(res.data.user.role)
+        window.setTimeout(() => {
+          setGoogleLoggingIn(false)
+          setSuccessMessage('Đăng nhập Google thành công.')
+          navigate(redirectPath)
+        }, 1100)
+      } catch {
+        setGoogleLoggingIn(false)
+        setSuccessMessage('Đăng nhập Google thất bại.')
+      }
+    },
+    onError: () => {
+      setGoogleLoggingIn(false)
+      setSuccessMessage('Đăng nhập Google thất bại.')
+    },
+    flow: 'implicit',
+  })
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -477,6 +503,27 @@ export function LoginPage() {
 
         {successMessage ? <StatusBanner type="success" title="Hoàn tất" description={successMessage} /> : null}
 
+        <button
+          type="button"
+          className="auth-google-btn"
+          onClick={() => googleLoginAction()}
+          disabled={googleLoggingIn}
+        >
+          {googleLoggingIn ? (
+            <Loader2 size={20} className="spin" />
+          ) : (
+            <img
+              src="/image/logo-google.png"
+              alt="Google"
+              className="auth-google-icon"
+            />
+          )}
+          <span>Tiếp tục với Google</span>
+        </button>
+
+        <div className="auth-divider">
+          <span>hoặc</span>
+        </div>
         <form className="auth-form" onSubmit={onSubmit} noValidate>
 
           <TextField

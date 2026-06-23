@@ -3,6 +3,7 @@ package com.example.becommerce.service.impl;
 import com.example.becommerce.constant.ErrorCode;
 import com.example.becommerce.dto.mapper.UserMapper;
 import com.example.becommerce.dto.request.*;
+import com.example.becommerce.dto.request.Login.GoogleLoginRequest;
 import com.example.becommerce.dto.response.AuthResponse;
 import com.example.becommerce.dto.response.TokenRefreshResponse;
 import com.example.becommerce.dto.response.UserResponse;
@@ -20,7 +21,9 @@ import com.example.becommerce.repository.UserRepository;
 import com.example.becommerce.security.JwtProvider;
 import com.example.becommerce.service.AuthService;
 import com.example.becommerce.service.EmailService;
+import com.example.becommerce.service.GoogleAuthService;
 import com.example.becommerce.service.WalletService;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -49,11 +52,64 @@ public class AuthServiceImpl implements AuthService {
     private final UserMapper                            userMapper;
     private final WalletService                         walletService;
     private final EmailService                          emailService;
-
+    private final GoogleAuthService googleAuthService;
     // ----------------------------------------------------------------
     // Register
     // ----------------------------------------------------------------
 
+    @Override
+    @Transactional
+    public AuthResponse googleCustomerLogin(
+            GoogleLoginRequest request) {
+
+        GoogleIdToken.Payload payload =
+                googleAuthService.verifyToken(
+                        request.getToken());
+
+        String email =
+                payload.getEmail();
+
+        String fullName =
+                (String) payload.get("name");
+
+        String avatar =
+                (String) payload.get("picture");
+
+        User user =
+                userRepository.findByEmailAndDeletedFalse(email)
+                        .orElse(null);
+
+        if (user == null) {
+
+            user = User.builder()
+                    .code("USR-" + System.currentTimeMillis())
+                    .email(email)
+                    .fullName(fullName)
+                    .avatar(avatar)
+
+                    .phone("GG-" + System.currentTimeMillis())
+
+                    .password("GOOGLE_LOGIN")
+
+                    .role(Role.CUSTOMER)
+
+                    .status(UserStatus.ACTIVE)
+                    .build();
+
+            user = userRepository.save(user);
+
+            walletService.createWalletForUser(user);
+        }
+
+        if (user.getRole() != Role.CUSTOMER) {
+
+            throw AppException.badRequest(
+                    ErrorCode.ROLE_NOT_ALLOWED,
+                    "Google Login chỉ dành cho Customer");
+        }
+
+        return buildAuthResponse(user);
+    }
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {

@@ -2,6 +2,7 @@ package com.example.becommerce.controller;
 
 import com.example.becommerce.constant.ApiConstant;
 import com.example.becommerce.dto.request.*;
+import com.example.becommerce.dto.request.Login.GoogleLoginRequest;
 import com.example.becommerce.dto.response.ApiResponse;
 import com.example.becommerce.dto.response.AuthResponse;
 import com.example.becommerce.dto.response.TokenRefreshResponse;
@@ -28,6 +29,20 @@ public class AuthController {
     // ----------------------------------------------------------------
     // POST /api/auth/register
     // ----------------------------------------------------------------
+
+    @PostMapping("/google/customer")
+    public ResponseEntity<ApiResponse<AuthResponse>>
+    googleCustomerLogin(
+            @RequestBody
+            GoogleLoginRequest request) {
+
+        AuthResponse data =
+                authService.googleCustomerLogin(
+                        request);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(data));
+    }
 
     @PostMapping(ApiConstant.AUTH_REGISTER)
     public ResponseEntity<ApiResponse<AuthResponse>> register(

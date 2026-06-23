@@ -91,3 +91,6 @@ app:
 #    com.example.becommerce: DEBUG
 #    org.springframework.security: DEBUG
 #    org.hibernate.SQL: DEBUG
+
+google:
+  client-id: 39478411393-57prtpnt37433bk0hg0tkch3ih284q9v.apps.googleusercontent.com
