@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Footer } from './Footer';
 import Header from './Header';
 import { SettingsFrame } from './SettingsFrame';
@@ -24,13 +25,14 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({
   searchPlaceholder = 'Tìm kiếm dịch vụ...',
 }) => {
   const onNavigate = useCustomerNavigate();
+  const navigate = useNavigate();
   const { clearProfile } = useUserProfile();
 
   const handleSidebarSelect = (id: string) => {
     if (id === 'logout') {
       logoutUser();
       clearProfile();
-      onNavigate('login');
+      navigate('/');
       return;
     }
 

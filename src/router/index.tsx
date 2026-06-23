@@ -30,6 +30,7 @@ import ProviderDashboard from '../pages/ProviderDashboard'
 import ProviderProfile from '../pages/ProviderProfile'
 import CustomerSecurityPage from '../pages/CustomerSecurityPage'
 import { OrderManagementPage } from '../pages/OrderManagementPage'
+import SearchPage from '../pages/SearchPage'
 import ServicesPage from '../pages/ServicesPage'
 import TechnicianProfileSettingsPage from '../pages/TechnicianProfileSettingsPage'
 import TechnicianVerificationPage from '../pages/TechnicianVerificationPage'
@@ -46,6 +47,7 @@ export default function AppRouter() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/provider" element={<Provider />} />
+      <Route path="/search" element={<SearchPage />} />
       <Route path="/services" element={<ServicesPage />} />
       <Route path="/rewards" element={<VoucherRewardsPage />} />
       <Route path="/provider-profile" element={<CustomerLayout activeNavKey="find-provider"><ProviderProfile /></CustomerLayout>} />

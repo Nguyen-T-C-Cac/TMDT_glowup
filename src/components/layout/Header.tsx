@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './Header.css';
 import { SearchIcon } from '../common/Icons';
@@ -25,6 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
+  const [searchKeyword, setSearchKeyword] = useState('');
   const { profile, isProfileLoaded, clearProfile } = useUserProfile();
   const storedUser = getStoredUser();
   const userRole = storedUser?.role?.toLowerCase();
@@ -54,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
   const goToLogout = () => {
     logoutUser();
     clearProfile();
-    onNavigate && onNavigate('login');
+    navigate('/');
   };
 
   const profileDropdown = (
@@ -188,16 +189,19 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
 
         <div className="header-actions">
-          <div
-            className="search-box"
-            style={{ cursor: 'pointer' }}
-            onClick={() => onNavigate && onNavigate('provider')}
-          >
+          <div className="search-box">
             <SearchIcon className="search-icon" size={16} />
             <input
               type="text"
               placeholder={searchPlaceholder}
               className="search-input"
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && searchKeyword.trim()) {
+                  navigate(`/search?keyword=${encodeURIComponent(searchKeyword.trim())}`)
+                }
+              }}
             />
           </div>
           <NotificationMenu badgeStyle="dot" />
