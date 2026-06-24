@@ -1,8 +1,7 @@
-import React, { useState } from 'react'
-import { ArrowLeft, Check, Camera, Upload, Phone, Mail, MapPin, Grid, Image, ChevronRight } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { ArrowLeft, Check, Camera, Upload, Phone, Mail, MapPin, Grid, Image, X } from 'lucide-react'
+import { getCategories, type Category } from '../services/categoryService'
 import './TechnicianVerificationPage.css'
-import { submitVerification } from '../services/verificationService'
-import { useNavigate } from 'react-router-dom'
 
 type VerificationStep = 'identity' | 'face' | 'description' | 'complete'
 
@@ -14,9 +13,19 @@ interface VerificationData {
   phone?: string
   email?: string
   area?: string
-  services?: string
+  services: string[]
   experience?: string
 }
+
+const HCMC_DISTRICTS = [
+  'Quận 1', 'Quận 3', 'Quận 4', 'Quận 5', 'Quận 6', 'Quận 7', 'Quận 8',
+  'Quận 10', 'Quận 11', 'Quận 12',
+  'Quận Bình Thạnh', 'Quận Bình Tân', 'Quận Gò Vấp',
+  'Quận Phú Nhuận', 'Quận Tân Bình', 'Quận Tân Phú',
+  'Thành phố Thủ Đức',
+  'Huyện Bình Chánh', 'Huyện Cần Giờ', 'Huyện Củ Chi',
+  'Huyện Hóc Môn', 'Huyện Nhà Bè',
+]
 
 export const TechnicianVerificationPage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<VerificationStep>('identity')
@@ -28,7 +37,7 @@ export const TechnicianVerificationPage: React.FC = () => {
     phone: '',
     email: '',
     area: '',
-    services: '',
+    services: [],
     experience: '',
   })
 
@@ -66,27 +75,10 @@ export const TechnicianVerificationPage: React.FC = () => {
     else if (currentStep === 'complete') setCurrentStep('description')
   }
 
-  const navigate = useNavigate()
-
-  const handleContinue = async () => {
-    try {
-      const formData = new FormData()
-      if (verificationData.idFront) formData.append('idFront', verificationData.idFront)
-      if (verificationData.idBack) formData.append('idBack', verificationData.idBack)
-      if (verificationData.faceSelfie) formData.append('faceSelfie', verificationData.faceSelfie)
-      if (verificationData.certificate) formData.append('certificate', verificationData.certificate)
-      if (verificationData.phone) formData.append('phone', verificationData.phone)
-      if (verificationData.email) formData.append('email', verificationData.email)
-      if (verificationData.area) formData.append('area', verificationData.area)
-      if (verificationData.services) formData.append('services', verificationData.services)
-      if (verificationData.experience) formData.append('experience', verificationData.experience)
-
-      await submitVerification(formData)
-      navigate('/technician/verification-status')
-    } catch (err) {
-      console.error('Lỗi khi nộp hồ sơ KYC:', err)
-      alert('Có lỗi xảy ra khi nộp hồ sơ. Vui lòng thử lại.')
-    }
+  const handleContinue = () => {
+    // Submit verification data
+    console.log('Submitting verification:', verificationData)
+    // Here you would send the data to the backend
   }
 
   const isStepComplete = (step: VerificationStep): boolean => {
@@ -96,7 +88,7 @@ export const TechnicianVerificationPage: React.FC = () => {
       case 'face':
         return !!verificationData.faceSelfie
       case 'description':
-        return !!(verificationData.phone || verificationData.email || verificationData.area || verificationData.services || verificationData.experience)
+        return !!(verificationData.phone || verificationData.email || verificationData.area || verificationData.services.length > 0 || verificationData.experience)
       case 'complete':
         return true
       default:
@@ -584,6 +576,114 @@ const CompleteVerificationStep: React.FC<CompleteVerificationStepProps> = ({
   )
 }
 
+interface ServiceMultiSelectProps {
+  selected: string[]
+  onChange: (services: string[]) => void
+}
+
+const ServiceMultiSelect: React.FC<ServiceMultiSelectProps> = ({ selected, onChange }) => {
+  const [allServices, setAllServices] = useState<Category[]>([])
+  const [search, setSearch] = useState('')
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const fetchServices = async () => {
+      try {
+        setLoading(true)
+        const items = await getCategories('active')
+        if (!cancelled) setAllServices(items)
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Lỗi tải dịch vụ')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    fetchServices()
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const filtered = allServices.filter(
+    svc =>
+      svc.title.toLowerCase().includes(search.toLowerCase()) &&
+      !selected.includes(svc.title)
+  )
+
+  const toggleService = (title: string) => {
+    if (selected.includes(title)) {
+      onChange(selected.filter(s => s !== title))
+    } else {
+      onChange([...selected, title])
+    }
+    setSearch('')
+  }
+
+  const removeService = (title: string) => {
+    onChange(selected.filter(s => s !== title))
+  }
+
+  return (
+    <div className="service-multi-select" ref={containerRef}>
+      <div className="service-tags">
+        {selected.map(s => (
+          <span key={s} className="service-tag">
+            {s}
+            <button type="button" className="tag-remove" onClick={() => removeService(s)}>
+              <X size={14} />
+            </button>
+          </span>
+        ))}
+        <input
+          className="service-search-input"
+          value={search}
+          onChange={e => { setSearch(e.target.value); setOpen(true) }}
+          onFocus={() => setOpen(true)}
+          placeholder={selected.length === 0 ? 'Gõ tên dịch vụ để chọn...' : ''}
+        />
+      </div>
+
+      {open && (
+        <div className="service-dropdown">
+          {loading && <div className="service-dropdown-empty">Đang tải...</div>}
+          {error && <div className="service-dropdown-empty" style={{ color: '#e74c3c' }}>{error}</div>}
+          {!loading && !error && search && filtered.length === 0 && (
+            <div className="service-dropdown-empty">Không tìm thấy dịch vụ "{search}"</div>
+          )}
+          {!loading && !error && filtered.length > 0 && (
+            <ul className="service-dropdown-list">
+              {filtered.map(svc => (
+                <li
+                  key={svc.id}
+                  className="service-dropdown-item"
+                  onClick={() => toggleService(svc.title)}
+                >
+                  <span className={`service-checkbox ${selected.includes(svc.title) ? 'checked' : ''}`}>
+                    {selected.includes(svc.title) && <Check size={12} />}
+                  </span>
+                  <span>{svc.title}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface DescriptionStepProps {
   data: VerificationData
   onChange: (fields: Partial<VerificationData>) => void
@@ -593,6 +693,7 @@ interface DescriptionStepProps {
 
 const DescriptionStep: React.FC<DescriptionStepProps> = ({ data, onChange, onNext, onPrev }) => {
   const [certPreview, setCertPreview] = useState<string>('')
+
   const handleCertUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     onChange({ certificate: file || null })
@@ -638,8 +739,16 @@ const DescriptionStep: React.FC<DescriptionStepProps> = ({ data, onChange, onNex
           <label>Khu vực hoạt động <span className="required">*</span></label>
           <div className="input-with-icon">
             <MapPin size={16} className="input-icon" />
-            <input value={data.area || ''} onChange={e => onChange({ area: e.target.value })} placeholder="Chọn khu vực hoạt động" />
-            <ChevronRight size={18} className="input-arrow" />
+            <select
+              className="district-select"
+              value={data.area || ''}
+              onChange={e => onChange({ area: e.target.value })}
+            >
+              <option value="" disabled>Chọn quận/huyện</option>
+              {HCMC_DISTRICTS.map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -647,8 +756,10 @@ const DescriptionStep: React.FC<DescriptionStepProps> = ({ data, onChange, onNex
           <label>Dịch vụ <span className="required">*</span></label>
           <div className="input-with-icon">
             <Grid size={16} className="input-icon" />
-            <input value={data.services || ''} onChange={e => onChange({ services: e.target.value })} placeholder="Chọn dịch vụ (ví dụ: Máy lạnh, Tủ lạnh)" />
-            <ChevronRight size={18} className="input-arrow" />
+            <ServiceMultiSelect
+              selected={data.services}
+              onChange={services => onChange({ services })}
+            />
           </div>
         </div>
       </div>
