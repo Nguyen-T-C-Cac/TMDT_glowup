@@ -714,4 +714,18 @@
   font-size: 14px;
   line-height: 1.6;
 }
+
+.crp-notice {
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.crp-notice--info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
 }

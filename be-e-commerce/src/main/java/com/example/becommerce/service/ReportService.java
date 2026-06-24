@@ -11,4 +11,6 @@ public interface ReportService {
     PagedResponse<ReportResponse> listReports(String status, String keyword, int page, int limit);
 
     ReportResponse getReport(String reportCode);
+
+    ReportResponse updateReportStatus(String reportCode, String newStatus);
 }

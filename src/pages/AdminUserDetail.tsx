@@ -69,7 +69,7 @@ const AdminUserDetail: React.FC = () => {
           <div className="aud-sidebar-right">
             <InternalNotes />
             <SystemStatus />
-            <SupportWidget />
+            <SupportWidget user={user} />
           </div>
         </div>
       </div>

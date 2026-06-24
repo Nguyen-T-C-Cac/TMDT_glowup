@@ -86,6 +86,7 @@ export default function NotificationDetailPage() {
     info: 'Thông tin',
     warning: 'Cảnh báo',
     'status-update': 'Cập nhật trạng thái',
+    system: 'Hệ thống',
   };
 
   return (
@@ -100,7 +101,9 @@ export default function NotificationDetailPage() {
 
         <article className="notif-detail-card">
           <div className="notif-detail-type-badge">
-            {typeLabel[notification.type] || notification.type}
+            {notification.data?.type === 'warning'
+              ? 'Cảnh báo'
+              : typeLabel[notification.type] || notification.type}
           </div>
 
           <h1 className="notif-detail-title">{notification.title}</h1>

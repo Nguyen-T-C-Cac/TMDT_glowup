@@ -199,9 +199,14 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
                   className={`notification-menu__item ${item.isRead ? '' : 'notification-menu__item--unread'}`}
                   onClick={() => handleItemClick(item)}
                 >
-                  <p className="notification-menu__item-title">{item.title}</p>
+                  <div className="notification-menu__item-top">
+                    <p className="notification-menu__item-title">{item.title}</p>
+                    {(item.data?.type === 'warning' || item.type === 'warning') && (
+                      <span className="notification-menu__type-badge notification-menu__type-badge--warning">Cảnh báo</span>
+                    )}
+                  </div>
                   <p className="notification-menu__item-body">
-                    {item.type === 'chat_message' ? item.body : 'Gửi từ quản trị viên'}
+                    {item.body}
                   </p>
                   <span className="notification-menu__item-time">
                     {formatNotificationTime(item.createdAt)}

@@ -97,6 +97,27 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
+    @Transactional
+    public ReportResponse updateReportStatus(String reportCode, String newStatus) {
+        OrderReport report = reportRepository.findByCode(reportCode)
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy khiếu nại " + reportCode));
+
+        ReportStatus status;
+        try {
+            status = ReportStatus.from(newStatus);
+        } catch (IllegalArgumentException e) {
+            throw AppException.badRequest(ErrorCode.VALIDATION_ERROR, "Trạng thái không hợp lệ: " + newStatus);
+        }
+        if (status == null) {
+            throw AppException.badRequest(ErrorCode.VALIDATION_ERROR, "Trạng thái không hợp lệ: " + newStatus);
+        }
+
+        report.setStatus(status);
+        OrderReport saved = reportRepository.save(report);
+        return reportMapper.toResponse(saved, true);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public PagedResponse<ReportResponse> listReports(String status, String keyword, int page, int limit) {
         Specification<OrderReport> spec = OrderReportSpecification.buildFilter(status, keyword);

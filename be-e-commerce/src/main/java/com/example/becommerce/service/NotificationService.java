@@ -7,6 +7,7 @@ import com.example.becommerce.dto.response.ReadAllNotificationResponse;
 import com.example.becommerce.entity.User;
 import com.example.becommerce.entity.enums.NotificationType;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -26,5 +27,7 @@ public interface NotificationService {
             String title,
             String body,
             Map<String, Object> data);
+
+    void sendAdminNotification(String title, String body, List<String> recipientCodes, String type);
 }
 

@@ -13,6 +13,7 @@ const typeLabel: Record<string, string> = {
   info: 'Thông tin',
   warning: 'Cảnh báo',
   'status-update': 'Cập nhật trạng thái',
+  system: 'Hệ thống',
 };
 
 const formatFullDate = (value: string) => {
@@ -90,7 +91,9 @@ const NotificationDetailModal: React.FC<Props> = ({ notificationId, onClose }) =
           {!loading && !error && notification && (
             <>
               <div className="notif-modal-type-badge">
-                {typeLabel[notification.type] || notification.type}
+                {notification.data?.type === 'warning'
+                  ? 'Cảnh báo'
+                  : typeLabel[notification.type] || notification.type}
               </div>
               <h3 className="notif-modal-title">{notification.title}</h3>
               <div className="notif-modal-meta">

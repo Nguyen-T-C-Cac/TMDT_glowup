@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import WarningModal from '../modal/WarningModal';
 import './AdminSidebarWidgets.css';
 
 export const InternalNotes: React.FC = () => {
@@ -50,16 +52,60 @@ export const SystemStatus: React.FC = () => {
   );
 };
 
-export const SupportWidget: React.FC = () => (
-  <div className="asw-card asw-support-card">
-    <div className="asw-support-inner">
-      <div className="asw-support-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+interface SupportWidgetProps {
+  user?: {
+    id: string | number;
+    name: string;
+    code?: string;
+  };
+}
+
+export const SupportWidget: React.FC<SupportWidgetProps> = ({ user }) => {
+  const navigate = useNavigate();
+  const [warningOpen, setWarningOpen] = useState(false);
+
+  const handleContact = () => {
+    if (!user) return;
+    navigate('/admin/chat', {
+      state: { technicianId: String(user.id) },
+    });
+  };
+
+  return (
+    <>
+      <div className="asw-card asw-support-card">
+        <div className="asw-support-inner">
+          <div className="asw-support-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </div>
+          <div>
+            <strong className="asw-support-title">Cần trợ giúp?</strong>
+            <a href="#" className="asw-support-link">Liên hệ Support Center</a>
+          </div>
+        </div>
+        {user && (
+          <div className="asw-support-actions">
+            <button className="asw-btn-contact" onClick={handleContact}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              Liên hệ trực tiếp
+            </button>
+            <button className="asw-btn-warn" onClick={() => setWarningOpen(true)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              Gửi cảnh báo
+            </button>
+          </div>
+        )}
       </div>
-      <div>
-        <strong className="asw-support-title">Cần trợ giúp?</strong>
-        <a href="#" className="asw-support-link">Liên hệ Support Center</a>
-      </div>
-    </div>
-  </div>
-);
+
+      <WarningModal
+        open={warningOpen}
+        onClose={() => setWarningOpen(false)}
+        technician={{
+          id: user?.id ?? '',
+          name: user?.name ?? '',
+          code: user?.code,
+        }}
+      />
+    </>
+  );
+};
