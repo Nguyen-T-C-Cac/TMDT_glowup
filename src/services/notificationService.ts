@@ -57,3 +57,38 @@ export const markAllNotificationsAsRead = async (): Promise<void> => {
     throw new Error('Không thể đánh dấu tất cả đã đọc')
   }
 }
+
+export type SendAdminNotificationPayload = {
+  title: string
+  body: string
+  recipientCodes: string[]
+  type?: string
+}
+
+export const sendAdminNotification = async (
+  payload: SendAdminNotificationPayload
+): Promise<void> => {
+  const response = await fetchWithAuth(`${API_URL}/notifications/send`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const parsed = (await response.json()) as ApiResponse<unknown>
+
+  if (!response.ok || !parsed.success) {
+    throw new Error('Không thể gửi thông báo')
+  }
+}
+
+export const getNotificationById = async (
+  id: string
+): Promise<NotificationItem> => {
+  const response = await fetchWithAuth(`${API_URL}/notifications/${id}`)
+  const parsed = (await response.json()) as ApiResponse<NotificationItem>
+
+  if (!response.ok || !parsed.success) {
+    throw new Error('Không thể tải thông báo')
+  }
+
+  return parsed.data
+}

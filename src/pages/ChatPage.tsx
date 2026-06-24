@@ -702,12 +702,12 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                                                     } ${message.senderRole === 'ADMIN' ? styles.bubbleAdmin : ''}`}
                                                 >
                                                     {message.title && (
-                                                        <div className={styles.bubbleTitle}>{message.title}</div>
+                                                        <div className={styles.bubbleTitle} dangerouslySetInnerHTML={{ __html: message.title }} />
                                                     )}
                                                     {message.senderRole === 'ADMIN' && !isMe && (
                                                         <span className={styles.adminTag}>Quản trị viên</span>
                                                     )}
-                                                    <div>{message.content}</div>
+                                                    <div dangerouslySetInnerHTML={{ __html: message.content ?? '' }} />
                                                 </div>
                                             )}
                                             <span className={styles.messageTime}>

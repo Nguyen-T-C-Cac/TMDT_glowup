@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { AdminHeader } from '../components/admin/AdminHeader';
 import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { ContactItem } from '../components/chat/ContactItem';
 import { Avatar } from '../components/common/Avatar';
 import { SearchBar } from '../components/chat/SearchBar';
-import { ChatInputWrapper } from '../components/chat/ChatInputWrapper';
 import { chatService } from '../services/chat/chatService';
 import { mapWsMessageToChatMessage } from '../services/chat/chatRealtimeClient';
 import { getStoredUser } from '../services/auth';
@@ -14,7 +12,6 @@ import type { Contact } from '../types/Message';
 import type { ChatMessage, ConversationItem } from '../types/chat';
 import { SendHorizontal } from 'lucide-react';
 import chatStyles from '../components/chat/Chat.module.css';
-import pageStyles from './ChatPage.module.css';
 import './AdminChatPage.css';
 
 const formatMessageTime = (value: string) => {
@@ -40,7 +37,6 @@ const toContact = (conversation: ConversationItem): Contact => ({
 });
 
 export default function AdminChatPage() {
-  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -272,7 +268,7 @@ export default function AdminChatPage() {
                           } ${message.senderRole === 'ADMIN' ? 'admin-chat-bubble--admin' : ''}`}
                         >
                           {message.title && (
-                            <div className="admin-chat-bubble-title">{message.title}</div>
+                            <div className="admin-chat-bubble-title" dangerouslySetInnerHTML={{ __html: message.title }} />
                           )}
                           {message.senderRole === 'ADMIN' && !isMe && (
                             <span className="admin-chat-admin-tag">Quản trị viên</span>
@@ -282,7 +278,7 @@ export default function AdminChatPage() {
                               {message.senderRole === 'CUSTOMER' ? 'Khách hàng' : 'Thợ'}
                             </span>
                           )}
-                          <div>{message.content}</div>
+                          <div className="admin-chat-bubble-body" dangerouslySetInnerHTML={{ __html: message.content ?? '' }} />
                         </div>
                         <span className="admin-chat-message-time">
                           {formatMessageTime(message.sentAt)}

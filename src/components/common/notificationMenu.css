@@ -72,11 +72,34 @@
   background: #f8fbff;
 }
 
+.notification-menu__item-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
 .notification-menu__item-title {
-  margin: 0 0 4px;
+  flex: 1;
   font-size: 14px;
   font-weight: 600;
   color: #1e293b;
+  margin: 0;
+}
+
+.notification-menu__type-badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+}
+
+.notification-menu__type-badge--warning {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
 }
 
 .notification-menu__item-body {

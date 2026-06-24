@@ -238,6 +238,22 @@
     background: rgba(255, 255, 255, 0.2);
 }
 
+.bubble strong {
+    font-weight: 700;
+}
+
+.bubble em {
+    font-style: italic;
+}
+
+.bubble [style*="color: rgb(220, 38, 38)"] {
+    color: #dc2626;
+}
+
+.bubble.bubbleRight [style*="color: rgb(220, 38, 38)"] {
+    color: #fca5a5;
+}
+
 .messageTime {
     font-size: var(--fs-xs);
     color: #6ba07e;

@@ -217,6 +217,18 @@ export const getAdminComplaintById = async (id: string): Promise<AdminComplaintI
   return toComplaintItem(payload);
 };
 
+export const updateComplaintStatus = async (id: string, status: ComplaintStatusApi): Promise<void> => {
+  const response = await fetchWithAuth(`${API_URL}/reports/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Không thể cập nhật trạng thái khiếu nại');
+  }
+};
+
 const countByStatus = async (status: ComplaintStatusApi): Promise<number> => {
   const query = new URLSearchParams({
     page: '1',
