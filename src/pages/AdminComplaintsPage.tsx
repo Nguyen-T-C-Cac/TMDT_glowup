@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdminHeader } from '../components/admin/AdminHeader';
 import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { resolveMediaUrl } from '../utils/mediaUrl';
 import {
   getAdminComplaintStats,
   getAdminComplaints,
@@ -313,12 +314,18 @@ export default function AdminComplaintsPage() {
                 </div>
 
                 <div className="modal-card wide">
-                  <h4>Bằng chứng</h4>
+                  <h4>Bằng chứng ({selected.evidenceImages.length})</h4>
                   {selected.evidenceImages.length > 0 ? (
                     <div className="evidence-list">
                       {selected.evidenceImages.map((url, index) => (
-                        <a href={url} className="evidence-link" target="_blank" rel="noreferrer" key={`${selected.id}-${index}`}>
-                          Ảnh #{index + 1}
+                        <a
+                          key={`${selected.id}-${index}`}
+                          href={resolveMediaUrl(url) ?? url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="evidence-link"
+                        >
+                          <img src={resolveMediaUrl(url) ?? url} alt={`Bằng chứng ${index + 1}`} />
                         </a>
                       ))}
                     </div>

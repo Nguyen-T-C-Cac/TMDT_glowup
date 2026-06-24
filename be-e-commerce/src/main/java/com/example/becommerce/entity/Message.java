@@ -57,6 +57,10 @@ public class Message {
     @Column(columnDefinition = "TEXT")
     private String content;
 
+    /** Optional title for admin / system messages. */
+    @Column(length = 255)
+    private String title;
+
     /** Set only when {@link #type} == {@link MessageType#QUOTATION}. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "quotation_id")

@@ -37,6 +37,7 @@ export const chatService = {
     return (data.items ?? []).filter((item) => Boolean(item.id));
   },
 
+  /** Create a conversation — admin can provide customerId instead of technicianId */
   createConversation: async (payload: CreateConversationPayload): Promise<ConversationItem> => {
     const response = await apiClient.post('/api/conversations', payload);
     if (!response.data || (response.data as { success?: boolean }).success === false) {
@@ -70,10 +71,11 @@ export const chatService = {
     return [...items].reverse();
   },
 
-  sendMessage: async (conversationId: string, content: string): Promise<ChatMessage> => {
+  sendMessage: async (conversationId: string, content: string, title?: string): Promise<ChatMessage> => {
     const response = await apiClient.post(`/api/conversations/${conversationId}/messages`, {
       type: 'text',
       content,
+      ...(title ? { title } : {}),
     });
     return unwrap<ChatMessage>(response.data);
   },

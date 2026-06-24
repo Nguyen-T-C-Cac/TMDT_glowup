@@ -53,6 +53,7 @@ const toContact = (conversation: ConversationItem): Contact => ({
     avatar: conversation.partner?.avatar ?? 'https://placehold.co/48x48',
     isOnline: conversation.partner?.isOnline ?? false,
     unread: conversation.unreadCount > 0,
+    partnerType: conversation.partner?.role ?? undefined,
 });
 
 export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) => {
@@ -148,7 +149,9 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                             ? 'Báo giá mới'
                             : incoming.type === 'invoice'
                                 ? 'Hoá đơn mới'
-                                : incoming.content ?? '';
+                                : incoming.title
+                                    ? `[${incoming.title}] ${incoming.content ?? ''}`
+                                    : incoming.content ?? '';
                     return {
                         ...c,
                         lastMessage: {
@@ -373,9 +376,9 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
         await loadMessages(conversationId);
     };
 
-    const handleSendMessage = async (text: string) => {
+    const handleSendMessage = async (text: string, title?: string) => {
         if (!activeConversationId) return;
-        const sent = await chatService.sendMessage(activeConversationId, text);
+        const sent = await chatService.sendMessage(activeConversationId, text, title);
         setMessages((prev) => {
             if (prev.some((message) => message.id === sent.id)) {
                 return prev;
@@ -696,9 +699,15 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                                                 <div
                                                     className={`${styles.bubble} ${
                                                         isMe ? styles.bubbleRight : styles.bubbleLeft
-                                                    }`}
+                                                    } ${message.senderRole === 'ADMIN' ? styles.bubbleAdmin : ''}`}
                                                 >
-                                                    {message.content}
+                                                    {message.title && (
+                                                        <div className={styles.bubbleTitle}>{message.title}</div>
+                                                    )}
+                                                    {message.senderRole === 'ADMIN' && !isMe && (
+                                                        <span className={styles.adminTag}>Quản trị viên</span>
+                                                    )}
+                                                    <div>{message.content}</div>
                                                 </div>
                                             )}
                                             <span className={styles.messageTime}>

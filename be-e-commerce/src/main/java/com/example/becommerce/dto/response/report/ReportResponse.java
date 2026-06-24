@@ -35,5 +35,6 @@ public class ReportResponse {
     public static class PartyRef {
         private String id;
         private String fullName;
+        private String phone;
     }
 }

@@ -20,8 +20,10 @@ export type MessageNewWsPayload = {
     id: string;
     conversationId?: string;
     senderId: string;
+    senderRole?: string | null;
     type: string;
     content?: string | null;
+    title?: string | null;
     quotation?: ChatMessage['quotation'];
     sentAt: string;
     isRead?: boolean;
@@ -149,8 +151,10 @@ export const mapWsMessageToChatMessage = (
     id: msg.id,
     conversationId: msg.conversationId ?? payload.conversationId,
     senderId: msg.senderId,
+    senderRole: msg.senderRole ?? null,
     type: (msg.type?.toLowerCase() ?? 'text') as ChatMessage['type'],
     content: msg.content,
+    title: msg.title ?? null,
     quotation: msg.quotation ?? null,
     sentAt:
       typeof msg.sentAt === 'string'

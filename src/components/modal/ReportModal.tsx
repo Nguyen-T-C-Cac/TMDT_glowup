@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import Modal from '../common/Modal';
-import { X, CheckCircle } from 'lucide-react';
+import { X, CheckCircle, Camera, Trash2 } from 'lucide-react';
 import { reportService } from '../../services/reportService';
+import { uploadService } from '../../services/uploadService';
 import './css/reportModal.css';
 
 const SUGGESTED_REASONS = [
@@ -23,9 +24,42 @@ interface ReportModalProps {
 const ReportModal: React.FC<ReportModalProps> = ({ open, onClose, orderId, onSuccess }) => {
     const [reason, setReason] = useState('');
     const [description, setDescription] = useState('');
+    const [evidenceUrls, setEvidenceUrls] = useState<string[]>([]);
+    const [uploadingImages, setUploadingImages] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = event.target.files;
+        if (!files?.length) return;
+
+        setUploadingImages(true);
+        try {
+            const results = await Promise.all(
+                Array.from(files).map((file) => uploadService.uploadImage(file, 'reports'))
+            );
+            const urls = results.map((r) => r.data.url);
+            setEvidenceUrls((prev) => [...prev, ...urls].slice(0, 5));
+        } catch (err: any) {
+            console.error('[ReportModal] Upload error:', err);
+            const message =
+                err?.response?.data?.message
+                || err?.message
+                || 'Không thể tải ảnh lên. Vui lòng thử lại.';
+            setError(message);
+        } finally {
+            setUploadingImages(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+
+    const handleRemoveImage = (index: number) => {
+        setEvidenceUrls((prev) => prev.filter((_, i) => i !== index));
+    };
 
     const handleSubmit = async () => {
         if (!reason) return;
@@ -37,6 +71,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ open, onClose, orderId, onSuc
             await reportService.createReport(orderId, {
                 reason,
                 description: description.trim(),
+                evidenceImages: evidenceUrls,
             });
             setSuccess(true);
             setTimeout(() => {
@@ -57,6 +92,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ open, onClose, orderId, onSuc
     const handleReset = () => {
         setReason('');
         setDescription('');
+        setEvidenceUrls([]);
         setError(null);
         setSuccess(false);
         onClose();
@@ -117,6 +153,45 @@ const ReportModal: React.FC<ReportModalProps> = ({ open, onClose, orderId, onSuc
                                     onChange={(e) => setDescription(e.target.value)}
                                     maxLength={2000}
                                 />
+                            </div>
+
+                            <div className="form-group">
+                                <label>ẢNH MINH CHỨNG (tối đa 5 ảnh)</label>
+                                <div className="report-evidence-grid">
+                                    {evidenceUrls.map((url, index) => (
+                                        <div key={url} className="report-evidence-item">
+                                            <img src={url} alt={`Minh chứng ${index + 1}`} />
+                                            <button
+                                                type="button"
+                                                className="report-evidence-remove"
+                                                onClick={() => handleRemoveImage(index)}
+                                                disabled={submitting}
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {evidenceUrls.length < 5 && (
+                                        <div
+                                            className="report-evidence-upload"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            role="button"
+                                            tabIndex={0}
+                                        >
+                                            <Camera size={24} />
+                                            <span>{uploadingImages ? 'Đang tải...' : 'Thêm ảnh'}</span>
+                                        </div>
+                                    )}
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        hidden
+                                        onChange={handleUpload}
+                                        disabled={uploadingImages}
+                                    />
+                                </div>
                             </div>
                         </div>
 

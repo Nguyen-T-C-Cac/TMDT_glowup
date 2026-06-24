@@ -199,6 +199,45 @@
     border-bottom-right-radius: 6px;
 }
 
+.bubbleAdmin {
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.bubbleAdmin.bubbleLeft {
+    background: #f0f6ff;
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+.bubbleAdmin.bubbleRight {
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    border-color: rgba(59, 130, 246, 0.38);
+}
+
+.bubbleTitle {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: inherit;
+}
+
+.adminTag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    color: #2563eb;
+    background: rgba(59, 130, 246, 0.12);
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.bubbleAdmin.bubbleRight .adminTag {
+    color: #bfdbfe;
+    background: rgba(255, 255, 255, 0.2);
+}
+
 .messageTime {
     font-size: var(--fs-xs);
     color: #6ba07e;

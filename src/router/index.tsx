@@ -22,6 +22,7 @@ import AdminVerificationUpdate from '../pages/AdminVerificationUpdate'
 import AdminOrdersPage from '../pages/AdminOrdersPage'
 import AdminComplaintsPage from '../pages/AdminComplaintsPage'
 import AdminComplaintResolvePage from '../pages/AdminComplaintResolvePage'
+import AdminChatPage from '../pages/AdminChatPage'
 import CustomerAccountSettingsPage from '../pages/CustomerAccountSettingsPage'
 import FindProvider from '../pages/FindProvider'
 import HomePage from '../pages/HomePage'
@@ -96,6 +97,7 @@ export default function AppRouter() {
         <Route path="settings" element={<AdminSystemSettingsPage />} />
         <Route path="complaints" element={<AdminComplaintsPage />} />
         <Route path="complaints/:complaintId/resolve" element={<AdminComplaintResolvePage />} />
+        <Route path="chat" element={<AdminChatPage />} />
       </Route>
 
       <Route path="/orders/:code" element={<OrderPaymentResultPage />} />

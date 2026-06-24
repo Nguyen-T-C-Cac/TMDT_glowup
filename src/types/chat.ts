@@ -13,8 +13,10 @@ export type ChatMessage = {
   id: string;
   conversationId: string;
   senderId: string;
+  senderRole?: string | null;
   type: ChatMessageType;
   content?: string | null;
+  title?: string | null;
   quotation?: EmbeddedQuotation | null;
   sentAt: string;
   isRead?: boolean;
@@ -25,6 +27,7 @@ export type ChatPartner = {
   fullName: string;
   avatar?: string | null;
   isOnline?: boolean;
+  role?: string | null;
 };
 
 export type ConversationItem = {
@@ -42,7 +45,8 @@ export type ConversationItem = {
 };
 
 export type CreateConversationPayload = {
-  technicianId: string;
+  technicianId?: string;
+  customerId?: string;
   orderId?: string;
 };
 

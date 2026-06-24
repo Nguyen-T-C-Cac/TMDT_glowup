@@ -15,8 +15,14 @@ public class MessageResponse {
     private String conversationId;
     private String senderId;
 
+    /** Sender's role: "ADMIN", "CUSTOMER", "TECHNICIAN". */
+    private String senderRole;
+
     private String type;
     private String content;
+
+    /** Optional title for admin / system messages. */
+    private String title;
 
     /** Set only when {@code type == "quotation"}. */
     private EmbeddedQuotation quotation;

@@ -104,8 +104,15 @@ public class ConversationServiceImpl implements ConversationService {
     @Override
     @Transactional
     public ConversationCreatedResponse createConversation(CreateConversationRequest request) {
-        User customer = getCurrentUser();
-        if (customer.getRole() != Role.CUSTOMER) {
+        User currentUser = getCurrentUser();
+
+        // Admin can create conversations with customers or technicians
+        if (currentUser.getRole() == Role.ADMIN) {
+            return createAdminConversation(currentUser, request);
+        }
+
+        // Regular flow: customer starts a chat with technician
+        if (currentUser.getRole() != Role.CUSTOMER) {
             throw AppException.forbidden("Chỉ khách hàng mới có thể mở cuộc trò chuyện");
         }
 
@@ -117,12 +124,12 @@ public class ConversationServiceImpl implements ConversationService {
         }
 
         Optional<Conversation> existing = conversationRepository
-                .findByCustomer_IdAndTechnician_Id(customer.getId(), technician.getId());
+                .findByCustomer_IdAndTechnician_Id(currentUser.getId(), technician.getId());
         boolean isNewConversation = existing.isEmpty();
 
         Conversation conversation = existing.orElseGet(() -> Conversation.builder()
                 .code(conversationCodeGenerator.generate())
-                .customer(customer)
+                .customer(currentUser)
                 .technician(technician)
                 .build());
 
@@ -134,19 +141,19 @@ public class ConversationServiceImpl implements ConversationService {
 
         Conversation saved = conversationRepository.save(conversation);
         log.info("Conversation {} between customer={} technician={} (order={})",
-                saved.getCode(), customer.getCode(), technician.getCode(),
+                saved.getCode(), currentUser.getCode(), technician.getCode(),
                 saved.getOrder() == null ? "-" : saved.getOrder().getCode());
 
         if (isNewConversation) {
             notifyChatRecipient(
                     technician,
-                    customer.getFullName(),
+                    currentUser.getFullName(),
                     "Khách hàng mới muốn trò chuyện",
-                    customer.getFullName() + " đã mở cuộc trò chuyện với bạn.",
+                    currentUser.getFullName() + " đã mở cuộc trò chuyện với bạn.",
                     saved);
         }
 
-        return conversationMapper.toCreatedResponse(saved, customer);
+        return conversationMapper.toCreatedResponse(saved, currentUser);
     }
 
     // ===============================================================
@@ -212,6 +219,7 @@ public class ConversationServiceImpl implements ConversationService {
                 .sender(sender)
                 .type(type)
                 .content(request.getContent())
+                .title(request.getTitle())
                 .build();
         Message saved = messageRepository.save(message);
 
@@ -237,6 +245,82 @@ public class ConversationServiceImpl implements ConversationService {
         }
 
         return response;
+    }
+
+    // ===============================================================
+    // Admin conversation helpers
+    // ===============================================================
+
+    /**
+     * Admin creates a conversation with either a customer or a technician.
+     * The admin is stored as one side of the conversation (technician for admin-customer,
+     * customer for admin-technician) to fit the existing schema.
+     */
+    @Transactional
+    protected ConversationCreatedResponse createAdminConversation(User admin,
+                                                                    CreateConversationRequest request) {
+        User customer;
+        User technician;
+
+        if (request.getCustomerId() != null && !request.getCustomerId().isBlank()) {
+            // Admin messaging a customer — admin takes the technician slot
+            customer = userRepository.findByCodeAndDeletedFalse(request.getCustomerId())
+                    .orElseThrow(() -> AppException.notFound(
+                            "Không tìm thấy khách hàng " + request.getCustomerId()));
+            if (customer.getRole() != Role.CUSTOMER) {
+                throw AppException.badRequest(ErrorCode.VALIDATION_ERROR,
+                        "Tài khoản không phải là khách hàng");
+            }
+            technician = admin;
+        } else if (request.getTechnicianId() != null && !request.getTechnicianId().isBlank()) {
+            // Admin messaging a technician — admin takes the customer slot
+            customer = admin;
+            technician = userRepository.findByCodeAndDeletedFalse(request.getTechnicianId())
+                    .orElseThrow(() -> AppException.notFound(
+                            "Không tìm thấy thợ " + request.getTechnicianId()));
+            if (technician.getRole() != Role.TECHNICIAN) {
+                throw AppException.badRequest(ErrorCode.VALIDATION_ERROR,
+                        "Tài khoản không phải là thợ");
+            }
+        } else {
+            throw AppException.badRequest(ErrorCode.VALIDATION_ERROR,
+                    "Vui lòng cung cấp customerId hoặc technicianId");
+        }
+
+        // Check for existing admin-user conversation
+        Optional<Conversation> existing = conversationRepository
+                .findByCustomer_IdAndTechnician_Id(customer.getId(), technician.getId());
+        boolean isNewConversation = existing.isEmpty();
+
+        Conversation conversation = existing.orElseGet(() -> Conversation.builder()
+                .code(conversationCodeGenerator.generate())
+                .customer(customer)
+                .technician(technician)
+                .build());
+
+        if (request.getOrderId() != null && !request.getOrderId().isBlank()) {
+            Order order = orderRepository.findByCodeAndDeletedFalse(request.getOrderId())
+                    .orElseThrow(() -> AppException.notFound("Không tìm thấy đơn " + request.getOrderId()));
+            conversation.setOrder(order);
+        }
+
+        Conversation saved = conversationRepository.save(conversation);
+        log.info("Admin conversation {} between admin={} and partner={} (order={})",
+                saved.getCode(), admin.getCode(),
+                customer.getId().equals(admin.getId()) ? technician.getCode() : customer.getCode(),
+                saved.getOrder() == null ? "-" : saved.getOrder().getCode());
+
+        if (isNewConversation) {
+            User recipient = customer.getId().equals(admin.getId()) ? technician : customer;
+            notifyChatRecipient(
+                    recipient,
+                    "Quản trị viên",
+                    "Tin nhắn từ quản trị viên",
+                    "Quản trị viên nền tảng đã gửi tin nhắn cho bạn.",
+                    saved);
+        }
+
+        return conversationMapper.toCreatedResponse(saved, admin);
     }
 
     // ===============================================================

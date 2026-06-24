@@ -8,7 +8,7 @@ import type { UserRole } from '../../types/UserRole';
 
 interface MessageInputProps {
     role: UserRole;
-    onSendMessage?: (message: string) => void;
+    onSendMessage?: (message: string, title?: string) => void;
     onCreateQuote?: (quote: Quote) => Promise<void>;
     showQuoteAction?: boolean;
     showPriceAdjustAction?: boolean;

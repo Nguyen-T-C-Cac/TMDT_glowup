@@ -157,3 +157,68 @@
 .btn-solid-danger:hover {
     background: #dc2626;
 }
+
+.report-evidence-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.report-evidence-item {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.report-evidence-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.report-evidence-remove {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+}
+
+.report-evidence-remove:hover {
+    background: rgba(220, 38, 38, 0.85);
+}
+
+.report-evidence-upload {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    border: 2px dashed var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    color: var(--text-sub);
+    font-size: 11px;
+    font-weight: var(--fw-medium);
+    transition: 0.2s;
+}
+
+.report-evidence-upload:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: #fef2f2;
+}
