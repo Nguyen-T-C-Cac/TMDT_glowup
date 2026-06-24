@@ -10,6 +10,7 @@ import {
   markNotificationAsRead,
   type NotificationItem,
 } from '../../services/notificationService';
+import NotificationDetailModal from './NotificationDetailModal';
 
 type NotificationMenuProps = {
   variant?: 'light' | 'dark';
@@ -37,6 +38,7 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [detailModalId, setDetailModalId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -136,6 +138,8 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
         conversationId,
         orderId,
       });
+    } else {
+      setDetailModalId(item.id);
     }
   };
 
@@ -196,7 +200,9 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
                   onClick={() => handleItemClick(item)}
                 >
                   <p className="notification-menu__item-title">{item.title}</p>
-                  <p className="notification-menu__item-body">{item.body}</p>
+                  <p className="notification-menu__item-body">
+                    {item.type === 'chat_message' ? item.body : 'Gửi từ quản trị viên'}
+                  </p>
                   <span className="notification-menu__item-time">
                     {formatNotificationTime(item.createdAt)}
                   </span>
@@ -204,6 +210,13 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
               ))}
           </div>
         </div>
+      )}
+
+      {detailModalId && (
+        <NotificationDetailModal
+          notificationId={detailModalId}
+          onClose={() => setDetailModalId(null)}
+        />
       )}
     </div>
   );

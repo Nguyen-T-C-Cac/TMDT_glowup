@@ -223,6 +223,10 @@
   overflow-wrap: anywhere;
 }
 
+.crp-field .rte-wrapper {
+  margin-top: 6px;
+}
+
 .crp-link-btn,
 .crp-copy-btn,
 .crp-primary-inline-btn {

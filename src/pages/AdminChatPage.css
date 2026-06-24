@@ -160,6 +160,22 @@
   color: inherit;
 }
 
+.admin-chat-bubble-body strong {
+  font-weight: 700;
+}
+
+.admin-chat-bubble-body em {
+  font-style: italic;
+}
+
+.admin-chat-bubble-body [style*="color: rgb(220, 38, 38)"] {
+  color: #dc2626;
+}
+
+.admin-chat-bubble--right .admin-chat-bubble-body [style*="color: rgb(220, 38, 38)"] {
+  color: #fca5a5;
+}
+
 .admin-chat-admin-tag {
   display: inline-block;
   font-size: 9px;

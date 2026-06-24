@@ -7,6 +7,8 @@ import { getAdminComplaintById } from '../services/adminComplaintService';
 import { resolveMediaUrl } from '../utils/mediaUrl';
 import { chatService } from '../services/chat/chatService';
 import { ArrowLeft, Bell, CheckCircle2, CircleAlert, CircleCheckBig, MessageSquare, Phone, ThumbsDown, Wallet } from 'lucide-react';
+import { RichTextEditor } from '../components/admin/RichTextEditor';
+import { sendAdminNotification } from '../services/notificationService';
 import './AdminComplaintResolvePage.css';
 
 type ResolveLocationState = {
@@ -181,6 +183,17 @@ const contactTitleSuggestions = [
   'Thông báo kết quả xử lý',
 ];
 
+const notificationTitleSuggestions = [
+  'Thông báo xử lý khiếu nại',
+  'Cập nhật tiến độ xử lý khiếu nại',
+  'Yêu cầu cung cấp thông tin',
+  'Thông báo kết quả giải quyết khiếu nại',
+  'Nhắc nhở phối hợp xử lý',
+  'Thông báo hoàn tiền / bồi thường',
+];
+
+const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '').trim();
+
 const initialContactForm: ContactForm = {
   method: 'call',
   title: '',
@@ -301,14 +314,14 @@ export default function AdminComplaintResolvePage() {
   const validateContact = () => {
     if (contactMode === 'message') {
       if (!contactForm.title.trim()) return 'Vui lòng nhập tiêu đề tin nhắn.';
-      if (!contactForm.message.trim()) return 'Vui lòng nhập nội dung tin nhắn.';
+      if (!stripHtml(contactForm.message)) return 'Vui lòng nhập nội dung tin nhắn.';
     }
     return '';
   };
 
   const validateNotification = () => {
     if (!notificationForm.title.trim()) return 'Vui lòng nhập tiêu đề thông báo.';
-    if (!notificationForm.message.trim()) return 'Vui lòng nhập nội dung thông báo.';
+    if (!stripHtml(notificationForm.message)) return 'Vui lòng nhập nội dung thông báo.';
     if (!notificationForm.receiver) return 'Vui lòng chọn người nhận.';
     return '';
   };
@@ -344,7 +357,7 @@ export default function AdminComplaintResolvePage() {
     return '';
   };
 
-  const handleSubmit = (action: ActionKey) => {
+  const handleSubmit = async (action: ActionKey) => {
     if (isLocked) {
       handleLockedActionAttempt();
       return;
@@ -384,13 +397,75 @@ export default function AdminComplaintResolvePage() {
     }
 
     if (action === 'send-notification') {
+      if (!complaint) return;
+
       const error = validateNotification();
       if (error) {
         setBanner('error', error);
         return;
       }
 
-      setBanner('success', 'Đã lưu nhật ký hành động và gửi thông báo thành công.');
+      const formattedTitle = `<strong>${notificationForm.title}</strong>`;
+      const receivers: Array<'customer' | 'technician'> =
+        notificationForm.receiver === 'both'
+          ? ['customer', 'technician']
+          : [notificationForm.receiver];
+
+      let successCount = 0;
+      const missing: string[] = [];
+
+      for (const target of receivers) {
+        try {
+          const partyLabel = target === 'customer' ? 'khách hàng' : 'thợ';
+          const partnerField = target === 'customer' ? 'customerId' : 'technicianId';
+          const partnerCode = target === 'customer' ? complaint.customerCode : complaint.technicianCode;
+
+          if (!partnerCode) {
+            missing.push(partyLabel);
+            continue;
+          }
+
+          const conversation = await chatService.createConversation({
+            [partnerField]: partnerCode,
+            orderId: complaint.orderCode,
+          });
+
+          await chatService.sendMessage(conversation.id, notificationForm.message, formattedTitle);
+          successCount++;
+        } catch {
+          // gửi qua chat thất bại cho recipient này
+        }
+      }
+
+      if (successCount > 0) {
+        setComplaintStatus('investigating');
+
+        try {
+          const recipientCodes = receivers
+            .map((t) => t === 'customer' ? complaint.customerCode : complaint.technicianCode)
+            .filter(Boolean) as string[];
+
+          if (recipientCodes.length > 0) {
+            await sendAdminNotification({
+              title: notificationForm.title,
+              body: notificationForm.message,
+              recipientCodes,
+              type: notificationForm.type,
+            });
+          }
+        } catch {
+          // notification API chưa có BE — bỏ qua, chỉ gửi qua chat
+        }
+
+        const label = notificationForm.receiver === 'both' ? 'khách hàng và thợ' : (notificationForm.receiver === 'customer' ? 'khách hàng' : 'thợ');
+        const suffix = missing.length > 0 ? ` (không thể gửi cho ${missing.join(', ')})` : '';
+        setBanner('success', `Đã gửi thông báo đến ${label} thành công.${suffix}`);
+      } else {
+        const msg = missing.length > 0
+          ? `Không tìm thấy thông tin ${missing.join(' và ')} để gửi thông báo.`
+          : 'Không thể gửi thông báo.';
+        setBanner('error', msg);
+      }
       return;
     }
 
@@ -458,7 +533,8 @@ export default function AdminComplaintResolvePage() {
         orderId: complaint.orderCode,
       });
 
-      await chatService.sendMessage(conversation.id, message, title);
+      const formattedTitle = `<strong>${title}</strong>`;
+      await chatService.sendMessage(conversation.id, message, formattedTitle);
 
       setComplaintStatus('investigating');
       setBanner('success', `Đã gửi tin nhắn đến ${partyLabel} thành công.`);
@@ -487,6 +563,7 @@ export default function AdminComplaintResolvePage() {
     switch (activeAction) {
       case 'contact-customer':
       case 'contact-technician': {
+        if (!complaint) return null;
         const isCustomer = activeAction === 'contact-customer';
         const partyName = isCustomer ? complaint.customerName : complaint.technicianName;
         const partyPhone = isCustomer ? complaint.customerPhone : complaint.technicianPhone;
@@ -578,13 +655,12 @@ export default function AdminComplaintResolvePage() {
 
                 <label className="crp-field">
                   <span>Nội dung tin nhắn</span>
-                  <textarea
-                    className="crp-textarea crp-textarea--large"
-                    rows={5}
-                    placeholder={`Nhập nội dung tin nhắn gửi ${partyLabel}...`}
+                  <RichTextEditor
                     value={contactForm.message}
-                    onChange={(event) => setContactForm((prev) => ({ ...prev, message: event.target.value }))}
+                    onChange={(html) => setContactForm((prev) => ({ ...prev, message: html }))}
+                    placeholder={`Nhập nội dung tin nhắn gửi ${partyLabel}...`}
                     disabled={isLocked}
+                    minHeight={120}
                   />
                 </label>
               </>
@@ -629,25 +705,45 @@ export default function AdminComplaintResolvePage() {
 
             <label className="crp-field">
               <span>Tiêu đề</span>
-              <input
-                className="crp-input"
-                type="text"
-                placeholder="Nhập tiêu đề thông báo"
-                value={notificationForm.title}
-                onChange={(event) => setNotificationForm((current) => ({ ...current, title: event.target.value }))}
+              <select
+                className="crp-select"
+                value={notificationTitleSuggestions.includes(notificationForm.title) ? notificationForm.title : 'custom'}
+                onChange={(event) => {
+                  const val = event.target.value;
+                  setNotificationForm((current) => ({
+                    ...current,
+                    title: val === 'custom' ? '' : val,
+                  }));
+                }}
                 disabled={isLocked}
-              />
+              >
+                <option value="" disabled>Chọn tiêu đề...</option>
+                {notificationTitleSuggestions.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+                <option value="custom">Tiêu đề khác...</option>
+              </select>
+              {!notificationTitleSuggestions.includes(notificationForm.title) && (
+                <input
+                  className="crp-input"
+                  type="text"
+                  placeholder="Nhập tiêu đề thông báo..."
+                  value={notificationForm.title}
+                  onChange={(event) => setNotificationForm((current) => ({ ...current, title: event.target.value }))}
+                  disabled={isLocked}
+                  style={{ marginTop: 8 }}
+                />
+              )}
             </label>
 
             <label className="crp-field">
               <span>Nội dung</span>
-              <textarea
-                className="crp-textarea crp-textarea--large"
-                rows={6}
-                placeholder="Nội dung thông báo..."
+              <RichTextEditor
                 value={notificationForm.message}
-                onChange={(event) => setNotificationForm((current) => ({ ...current, message: event.target.value }))}
+                onChange={(html) => setNotificationForm((current) => ({ ...current, message: html }))}
+                placeholder="Nhập nội dung thông báo..."
                 disabled={isLocked}
+                minHeight={140}
               />
             </label>
 
@@ -682,9 +778,9 @@ export default function AdminComplaintResolvePage() {
         return (
           <form
             className="crp-form"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault();
-              handleSubmit('refund-customer');
+              await handleSubmit('refund-customer');
             }}
           >
             <div className="crp-form-row">
@@ -760,9 +856,9 @@ export default function AdminComplaintResolvePage() {
         return (
           <form
             className="crp-form"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault();
-              handleSubmit('warn-technician');
+              await handleSubmit('warn-technician');
             }}
           >
             <label className="crp-field">
@@ -841,9 +937,9 @@ export default function AdminComplaintResolvePage() {
         return (
           <form
             className="crp-form"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault();
-              handleSubmit('dismiss-complaint');
+              await handleSubmit('dismiss-complaint');
             }}
           >
             <label className="crp-field">
@@ -912,9 +1008,9 @@ export default function AdminComplaintResolvePage() {
         return (
           <form
             className="crp-form"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault();
-              handleSubmit('mark-done');
+              await handleSubmit('mark-done');
             }}
           >
             <label className="crp-field">
