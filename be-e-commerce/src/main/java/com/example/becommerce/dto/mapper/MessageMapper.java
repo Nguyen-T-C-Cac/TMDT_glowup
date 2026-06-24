@@ -33,12 +33,16 @@ public class MessageMapper {
             isRead = watermark != null && m.getSentAt() != null && !m.getSentAt().isAfter(watermark);
         }
 
+        String senderRole = m.getSender() == null ? null : m.getSender().getRole().name();
+
         return MessageResponse.builder()
                 .id(m.getCode())
                 .conversationId(conv == null ? null : conv.getCode())
                 .senderId(m.getSender() == null ? null : m.getSender().getCode())
+                .senderRole(senderRole)
                 .type(m.getType() == null ? null : m.getType().apiValue())
                 .content(m.getContent())
+                .title(m.getTitle())
                 .quotation(quotationMapper.toEmbedded(m.getQuotation()))
                 .sentAt(m.getSentAt())
                 .isRead(isRead)

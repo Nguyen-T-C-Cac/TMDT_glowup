@@ -26,6 +26,7 @@ public class ConversationMapper {
                     .fullName(partner.getFullName())
                     .avatar(partner.getAvatar())
                     .isOnline(false)
+                    .role(partner.getRole().name())
                     .build();
         }
 
@@ -52,6 +53,7 @@ public class ConversationMapper {
                     .fullName(partner.getFullName())
                     .avatar(partner.getAvatar())
                     .isOnline(false)
+                    .role(partner.getRole().name())
                     .build();
         }
         return ConversationCreatedResponse.builder()
@@ -74,6 +76,9 @@ public class ConversationMapper {
         if (c.getTechnician() != null && c.getTechnician().getId().equals(viewer.getId())) {
             return c.getCustomer();
         }
+        // Admin is allowed — return the other participant
+        if (c.getCustomer() != null) return c.getCustomer();
+        if (c.getTechnician() != null) return c.getTechnician();
         return null;
     }
 }

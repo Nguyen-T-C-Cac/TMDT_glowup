@@ -14,9 +14,11 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CreateConversationRequest {
 
-    /** Partner technician's user code, e.g. TECH-001. */
-    @NotBlank(message = "technicianId không được trống")
+    /** Partner technician's user code, e.g. TECH-001. Used by customers starting a chat. */
     private String technicianId;
+
+    /** Partner customer's user code, e.g. CUS-001. Used by admin starting a chat with a customer. */
+    private String customerId;
 
     /** Optional — link the chat to an existing order. */
     private String orderId;

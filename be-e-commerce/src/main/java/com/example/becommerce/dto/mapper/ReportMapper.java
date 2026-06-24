@@ -40,6 +40,7 @@ public class ReportMapper {
         return ReportResponse.PartyRef.builder()
                 .id(user.getCode())
                 .fullName(user.getFullName())
+                .phone(user.getPhone())
                 .build();
     }
 }

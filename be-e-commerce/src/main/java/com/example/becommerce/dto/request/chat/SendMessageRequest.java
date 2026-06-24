@@ -19,4 +19,7 @@ public class SendMessageRequest {
 
     @NotBlank(message = "Nội dung tin nhắn không được trống")
     private String content;
+
+    /** Optional title for admin / system messages. */
+    private String title;
 }

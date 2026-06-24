@@ -90,6 +90,14 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     @Transactional(readOnly = true)
+    public ReportResponse getReport(String reportCode) {
+        OrderReport report = reportRepository.findByCode(reportCode)
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy khiếu nại " + reportCode));
+        return reportMapper.toResponse(report, true);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public PagedResponse<ReportResponse> listReports(String status, String keyword, int page, int limit) {
         Specification<OrderReport> spec = OrderReportSpecification.buildFilter(status, keyword);
 
