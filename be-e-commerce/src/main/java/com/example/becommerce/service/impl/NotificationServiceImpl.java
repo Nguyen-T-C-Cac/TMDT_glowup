@@ -179,6 +179,26 @@ public class NotificationServiceImpl implements NotificationService {
                 HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    @Override
+    @Transactional
+    public void sendAdminNotification(String title, String body, List<String> recipientCodes, String type) {
+        if (recipientCodes == null || recipientCodes.isEmpty()) {
+            throw AppException.badRequest(ErrorCode.BAD_REQUEST, "Danh sách người nhận là bắt buộc");
+        }
+
+        Map<String, Object> data = null;
+        if (type != null) {
+            data = Map.of("type", type);
+        }
+
+        for (String code : recipientCodes) {
+            User user = userRepository.findByCodeAndDeletedFalse(code.trim())
+                    .orElseThrow(() -> AppException.notFound("Không tìm thấy người dùng với mã " + code));
+
+            createNotification(user, NotificationType.SYSTEM, title, body, data);
+        }
+    }
+
     private String generateCandidateCode(int offset) {
         LocalDate today = LocalDate.now();
         LocalDateTime startOfDay = today.atStartOfDay();

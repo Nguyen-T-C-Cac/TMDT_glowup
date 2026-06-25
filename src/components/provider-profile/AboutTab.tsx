@@ -1,6 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './AboutTab.css';
 import { StarIcon } from '../common/Icons';
+import { technicianService } from '../../services/technicianService';
+
+function formatRelativeTime(dateStr: string): string {
+  if (!dateStr) return '';
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return 'Vừa xong';
+  if (diffMins < 60) return `${diffMins} phút trước`;
+  if (diffHours < 24) return `${diffHours} giờ trước`;
+  if (diffDays < 7) return `${diffDays} ngày trước`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} tuần trước`;
+  return `${Math.floor(diffDays / 30)} tháng trước`;
+}
 
 interface Review {
   id: string;
@@ -12,70 +30,42 @@ interface Review {
   attachedImage?: string;
 }
 
-export const AboutTab: React.FC<{ onlyReviews?: boolean, onViewAllReviews?: () => void }> = ({ onlyReviews, onViewAllReviews }) => {
-  const reviews: Review[] = [
-    {
-      id: '1',
-      authorName: 'Chị Lan - Vinhomes Central Park',
-      authorAvatar: 'https://i.pravatar.cc/150?img=5',
-      timeAgo: '2 ngày trước',
-      content: 'Anh Hùng làm việc rất kỹ, giải thích rõ ràng nguyên nhân máy lạnh bị rỉ nước. Dọn dẹp sạch sẽ sau khi xong việc. Rất hài lòng!',
-      rating: 5,
-      attachedImage: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&q=80&w=200'
-    },
-    {
-      id: '2',
-      authorName: 'Anh Tuấn - Quận 1',
-      authorAvatar: 'https://i.pravatar.cc/150?img=11',
-      timeAgo: '1 tuần trước',
-      content: 'Sửa điện nhanh, đúng hẹn. Giá cả báo trước nên rất an tâm.',
-      rating: 4,
-    },
-    {
-      id: '3',
-      authorName: 'Bác Bình - Thảo Điền',
-      authorAvatar: 'https://i.pravatar.cc/150?img=8',
-      timeAgo: '2 tuần trước',
-      content: 'Lắp đặt chuyên nghiệp, nhân viên nhiệt tình, có trách nhiệm cao trong công việc.',
-      rating: 5,
-    },
-    {
-      id: '4',
-      authorName: 'Chú Tâm - Gò Vấp',
-      authorAvatar: 'https://i.pravatar.cc/150?img=12',
-      timeAgo: '3 tuần trước',
-      content: 'Làm việc ok, vui vẻ. Đã xong trong 30p.',
-      rating: 5,
-    },
-    {
-      id: '5',
-      authorName: 'Chị Mai - Quận 3',
-      authorAvatar: 'https://i.pravatar.cc/150?img=13',
-      timeAgo: '1 tháng trước',
-      content: 'Nhiệt tình nhưng tới trễ 10 phút. Tuy thế sửa rất kỹ.',
-      rating: 4,
-    },
-    {
-      id: '6',
-      authorName: 'Anh Long - Tân Bình',
-      authorAvatar: 'https://i.pravatar.cc/150?img=14',
-      timeAgo: '1 tháng trước',
-      content: 'Support siêu nhanh, giá hợp lý.',
-      rating: 5,
-    },
-    {
-      id: '7',
-      authorName: 'Cô Huyền - Phú Nhuận',
-      authorAvatar: 'https://i.pravatar.cc/150?img=15',
-      timeAgo: '2 tháng trước',
-      content: 'Hài lòng với dịch vụ này.',
-      rating: 5,
-    },
-  ];
-
+export const AboutTab: React.FC<{ providerId?: string; onlyReviews?: boolean; onViewAllReviews?: () => void }> = ({ providerId, onlyReviews, onViewAllReviews }) => {
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(false);
   const [visibleCount, setVisibleCount] = useState(5);
 
-  const averageRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
+  useEffect(() => {
+    if (!providerId) return;
+
+    setLoading(true);
+    technicianService.getTechnicianReviews(providerId)
+      .then(res => {
+        const items = res.data?.items;
+        if (items && items.length > 0) {
+          setReviews(items.map((item: any) => ({
+            id: item.id || item._id,
+            authorName: item.authorName || item.customerName || item.userName || 'Khách hàng',
+            authorAvatar: item.authorAvatar || item.customerAvatar || item.avatar || 'https://i.pravatar.cc/150?img=5',
+            timeAgo: formatRelativeTime(item.createdAt),
+            content: item.content || item.comment || '',
+            rating: item.rating || 5,
+            attachedImage: item.attachedImage || item.attachedImages?.[0] || undefined,
+          })));
+        } else {
+          setReviews([]);
+        }
+      })
+      .catch(err => {
+        console.error('Lỗi khi lấy đánh giá', err);
+        setReviews([]);
+      })
+      .finally(() => setLoading(false));
+  }, [providerId]);
+
+  const averageRating = reviews.length > 0
+    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+    : 0;
   const roundedRating = averageRating.toFixed(1);
 
   return (
@@ -100,48 +90,58 @@ export const AboutTab: React.FC<{ onlyReviews?: boolean, onViewAllReviews?: () =
       <div className="profile-card">
         <div className="review-header">
           <h2 className="pc-title mb-0">Đánh giá thực tế</h2>
-          <div className="avg-rating-box">
-            <span className="avg-rating-num">{roundedRating}</span>
-            <div className="avg-stars">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <StarIcon key={star} size={16} className={star <= Math.round(averageRating) ? 'star-solid' : 'star-empty'} />
+          {!loading && reviews.length > 0 && (
+            <div className="avg-rating-box">
+              <span className="avg-rating-num">{roundedRating}</span>
+              <div className="avg-stars">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <StarIcon key={star} size={16} className={star <= Math.round(averageRating) ? 'star-solid' : 'star-empty'} />
+                ))}
+              </div>
+              <span className="review-count">({reviews.length} đánh giá)</span>
+            </div>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="review-list-loading">Đang tải đánh giá...</div>
+        ) : reviews.length > 0 ? (
+          <>
+            <div className="review-list">
+              {reviews.slice(0, visibleCount).map(review => (
+                <div key={review.id} className="review-item">
+                  <div className="review-item-header">
+                    <img src={review.authorAvatar} alt={review.authorName} className="review-avatar" />
+                    <div className="review-author-info">
+                      <h4 className="review-author-name">{review.authorName}</h4>
+                      <span className="review-time">{review.timeAgo}</span>
+                    </div>
+                    <div className="review-stars">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <StarIcon key={star} size={12} className={star <= review.rating ? 'star-solid' : 'star-empty'} />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="review-content">{review.content}</p>
+                  {review.attachedImage && (
+                    <div className="review-attachment">
+                      <img src={review.attachedImage} alt="Attachment" className="review-img" />
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
-            <span className="review-count">({reviews.length} đánh giá)</span>
-          </div>
-        </div>
 
-        <div className="review-list">
-          {reviews.slice(0, visibleCount).map(review => (
-            <div key={review.id} className="review-item">
-              <div className="review-item-header">
-                <img src={review.authorAvatar} alt={review.authorName} className="review-avatar" />
-                <div className="review-author-info">
-                  <h4 className="review-author-name">{review.authorName}</h4>
-                  <span className="review-time">{review.timeAgo}</span>
-                </div>
-                <div className="review-stars">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <StarIcon key={star} size={12} className={star <= review.rating ? 'star-solid' : 'star-empty'} />
-                  ))}
-                </div>
-              </div>
-              <p className="review-content">{review.content}</p>
-              {review.attachedImage && (
-                <div className="review-attachment">
-                  <img src={review.attachedImage} alt="Attachment" className="review-img" />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {onlyReviews ? (
-          visibleCount < reviews.length && (
-            <button className="view-more-btn" onClick={() => setVisibleCount(v => v + 3)}>Xem thêm</button>
-          )
+            {onlyReviews ? (
+              visibleCount < reviews.length && (
+                <button className="view-more-btn" onClick={() => setVisibleCount(v => v + 3)}>Xem thêm</button>
+              )
+            ) : (
+              <button className="view-more-btn" onClick={onViewAllReviews}>Xem tất cả</button>
+            )}
+          </>
         ) : (
-          <button className="view-more-btn" onClick={onViewAllReviews}>Xem tất cả</button>
+          <p className="review-empty">Chưa có đánh giá nào.</p>
         )}
       </div>
     </div>

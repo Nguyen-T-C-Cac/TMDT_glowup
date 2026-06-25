@@ -47,6 +47,9 @@ public class OrderResponse {
     private String cancelReason;
     private LocalDateTime cancelledAt;
 
+    private Boolean reviewed;
+    private Integer myRating;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

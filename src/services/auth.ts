@@ -96,6 +96,56 @@ export const loginUser = async (
   return data
 }
 
+export const googleLogin = async (
+  token: string
+): Promise<LoginResponse> => {
+
+  const response = await fetch(
+    `${API_URL}/auth/google/customer`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        token,
+      }),
+    }
+  )
+
+  const data: LoginResponse =
+    await response.json()
+
+  if (!response.ok) {
+    throw new Error(
+      'Đăng nhập Google thất bại'
+    )
+  }
+
+  const {
+    user,
+    accessToken,
+    refreshToken,
+  } = data.data
+
+  localStorage.setItem(
+    'user',
+    JSON.stringify({ user })
+  )
+
+  localStorage.setItem(
+    'accessToken',
+    accessToken
+  )
+
+  localStorage.setItem(
+    'refreshToken',
+    refreshToken
+  )
+
+  return data
+}
+
 export const refreshAccessToken = async (): Promise<string | null> => {
   const refreshToken = localStorage.getItem('refreshToken')
 
@@ -182,6 +232,25 @@ export const getAccessToken = (): string | null => {
   }
   return localStorage.getItem('accessToken')
 }
+
+
+export const getStoredUser = (): User | null => {
+  const raw = localStorage.getItem('user')
+  if (!raw) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as { user?: User } | User
+    if ('user' in parsed && parsed.user) {
+      return parsed.user
+    }
+    return parsed as User
+  } catch {
+    return null
+  }
+}
+
 
 export const getRefreshToken = (): string | null => {
   return localStorage.getItem('refreshToken')

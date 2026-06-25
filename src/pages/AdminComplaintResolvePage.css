@@ -223,6 +223,10 @@
   overflow-wrap: anywhere;
 }
 
+.crp-field .rte-wrapper {
+  margin-top: 6px;
+}
+
 .crp-link-btn,
 .crp-copy-btn,
 .crp-primary-inline-btn {
@@ -290,17 +294,27 @@
 }
 
 .crp-evidence-thumb {
-  min-height: 80px;
+  width: 100%;
+  height: 80px;
   border: 1px solid #cbd5e1;
-  background: linear-gradient(180deg, #f8fafc, #eef6ff);
   border-radius: 12px;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #1d4ed8;
   text-decoration: none;
-  font-weight: 600;
-  font-size: 13px;
+  transition: 0.2s;
+}
+
+.crp-evidence-thumb:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(59,130,246,0.2);
+}
+
+.crp-evidence-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .crp-muted {
@@ -690,4 +704,28 @@
   .crp-checkbox-grid {
     grid-template-columns: 1fr;
   }
+
+.crp-call-info {
+  padding: 16px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  color: #0c4a6e;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.crp-notice {
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.crp-notice--info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
 }

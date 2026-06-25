@@ -9,8 +9,6 @@ import './VoucherRewardsPage.css';
 export default function VoucherRewardsPage() {
   const navigate = useNavigate();
   const [parallax, setParallax] = useState({ x: 0, y: 0 });
-  const [dailyGiftReward, setDailyGiftReward] = useState<string | null>(null);
-  const [claimedToday, setClaimedToday] = useState(false);
 
   const pageMap: Record<string, string> = {
     home: '/',
@@ -84,10 +82,10 @@ export default function VoucherRewardsPage() {
           </div>
           <aside className="right-col">
             <div className="card card--checkin">
-              <SevenDayCheckInCard dailyReward={dailyGiftReward} isClaimedToday={claimedToday} />
+              <SevenDayCheckInCard />
             </div>
             <div className="card daily-gift-card" aria-live="polite">
-              <DailyMysteryGift onRewardClaimed={setDailyGiftReward} onClaimStatusChange={setClaimedToday} />
+              <DailyMysteryGift />
             </div>
             <div className="card card--benefits">
               <PremiumBenefitsCard />
@@ -104,7 +102,7 @@ export default function VoucherRewardsPage() {
   );
 }
 
-function DailyMysteryGift({ onRewardClaimed, onClaimStatusChange }: { onRewardClaimed: (reward: string) => void; onClaimStatusChange: (claimed: boolean) => void }) {
+function DailyMysteryGift() {
   const [claimedToday, setClaimedToday] = useState(false);
   const [storedReward, setStoredReward] = useState<string | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
@@ -126,8 +124,6 @@ function DailyMysteryGift({ onRewardClaimed, onClaimStatusChange }: { onRewardCl
     const reward = rewards[selected];
     setStoredReward(reward);
     setClaimedToday(true);
-    onRewardClaimed(reward);
-    onClaimStatusChange(true);
     setShowModal(false);
   }
 
@@ -196,19 +192,78 @@ function DailyMysteryGift({ onRewardClaimed, onClaimStatusChange }: { onRewardCl
   );
 }
 
-function SevenDayCheckInCard({ dailyReward, isClaimedToday }: { dailyReward: string | null; isClaimedToday: boolean }) {
-  const today = new Date().getDay(); // 0 = Sunday, 1-6 = Mon-Sat
-  const dayIndex = today === 0 ? 6 : today - 1; // Convert to 0-6 (T2-CN)
+const CHECKIN_STORAGE_KEY = 'glowup_weekly_checkin';
 
-  const days = [
-    { day: 'T2', label: '100đ', active: true },
-    { day: 'T3', label: '200đ', active: true },
-    { day: 'T4', label: '150đ', active: true },
-    { day: 'T5', label: '300đ', active: true },
-    { day: 'T6', label: 'Quà', active: false },
-    { day: 'T7', label: 'Quà', active: false },
-    { day: 'CN', label: 'Quà', active: false },
-  ];
+interface WeeklyCheckIn {
+  weekStart: string; // Monday YYYY-MM-DD
+  checkedDays: boolean[]; // indices 0-6 (Mon-Sun)
+  lastCheckIn: string; // YYYY-MM-DD
+}
+
+function getMonday(date: Date): string {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  return formatDate(d);
+}
+
+function formatDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function getWeekDayIndex(date: Date): number {
+  const day = date.getDay();
+  return day === 0 ? 6 : day - 1; // 0=Mon, 6=Sun
+}
+
+function loadCheckIn(): WeeklyCheckIn {
+  try {
+    const raw = localStorage.getItem(CHECKIN_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return { weekStart: '', checkedDays: Array(7).fill(false), lastCheckIn: '' };
+}
+
+function saveCheckIn(data: WeeklyCheckIn) {
+  localStorage.setItem(CHECKIN_STORAGE_KEY, JSON.stringify(data));
+}
+
+const DAY_REWARDS = ['100đ', '200đ', '300đ', 'Voucher 10K', '500đ', 'Voucher 20K', 'Quà bí mật'];
+const DAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+
+function SevenDayCheckInCard() {
+  const today = new Date();
+  const todayStr = formatDate(today);
+  const todayWeekIndex = getWeekDayIndex(today);
+  const thisMonday = getMonday(today);
+
+  const [checkIn, setCheckIn] = useState<WeeklyCheckIn>(() => {
+    const stored = loadCheckIn();
+    if (stored.weekStart !== thisMonday) {
+      const reset: WeeklyCheckIn = { weekStart: thisMonday, checkedDays: Array(7).fill(false), lastCheckIn: '' };
+      saveCheckIn(reset);
+      return reset;
+    }
+    return stored;
+  });
+
+  const isCheckedInToday = checkIn.lastCheckIn === todayStr;
+  const checkedCount = checkIn.checkedDays.filter(Boolean).length;
+
+  const handleCheckIn = () => {
+    if (isCheckedInToday) return;
+
+    const updated = { ...checkIn };
+    updated.checkedDays[todayWeekIndex] = true;
+    updated.lastCheckIn = todayStr;
+
+    saveCheckIn(updated);
+    setCheckIn(updated);
+  };
 
   return (
     <div className="checkin-card-panel">
@@ -218,29 +273,37 @@ function SevenDayCheckInCard({ dailyReward, isClaimedToday }: { dailyReward: str
           <h4 className="checkin-title">Nhận quà mỗi ngày</h4>
         </div>
         <div className="checkin-streak">
-          {dayIndex + 1}/7
+          {checkedCount}/7
         </div>
       </div>
 
       <div className="checkin-row" role="list" aria-label="7-day check-in rewards">
-        {days.map((item, index) => {
-          const isCurrent = index === dayIndex;
-          const showReward = isCurrent && isClaimedToday && dailyReward;
-          const displayReward = showReward ? dailyReward : item.label;
+        {DAY_LABELS.map((label, index) => {
+          const isCurrentDay = index === todayWeekIndex;
+          const isClaimed = checkIn.checkedDays[index];
 
           return (
             <div
-              key={item.day}
+              key={label}
               role="listitem"
-              className={`checkin-day ${item.active ? 'is-active' : ''} ${isCurrent ? 'is-current' : ''}`}
-              data-claimed={isCurrent && isClaimedToday ? 'true' : 'false'}
+              className={`checkin-day ${isCurrentDay ? 'is-current' : ''}`}
+              data-claimed={isClaimed ? 'true' : 'false'}
             >
-              <span className="checkin-day-label">{item.day}</span>
-              <span className="checkin-orb">{displayReward}</span>
+              <span className="checkin-day-label">{label}</span>
+              <span className="checkin-orb">{DAY_REWARDS[index]}</span>
+              {isClaimed && <span className="checkin-checked-badge">✓</span>}
             </div>
           );
         })}
       </div>
+
+      <button
+        className={`checkin-btn ${isCheckedInToday ? 'is-done' : ''}`}
+        onClick={handleCheckIn}
+        disabled={isCheckedInToday}
+      >
+        {isCheckedInToday ? 'Đã điểm danh' : 'Điểm danh ngay'}
+      </button>
     </div>
   );
 }

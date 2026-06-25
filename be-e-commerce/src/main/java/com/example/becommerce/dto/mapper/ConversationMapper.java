@@ -19,16 +19,21 @@ public class ConversationMapper {
                                                     long unreadCount) {
         if (c == null) return null;
         User partner = partnerOf(c, viewer);
+        ChatPartnerSummary partnerSummary = null;
+        if (partner != null) {
+            partnerSummary = ChatPartnerSummary.builder()
+                    .id(partner.getCode())
+                    .fullName(partner.getFullName())
+                    .avatar(partner.getAvatar())
+                    .isOnline(false)
+                    .role(partner.getRole().name())
+                    .build();
+        }
 
         return ConversationListItemResponse.builder()
                 .id(c.getCode())
                 .orderId(c.getOrder() == null ? null : c.getOrder().getCode())
-                .partner(partner == null ? null : ChatPartnerSummary.builder()
-                        .id(partner.getCode())
-                        .fullName(partner.getFullName())
-                        .avatar(partner.getAvatar())
-                        .isOnline(false) // No presence layer yet
-                        .build())
+                .partner(partnerSummary)
                 .lastMessage(lastMessage == null ? null : LastMessagePreview.builder()
                         .content(lastMessage.getContent())
                         .senderId(lastMessage.getSender() == null ? null : lastMessage.getSender().getCode())
@@ -39,10 +44,22 @@ public class ConversationMapper {
                 .build();
     }
 
-    public ConversationCreatedResponse toCreatedResponse(Conversation c) {
+    public ConversationCreatedResponse toCreatedResponse(Conversation c, User viewer) {
+        User partner = partnerOf(c, viewer);
+        ChatPartnerSummary partnerSummary = null;
+        if (partner != null) {
+            partnerSummary = ChatPartnerSummary.builder()
+                    .id(partner.getCode())
+                    .fullName(partner.getFullName())
+                    .avatar(partner.getAvatar())
+                    .isOnline(false)
+                    .role(partner.getRole().name())
+                    .build();
+        }
         return ConversationCreatedResponse.builder()
                 .id(c.getCode())
                 .orderId(c.getOrder() == null ? null : c.getOrder().getCode())
+                .partner(partnerSummary)
                 .participants(List.of(
                         c.getCustomer().getCode(),
                         c.getTechnician().getCode()))
@@ -59,6 +76,9 @@ public class ConversationMapper {
         if (c.getTechnician() != null && c.getTechnician().getId().equals(viewer.getId())) {
             return c.getCustomer();
         }
+        // Admin is allowed — return the other participant
+        if (c.getCustomer() != null) return c.getCustomer();
+        if (c.getTechnician() != null) return c.getTechnician();
         return null;
     }
 }

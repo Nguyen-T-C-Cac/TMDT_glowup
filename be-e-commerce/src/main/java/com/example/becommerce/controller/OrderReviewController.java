@@ -9,8 +9,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -27,11 +29,24 @@ public class OrderReviewController {
 
     private final ReviewService reviewService;
 
+    @GetMapping("/{id}/review")
+    public ResponseEntity<ApiResponse<ReviewResponse>> getMyReview(
+            @PathVariable("id") String orderCode) {
+        return ResponseEntity.ok(ApiResponse.success(reviewService.getMyReview(orderCode)));
+    }
+
     @PostMapping("/{id}/reviews")
     public ResponseEntity<ApiResponse<ReviewResponse>> createReview(
             @PathVariable("id") String orderCode,
             @Valid @RequestBody CreateReviewRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(reviewService.createReview(orderCode, request)));
+    }
+
+    @PutMapping("/{id}/review")
+    public ResponseEntity<ApiResponse<ReviewResponse>> updateReview(
+            @PathVariable("id") String orderCode,
+            @Valid @RequestBody CreateReviewRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(reviewService.updateReview(orderCode, request)));
     }
 }

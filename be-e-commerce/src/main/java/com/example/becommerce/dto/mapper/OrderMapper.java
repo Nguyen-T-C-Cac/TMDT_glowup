@@ -78,13 +78,19 @@ public class OrderMapper {
                 .status(toApi(order.getStatus()))
                 .serviceName(order.getServiceName())
                 .subService(order.getSubService())
+                .serviceCategory(order.getServiceCategory())
                 .deviceName(order.getDeviceName())
+                .description(order.getDescription())
                 .address(order.getAddress())
                 .scheduledAt(order.getScheduledAt())
+                .expectedTime(order.getExpectedTime())
                 .estimatedPrice(order.getEstimatedPrice())
                 .finalPrice(order.getFinalPrice())
                 .customer(toParty(order.getCustomer(), false))
                 .technician(toParty(order.getTechnician(), false))
+                .cancelledAt(order.getCancelledAt())
+                .cancelledBy(order.getCancelledBy() == null ? null : order.getCancelledBy().apiValue())
+                .cancelReason(order.getCancelReason())
                 .createdAt(order.getCreatedAt())
                 .build();
     }
@@ -111,12 +117,14 @@ public class OrderMapper {
                 .map(this::toPartResponse)
                 .toList();
 
+        List<String> evidence = adj.getEvidenceImages();
         return OrderPriceAdjustmentResponse.builder()
                 .originalPrice(adj.getOriginalPrice())
                 .newPrice(adj.getNewPrice())
                 .reason(adj.getReason())
                 .status(adj.getStatus() == null ? null : adj.getStatus().apiValue())
                 .parts(parts.isEmpty() ? null : parts)
+                .evidenceImages(evidence == null || evidence.isEmpty() ? null : evidence)
                 .requestedAt(adj.getRequestedAt())
                 .approvedAt(adj.getApprovedAt())
                 .rejectedAt(adj.getRejectedAt())

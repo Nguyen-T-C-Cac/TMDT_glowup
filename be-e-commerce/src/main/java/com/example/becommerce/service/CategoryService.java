@@ -6,8 +6,12 @@ import com.example.becommerce.dto.response.category.CategoryDeleteResponse;
 import com.example.becommerce.dto.response.category.CategoryListResponse;
 import com.example.becommerce.dto.response.category.CategoryResponse;
 
+import java.util.List;
+
 public interface CategoryService {
     CategoryListResponse getCategories(String status);
+
+    List<CategoryResponse> searchCategories(String keyword);
 
     CategoryResponse createCategory(CategoryUpsertRequest request);
 

@@ -27,4 +27,5 @@ public class ReviewResponse {
     private List<String> attachedImages;
 
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

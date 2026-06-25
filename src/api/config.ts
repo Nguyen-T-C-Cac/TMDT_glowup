@@ -7,9 +7,6 @@ const apiClient = axios.create({
     baseURL: 'http://localhost:8080/',
     // baseURL: 'http://192.168.1.191:8080/',
     timeout: 60000, // 60s để xử lý upload ảnh lớn
-    // KHÔNG đặt Content-Type mặc định ở đây.
-    // Axios sẽ tự động đặt 'multipart/form-data' khi body là FormData,
-    // và 'application/json' khi body là object thường.
 });
 
 // ─── Request interceptor: gắn JWT Bearer token ───────────────────────────────

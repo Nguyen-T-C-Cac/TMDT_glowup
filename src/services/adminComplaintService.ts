@@ -29,6 +29,7 @@ interface PagedResponseApi<T> {
 interface ApiComplaintPartyRef {
   id?: string;
   fullName?: string;
+  phone?: string | null;
 }
 
 interface ApiComplaintResponse {
@@ -48,7 +49,11 @@ export interface AdminComplaintItem {
   code: string;
   orderCode: string;
   customerName: string;
+  customerPhone: string;
+  customerCode?: string;
   technicianName: string;
+  technicianPhone: string;
+  technicianCode?: string;
   reason: string;
   reasonLabel: string;
   status: ComplaintStatusApi;
@@ -165,7 +170,11 @@ const toComplaintItem = (item: ApiComplaintResponse): AdminComplaintItem => {
     code: item.id,
     orderCode: item.orderId || '--',
     customerName: item.customer?.fullName || '--',
+    customerPhone: item.customer?.phone || '--',
+    customerCode: item.customer?.id || undefined,
     technicianName: item.technician?.fullName || '--',
+    technicianPhone: item.technician?.phone || '--',
+    technicianCode: item.technician?.id || undefined,
     reason: normalizedReason || 'other',
     reasonLabel: reasonLabelMap[normalizedReason] || 'Khác',
     status,
@@ -201,6 +210,23 @@ export const getAdminComplaints = async (filters: ComplaintListFilters = {}): Pr
     totalElements: pagination.totalElements || 0,
     totalPages: pagination.totalPages || 0,
   };
+};
+
+export const getAdminComplaintById = async (id: string): Promise<AdminComplaintItem> => {
+  const payload = await requestApi<ApiComplaintResponse>(`/reports/${id}`);
+  return toComplaintItem(payload);
+};
+
+export const updateComplaintStatus = async (id: string, status: ComplaintStatusApi): Promise<void> => {
+  const response = await fetchWithAuth(`${API_URL}/reports/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Không thể cập nhật trạng thái khiếu nại');
+  }
 };
 
 const countByStatus = async (status: ComplaintStatusApi): Promise<number> => {

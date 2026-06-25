@@ -20,4 +20,6 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     boolean existsByCode(String code);
 
     long countByDeletedFalse();
+
+    List<Category> findByTitleContainingIgnoreCaseAndDeletedFalse(String title);
 }

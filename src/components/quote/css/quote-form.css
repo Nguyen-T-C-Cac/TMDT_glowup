@@ -1,21 +1,7 @@
 .quote-form {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-}
-
-.quote-title {
-    font-size: var(--fs-lg);
-    font-weight: var(--fw-bold);
-    color: var(--blueberry-skin);
-    text-align: left;
-    margin-bottom: 4px;
-}
-
-.quote-subtitle {
-    font-size: var(--fs-sm);
-    text-align: left;
-    color: var(--stem-grey);
+    gap: 18px;
 }
 
 .field-group {
@@ -35,23 +21,25 @@
 .input,
 .textarea {
     width: 100%;
+    box-sizing: border-box;
     padding: 12px 16px;
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 14px;
     background: var(--white);
-    font-size: var(--fs-sm);
+    font-size: 14px;
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s ease;
 }
 
 .input:focus,
 .textarea:focus {
-    border-color: var(--berry-bloom);
+    border-color: #6fbf84;
     background: var(--white);
+    box-shadow: 0 0 0 4px rgba(111, 191, 132, 0.12);
 }
 
 .textarea {
-    min-height: 50px;
+    min-height: 64px;
     resize: none;
 }
 
@@ -84,15 +72,16 @@
     flex: 1;
     padding: 14px;
     border: none;
-    border-radius: 16px;
+    border-radius: 18px;
     font-weight: var(--fw-bold);
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: opacity 0.2s, transform 0.2s ease;
     background: var(--blueberry-skin);
 }
 
 .btn:hover {
-    opacity: 0.9;
+    opacity: 0.95;
+    transform: translateY(-1px);
 }
 
 .btn-cancel {
@@ -102,6 +91,187 @@
 }
 
 .btn-submit {
-    background: var(--blueberry-skin);
+    background: #16a34a;
     color: white;
+}
+
+/* ===== Sections ===== */
+.qsection {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 18px 18px;
+    border: 1px solid rgba(203, 213, 225, 0.64);
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.qsection-title {
+    font-size: 15px;
+    font-weight: var(--fw-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #1f9d55;
+    text-align: left;
+}
+
+.field-label-sm {
+    font-size: var(--fs-sm);
+    text-align: left;
+    font-weight: var(--fw-semibold);
+    color: var(--text-secondary, #475569);
+}
+
+.req {
+    color: #dc2626;
+}
+
+select.input {
+    appearance: auto;
+    cursor: pointer;
+}
+
+.ta-right { text-align: right; }
+.ta-center { text-align: center; }
+
+/* ===== Line-item table ===== */
+.qitem-head,
+.qitem-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 68px 120px 92px 30px;
+    gap: 8px;
+    align-items: center;
+}
+
+.qitem-head {
+    font-size: 12px;
+    font-weight: var(--fw-semibold);
+    color: var(--stem-grey, #64748b);
+    text-align: left;
+    padding: 0 2px;
+}
+
+.qitem-input {
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+}
+
+.qitem-total {
+    text-align: right;
+    font-size: 13px;
+    font-weight: var(--fw-semibold);
+    color: var(--text-primary, #1e293b);
+}
+
+.qitem-del {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+.qitem-del:hover {
+    color: #dc2626;
+    background: #fef2f2;
+}
+
+.qadd-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px;
+    border: 1px dashed var(--border);
+    border-radius: 14px;
+    background: transparent;
+    color: #16a34a;
+    font-weight: var(--fw-semibold);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.qadd-btn:hover {
+    background: #f0fdf4;
+    border-color: #16a34a;
+}
+
+/* ===== Other fees ===== */
+.qfee-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 14px;
+    color: var(--text-secondary, #475569);
+    text-align: left;
+}
+
+.qfee-input {
+    width: 120px;
+    flex: 0 0 auto;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+/* ===== Totals ===== */
+.qtotals {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px 18px;
+    background: linear-gradient(180deg, #f7fbf7 0%, #eef8f1 100%);
+    border-radius: 18px;
+    border: 1px solid rgba(111, 191, 132, 0.18);
+}
+
+.qtotals-title {
+    font-size: 15px;
+    font-weight: var(--fw-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #16a34a;
+    text-align: left;
+    margin-bottom: 2px;
+}
+
+.qtotal-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    color: var(--text-secondary, #475569);
+}
+
+.qtotal-grand {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-bold);
+    color: #16a34a;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+}
+
+.quote-error {
+    color: #dc2626;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
+}
+
+@media (max-width: 640px) {
+    .qitem-head,
+    .qitem-row {
+        grid-template-columns: minmax(0, 1fr) 64px 92px 78px 28px;
+    }
+
+    .quote-actions {
+        flex-direction: column;
+    }
 }

@@ -22,6 +22,7 @@ import AdminVerificationUpdate from '../pages/AdminVerificationUpdate'
 import AdminOrdersPage from '../pages/AdminOrdersPage'
 import AdminComplaintsPage from '../pages/AdminComplaintsPage'
 import AdminComplaintResolvePage from '../pages/AdminComplaintResolvePage'
+import AdminChatPage from '../pages/AdminChatPage'
 import CustomerAccountSettingsPage from '../pages/CustomerAccountSettingsPage'
 import FindProvider from '../pages/FindProvider'
 import HomePage from '../pages/HomePage'
@@ -30,14 +31,17 @@ import ProviderDashboard from '../pages/ProviderDashboard'
 import ProviderProfile from '../pages/ProviderProfile'
 import CustomerSecurityPage from '../pages/CustomerSecurityPage'
 import { OrderManagementPage } from '../pages/OrderManagementPage'
+import SearchPage from '../pages/SearchPage'
 import ServicesPage from '../pages/ServicesPage'
 import TechnicianProfileSettingsPage from '../pages/TechnicianProfileSettingsPage'
 import TechnicianVerificationPage from '../pages/TechnicianVerificationPage'
 import TechnicianVerificationStatusPage from '../pages/TechnicianVerificationStatusPage'
 import TechnicianWalletPage from '../pages/TechnicianWalletPage'
 import TechnicianWalletTopUpPage from '../pages/TechnicianWalletTopUpPage'
+import TechnicianWalletTopUpResultPage from '../pages/TechnicianWalletTopUpResultPage'
 import TechnicianWalletWithdrawPage from '../pages/TechnicianWalletWithdrawPage'
 import VoucherRewardsPage from '../pages/VoucherRewardsPage'
+import OrderPaymentResultPage from '../pages/OrderPaymentResultPage'
 
 
 export default function AppRouter() {
@@ -45,6 +49,7 @@ export default function AppRouter() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/provider" element={<Provider />} />
+      <Route path="/search" element={<SearchPage />} />
       <Route path="/services" element={<ServicesPage />} />
       <Route path="/rewards" element={<VoucherRewardsPage />} />
       <Route path="/provider-profile" element={<CustomerLayout activeNavKey="find-provider"><ProviderProfile /></CustomerLayout>} />
@@ -62,6 +67,7 @@ export default function AppRouter() {
         <Route path="jobs" element={<TechnicianLayout activeItem="jobs"><OrderManagementPage role="technician" /></TechnicianLayout>} />
         <Route path="wallet" element={<TechnicianLayout activeItem="wallet"><TechnicianWalletPage /></TechnicianLayout>} />
         <Route path="wallet/topup" element={<TechnicianLayout activeItem="wallet"><TechnicianWalletTopUpPage /></TechnicianLayout>} />
+        <Route path="wallet/topup-result" element={<TechnicianLayout activeItem="wallet"><TechnicianWalletTopUpResultPage /></TechnicianLayout>} />
         <Route path="wallet/withdraw" element={<TechnicianLayout activeItem="wallet"><TechnicianWalletWithdrawPage /></TechnicianLayout>} />
         <Route path="profile" element={<TechnicianLayout activeItem="profile"><TechnicianProfileSettingsPage /></TechnicianLayout>} />
         <Route path="verification" element={<TechnicianVerificationPage />} />
@@ -91,7 +97,10 @@ export default function AppRouter() {
         <Route path="settings" element={<AdminSystemSettingsPage />} />
         <Route path="complaints" element={<AdminComplaintsPage />} />
         <Route path="complaints/:complaintId/resolve" element={<AdminComplaintResolvePage />} />
+        <Route path="chat" element={<AdminChatPage />} />
       </Route>
+
+      <Route path="/orders/:code" element={<OrderPaymentResultPage />} />
 
       <Route path="/auth">
         <Route index element={<Navigate to="login" replace />} />

@@ -21,6 +21,10 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     Optional<Review> findByCode(String code);
 
+    Optional<Review> findByOrder_Id(Long orderId);
+
+    Optional<Review> findByOrder_IdAndAuthor_Id(Long orderId, Long authorId);
+
     Page<Review> findByTechnician_IdOrderByCreatedAtDesc(Long technicianId, Pageable pageable);
 
     @Query("SELECT COALESCE(AVG(r.rating), 0) FROM Review r WHERE r.technician.id = :technicianId")

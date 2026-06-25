@@ -1,227 +1,132 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import './TopExperts.css';
+import { StarIcon, BadgeCheckIcon, CheckCircleIcon, ClockIcon } from '../common/Icons';
+import { technicianService } from '../../services/technician/technicianService';
+import { toNumber } from '../../utils/technicianMappers';
 
-import {
-  StarIcon,
-  BadgeCheckIcon,
-  CheckCircleIcon,
-  ClockIcon,
-} from '../common/Icons';
+type ExpertCard = {
+  id: string;
+  name: string;
+  title: string;
+  rating: number;
+  experience: string;
+  completedJobs: string;
+  badge: string;
+  imageUrl: string;
+};
 
-import { getTopTechnicians } from '../../services/providerService';
-
-import { mapTechnicianToExpertCard } from '../../services/technicianMapper';
-
-type Expert = ReturnType<typeof mapTechnicianToExpertCard>;
-
-interface TopExpertsProps {
-  onNavigate?: (page: string, data?: any) => void;
-}
-
-export const TopExperts: React.FC<TopExpertsProps> = ({
+export const TopExperts: React.FC<{ onNavigate?: (page: string, data?: Record<string, unknown>) => void }> = ({
   onNavigate,
 }) => {
-  const [experts, setExperts] = useState<Expert[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(
-    null,
-  );
+  const [experts, setExperts] = useState<ExpertCard[]>([]);
 
   useEffect(() => {
-    const fetchExperts = async () => {
+    let cancelled = false;
+
+    const load = async () => {
       try {
-        setLoading(true);
-        setError(null);
+        const data = await technicianService.listTechnicians({ page: 1, limit: 6 });
+        const premium = data.items
+          .filter((item) => item.type === 'premium')
+          .slice(0, 3)
+          .map((item) => ({
+            id: item.id,
+            name: item.fullName,
+            title: item.titleBadge || item.skills?.[0] || 'Kỹ thuật viên',
+            rating: toNumber(item.rating, 0),
+            experience: 'Chuyên nghiệp',
+            completedJobs: `${item.completedJobs ?? 0} đơn`,
+            badge: item.titleBadge || 'CHUYÊN GIA',
+            imageUrl: item.avatar || 'https://placehold.co/150x150',
+          }));
 
-        const technicians =
-          await getTopTechnicians(3);
-
-        const transformedExperts =
-          technicians.map((tech, index) =>
-            mapTechnicianToExpertCard(
-              tech,
-              index,
-            ),
-          );
-
-        setExperts(transformedExperts);
-      } catch (err) {
-        console.error(
-          'Failed to fetch experts:',
-          err,
-        );
-
-        setError(
-          'Không thể tải danh sách chuyên gia',
-        );
-      } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setExperts(premium);
+        }
+      } catch {
+        if (!cancelled) {
+          setExperts([]);
+        }
       }
     };
 
-    fetchExperts();
+    load();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handleExpertClick = (
-    expert: Expert,
-  ) => {
+  const handleExpertClick = (expert: ExpertCard) => {
     onNavigate?.('provider-profile', {
+      id: expert.id,
       name: expert.name,
       avatar: expert.imageUrl,
       rating: expert.rating,
-      reviewCount:
-        parseInt(expert.completedJobs) || 0,
       location: 'TP. Hồ Chí Minh',
       type: 'premium',
-      titleBadge:
-        expert.badgeLabel ||
-        'CHUYÊN GIA CỦA THÁNG',
+      titleBadge: expert.badge,
     });
   };
 
-  return (
-    <section className="home-experts">
-      <div className="experts-header">
-        <h2 className="section-title text-center">
-          Chuyên gia hàng đầu
-        </h2>
+  if (experts.length === 0) {
+    return null;
+  }
 
+  return (
+    <section className="experts-section">
+      <div className="experts-header">
+        <h2 className="section-title text-center">Chuyên gia hàng đầu</h2>
         <p className="section-subtitle text-center">
-          Đội ngũ kỹ thuật viên có tay nghề
-          cao, đã được xác minh 100% với
-          trên 5 năm kinh nghiệm thực chiến.
+          Đội ngũ kỹ thuật viên có tay nghề cao, đã được xác minh 100% với trên 5 năm kinh nghiệm thực chiến.
         </p>
       </div>
 
       <div className="experts-grid">
-        {loading && (
+        {experts.map((expert) => (
           <div
-            style={{
-              gridColumn: '1 / -1',
-              textAlign: 'center',
-              padding: '40px 20px',
-            }}
+            key={expert.id}
+            className="expert-card"
+            onClick={() => handleExpertClick(expert)}
+            style={{ cursor: 'pointer' }}
           >
-            <p>
-              Đang tải danh sách chuyên
-              gia...
-            </p>
-          </div>
-        )}
-
-        {error && (
-          <div
-            style={{
-              gridColumn: '1 / -1',
-              textAlign: 'center',
-              padding: '40px 20px',
-              color: '#e74c3c',
-            }}
-          >
-            <p>{error}</p>
-          </div>
-        )}
-
-        {!loading &&
-          !error &&
-          experts.length === 0 && (
-            <div
-              style={{
-                gridColumn: '1 / -1',
-                textAlign: 'center',
-                padding: '40px 20px',
-              }}
-            >
-              <p>
-                Không có dữ liệu chuyên
-                gia
-              </p>
+            <div className="badge-tier badge-diamond">
+              {expert.badge}
             </div>
-          )}
 
-        {!loading &&
-          !error &&
-          experts.map((expert) => (
-            <div
-              key={expert.id}
-              className="expert-card"
-              onClick={() =>
-                handleExpertClick(expert)
-              }
-              style={{ cursor: 'pointer' }}
-            >
-              <div
-                className={`badge-tier badge-${expert.badge.toLowerCase()}`}
-              >
-                {expert.badge}
-              </div>
-
-              <div className="expert-info-top">
-                <div className="expert-avatar-wrapper">
-                  <img
-                    src={expert.imageUrl}
-                    alt={expert.name}
-                    className="expert-avatar"
-                  />
-
-                  <div className="verified-badge">
-                    <BadgeCheckIcon size={12} />
-                  </div>
-                </div>
-
-                <div className="expert-name-title">
-                  <h3 className="expert-name">
-                    {expert.name}
-                  </h3>
-
-                  <p className="expert-title">
-                    {expert.title}
-                  </p>
-
-                  <div className="expert-rating">
-                    <StarIcon
-                      size={14}
-                      className="star-icon"
-                    />
-
-                    <span className="rating-value">
-                      {expert.rating}
-                    </span>
-                  </div>
+            <div className="expert-info-top">
+              <div className="expert-avatar-wrapper">
+                <img src={expert.imageUrl} alt={expert.name} className="expert-avatar" />
+                <div className="verified-badge">
+                  <BadgeCheckIcon size={12} />
                 </div>
               </div>
-
-              <div className="expert-stats">
-                <div className="stat-item">
-                  <ClockIcon
-                    size={16}
-                    className="stat-icon"
-                  />
-
-                  <span>
-                    {expert.experience}
-                  </span>
-                </div>
-
-                <div className="stat-item">
-                  <CheckCircleIcon
-                    size={16}
-                    className="stat-icon"
-                  />
-
-                  <span>
-                    Hoàn thành:{' '}
-                    {expert.completedJobs}
-                  </span>
+              <div className="expert-name-title">
+                <h3 className="expert-name">{expert.name}</h3>
+                <p className="expert-title">{expert.title}</p>
+                <div className="expert-rating">
+                  <StarIcon size={14} className="star-icon" />
+                  <span className="rating-value">{expert.rating}</span>
                 </div>
               </div>
-
-              <button className="btn-request">
-                Gửi yêu cầu →
-              </button>
             </div>
-          ))}
+
+            <div className="expert-stats">
+              <div className="stat-item">
+                <ClockIcon size={16} className="stat-icon" />
+                <span>Kinh nghiệm: {expert.experience}</span>
+              </div>
+              <div className="stat-item">
+                <CheckCircleIcon size={16} className="stat-icon" />
+                <span>Hoàn thành: {expert.completedJobs}</span>
+              </div>
+            </div>
+
+            <button type="button" className="btn-request">
+              Gửi yêu cầu →
+            </button>
+          </div>
+        ))}
       </div>
     </section>
   );

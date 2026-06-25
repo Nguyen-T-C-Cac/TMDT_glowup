@@ -220,6 +220,8 @@ export const CompletedDetail: React.FC<CompletedDetailProps> = ({ role, onBack, 
             <ReportModal
                 open={showReportModal}
                 onClose={() => setShowReportModal(false)}
+                orderId={orderData.id}
+                onSuccess={() => setShowReportModal(false)}
             />
 
         </div>

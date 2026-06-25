@@ -10,20 +10,22 @@ interface LayoutProps {
 }
 
 export const TechnicianLayout: React.FC<LayoutProps> = ({ children, activeItem }) => {
+    const isChatLayout = activeItem === 'chat';
+
     return (
-        <div className="app-wrapper">
-            <div className="tech-layout-container">
+        <div className={`app-wrapper ${isChatLayout ? 'app-wrapper--chat' : ''}`}>
+            <div className={`tech-layout-container ${isChatLayout ? 'tech-layout-container--chat' : ''}`}>
                 <TechnicianSidebar activeItem={activeItem} />
 
-                <div className="tech-main-wrapper">
+                <div className={`tech-main-wrapper ${isChatLayout ? 'tech-main-wrapper--chat' : ''}`}>
                     <TechnicianHeader />
-                    <main className="tech-content-area">
+                    <main className={`tech-content-area ${isChatLayout ? 'tech-content-area--chat' : ''}`}>
                         {children}
                     </main>
                 </div>
             </div>
 
-            <Footer />
+            {!isChatLayout && <Footer />}
         </div>
     );
 };

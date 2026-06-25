@@ -9,4 +9,8 @@ public interface ReportService {
     ReportResponse createReport(String orderCode, CreateReportRequest request);
 
     PagedResponse<ReportResponse> listReports(String status, String keyword, int page, int limit);
+
+    ReportResponse getReport(String reportCode);
+
+    ReportResponse updateReportStatus(String reportCode, String newStatus);
 }

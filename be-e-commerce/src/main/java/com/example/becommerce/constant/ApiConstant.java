@@ -42,4 +42,5 @@ public final class ApiConstant {
     // Notification endpoints
     public static final String NOTIFICATION_MARK_READ = "/{id}/read";
     public static final String NOTIFICATION_MARK_ALL_READ = "/read-all";
+    public static final String NOTIFICATION_SEND = "/send";
 }

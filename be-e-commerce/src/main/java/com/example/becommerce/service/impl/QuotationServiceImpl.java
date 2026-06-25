@@ -129,6 +129,7 @@ public class QuotationServiceImpl implements QuotationService {
                 .orElseThrow(() -> AppException.notFound("Không tìm thấy báo giá " + quotationCode));
 
         Conversation conversation = quotation.getConversation();
+        Order linkedOrder = conversation.getOrder();
         User customer = getCurrentUser();
 
         if (customer.getRole() != Role.CUSTOMER
@@ -141,12 +142,20 @@ public class QuotationServiceImpl implements QuotationService {
                     "Báo giá không còn ở trạng thái chờ duyệt");
         }
 
+        String resolvedAddress = linkedOrder != null && linkedOrder.getAddress() != null && !linkedOrder.getAddress().isBlank()
+                ? linkedOrder.getAddress()
+                : customer.getAddress();
+
         Order order = Order.builder()
                 .code(orderCodeGenerator.generate())
                 .customer(customer)
                 .technician(quotation.getTechnician())
                 .serviceName(quotation.getServiceName())
+                .subService(linkedOrder != null ? linkedOrder.getSubService() : null)
+                .serviceCategory(linkedOrder != null ? linkedOrder.getServiceCategory() : null)
+                .deviceName(linkedOrder != null ? linkedOrder.getDeviceName() : null)
                 .description(quotation.getDescription())
+                .address(resolvedAddress)
                 .estimatedPrice(quotation.getPrice())
                 .scheduledAt(quotation.getScheduledAt())
                 .expectedTime(quotation.getScheduledAt())
@@ -187,6 +196,37 @@ public class QuotationServiceImpl implements QuotationService {
                 savedQuote.getCode(), customer.getCode(), savedOrder.getCode());
 
         return quotationMapper.toAcceptResponse(savedQuote);
+    }
+
+    // ===============================================================
+    // REJECT QUOTE
+    // ===============================================================
+
+    @Override
+    @Transactional
+    public QuotationResponse rejectQuotation(String quotationCode) {
+        Quotation quotation = quotationRepository.findByCode(quotationCode)
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy báo giá " + quotationCode));
+
+        Conversation conversation = quotation.getConversation();
+        User customer = getCurrentUser();
+
+        if (customer.getRole() != Role.CUSTOMER
+                || conversation.getCustomer() == null
+                || !conversation.getCustomer().getId().equals(customer.getId())) {
+            throw AppException.forbidden("Chỉ khách hàng của cuộc trò chuyện mới có thể từ chối báo giá");
+        }
+        if (quotation.getStatus() != QuotationStatus.PENDING) {
+            throw AppException.badRequest(ErrorCode.QUOTATION_NOT_PENDING,
+                    "Báo giá không còn ở trạng thái chờ duyệt");
+        }
+
+        quotation.setStatus(QuotationStatus.REJECTED);
+        quotation.setRejectedAt(LocalDateTime.now());
+        Quotation savedQuote = quotationRepository.save(quotation);
+
+        log.info("Quotation {} rejected by customer {}", savedQuote.getCode(), customer.getCode());
+        return quotationMapper.toResponse(savedQuote);
     }
 
     // ----------------------------------------------------------------

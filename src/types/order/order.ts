@@ -55,13 +55,31 @@ export interface OrderResponse {
     cancelReason?: string;
     cancelledAt?: string;
 
+    reviewed?: boolean;
+    myRating?: number;
+
     createdAt?: string;
     updatedAt?: string;
 }
 
 export interface OrderListQuery {
     page?: number;
-    size?: number;
+    limit?: number;
+    status?: string;
+    keyword?: string;
+}
+
+export interface CreateOrderPayload {
+    serviceName?: string;
+    subService?: string;
+    serviceCategory: string;
+    deviceName: string;
+    description: string;
+    address: string;
+    estimatedPrice?: number;
+    expectedTime?: string;
+    images?: string[];
+    technicianId?: string;
 }
 
 export interface OrderPageResponse {

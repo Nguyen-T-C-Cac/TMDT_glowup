@@ -4,23 +4,31 @@ import { FaLocationDot, FaClock, FaUser, FaPhone, FaPersonWalkingLuggage, FaMess
 import './scheduledCard.css';
 import type {ScheduledOrder} from "../../types/ScheduledOrder.ts";
 import {useNavigate} from "react-router-dom";
+import { navigateToChat } from "../../utils/chatNavigation";
 
 interface ScheduledCardProps {
     data: ScheduledOrder;
     role: UserRole;
     onViewDetail: (id: string) => void;
     onCancel?: (id: string) => void;
+    onUpdateStatus?: (id: string, status: string) => void;
 }
 
-export const ScheduledCard: React.FC<ScheduledCardProps> = ({ data, role, onViewDetail, onCancel }) => {
+export const ScheduledCard: React.FC<ScheduledCardProps> = ({ data, role, onViewDetail, onCancel, onUpdateStatus }) => {
     const navigate = useNavigate();
     const handleChatClick = (e: React.MouseEvent) => {
-        e.stopPropagation(); // Chặn sự kiện click nhầm vào background của Card
-        if (role === 'customer') {
-            navigate('/customer/chat');
-        } else {
-            navigate('/technician/chat');
+        e.stopPropagation();
+        if (role === 'customer' && data.technicianId) {
+            navigateToChat(navigate, role, {
+                technicianId: data.technicianId,
+                orderId: data.id,
+            });
+            return;
         }
+        navigateToChat(navigate, role, {
+            orderId: data.id,
+            customerId: data.customerId,
+        });
     };
     return (
         <div className="sched-card" onClick={() => onViewDetail(data.id)}>
@@ -52,7 +60,7 @@ export const ScheduledCard: React.FC<ScheduledCardProps> = ({ data, role, onView
             <div className="sched-card-actions" onClick={(e) => e.stopPropagation()}>
                 {role === 'technician' ? (
                     <>
-                        <button className="btn-primary">
+                        <button className="btn-primary" onClick={(e) => { e.stopPropagation(); onUpdateStatus?.(data.id, 'in-progress'); }}>
                             <FaPersonWalkingLuggage /> Tôi đang di chuyển
                         </button>
                         <button className="btn-secondary" onClick={handleChatClick}>

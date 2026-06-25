@@ -1,86 +1,54 @@
-# ThuongMaiDienTu
+# ThuongMaiDienTu (GlowUp)
 
-# GlowUp FE 
+Nền tảng marketplace dịch vụ gồm frontend web và backend REST API.
 
-Frontend project built with **React + TypeScript + Vite**
+## Cấu trúc
 
----
+- `./`: Frontend (`React + TypeScript + Vite`)
+- `./be-e-commerce`: Backend (`Spring Boot + PostgreSQL + JWT`)
 
-# GlowUp FE
+## Yêu cầu môi trường
 
-Frontend project built with React + TypeScript + Vite.
+- Node.js 20+, npm 10+
+- Java 17+, Maven 3.9+
+- PostgreSQL 14+
 
----
+## Chạy nhanh
 
-## Tech Stack
-
-- React
-- TypeScript
-- Vite
-- CSS
-- ESLint
-
----
-
-## Installation
+Frontend:
 
 ```bash
 npm install
-```
-
-## Run development
-
-```bash
 npm run dev
 ```
 
-## Build production
+- URL: `http://localhost:5173`
+- API base hiện tại: `src/api/config.ts`, `src/services/auth.ts`
+
+Backend:
 
 ```bash
-npm run build
+cd be-e-commerce
+mvn clean package -DskipTests
+mvn spring-boot:run
 ```
 
----
+- URL: `http://localhost:8080`
 
-## Admin pages
+## Route frontend chính
 
-### Dashboard
+- Public: `/`, `/services`, `/provider`, `/find-provider`
+- Auth: `/auth/login`, `/auth/register`, `/verify-email`
+- Customer: `/customer/*`
+- Technician: `/technician/*`
+- Admin: `/admin/*`
 
-- URL: /admin/dashboard
-- Page: src/pages/AdminDashboard.tsx
+Chi tiết: `src/router/index.tsx`
 
-### User Management
+## Tài liệu backend
 
-- URL: /admin/users
-- Page: src/pages/AdminUserManagement.tsx
-
-### Technician Identity Verification Flow
-
-1) Verification request list
-- URL: /admin/verification
-- Page: src/pages/AdminVerificationRequests.tsx
-
-2) Verification request detail
-- URL: /admin/verification/:requestId
-- Page: src/pages/AdminVerificationDetail.tsx
-
-3) Verification status update
-- URL: /admin/verification/:requestId/update
-- Page: src/pages/AdminVerificationUpdate.tsx
-
-Flow behavior:
-- Admin reviews technician documents.
-- Admin approves / rejects / requests additional documents.
-- New status is saved and synced to the technician verification status store.
-
-Shared components reused:
-- src/components/admin/AdminSidebar.tsx
-- src/components/admin/AdminHeader.tsx
-- src/components/layout/Footer.tsx
-
----
-
-## Notes
-
-- If you see a blank page, verify routes in src/App.tsx.
-- Verification mock state is stored in localStorage via src/services/verificationService.ts.
+- `be-e-commerce/README.md`
+- `be-e-commerce/docs/API_REFERENCE.md`
+- `be-e-commerce/docs/WALLET_API.md`
+- `be-e-commerce/docs/PAYMENT_INTEGRATION.md`
+- `be-e-commerce/docs/COMMISSION_API.md`

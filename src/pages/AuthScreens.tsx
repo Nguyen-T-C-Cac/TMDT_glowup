@@ -1,6 +1,8 @@
-import { useState } from 'react'
+
+import { useState, useEffect } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { useGoogleLogin } from '@react-oauth/google'
 import {
   ArrowLeft,
   BadgeCheck,
@@ -17,8 +19,9 @@ import {
   Sparkles,
   UserRound,
 } from 'lucide-react'
-import { loginUser, registerUser } from '../services/auth'
+import { loginUser, registerUser, API_URL, googleLogin} from '../services/auth'
 import { authService } from '../services/authService'
+import { loadTokenFromStorage, removeToken, removeRefreshToken } from '../utils/token'
 import './AuthScreens.css'
 type AccountType = 'customer' | 'technician'
 
@@ -334,8 +337,25 @@ function loginSideItems(): InfoItem[] {
   ]
 }
 
+function resolveRedirectPathByRole(role?: string | null) {
+  const normalizedRole = role?.toLowerCase()
+
+  if (normalizedRole === 'admin') {
+    return '/admin/dashboard'
+  }
+
+  if (normalizedRole === 'technician') {
+    return '/technician/provider-dashboard'
+  }
+
+  return '/'
+}
+
 export function LoginPage() {
   const navigate = useNavigate()
+  const [redirectTo, setRedirectTo] = useState<string | null>(null)
+  const [checkingSession, setCheckingSession] = useState(true)
+
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(true)
@@ -343,6 +363,80 @@ export function LoginPage() {
   const [errors, setErrors] = useState<FieldError>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
+  const [googleLoggingIn, setGoogleLoggingIn] = useState(false)
+
+  const googleLoginAction = useGoogleLogin({
+    onStart: () => setGoogleLoggingIn(true),
+    onSuccess: async (tokenResponse) => {
+      try {
+        const res = await googleLogin(tokenResponse.access_token)
+        const redirectPath = resolveRedirectPathByRole(res.data.user.role)
+        window.setTimeout(() => {
+          setGoogleLoggingIn(false)
+          setSuccessMessage('Đăng nhập Google thành công.')
+          navigate(redirectPath)
+        }, 1100)
+      } catch {
+        setGoogleLoggingIn(false)
+        setSuccessMessage('Đăng nhập Google thất bại.')
+      }
+    },
+    onError: () => {
+      setGoogleLoggingIn(false)
+      setSuccessMessage('Đăng nhập Google thất bại.')
+    },
+    flow: 'implicit',
+  })
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user')
+    if (!storedUser) {
+      setCheckingSession(false)
+      return
+    }
+
+    let storedRole: string | null = null
+    try {
+      const parsed = JSON.parse(storedUser) as { user?: { role?: string } } | { role?: string }
+      storedRole = ('user' in parsed && parsed.user ? parsed.user.role : parsed.role) ?? null
+    } catch {
+      localStorage.removeItem('user')
+      setCheckingSession(false)
+      return
+    }
+
+    if (!storedRole) {
+      setCheckingSession(false)
+      return
+    }
+
+    fetch(`${API_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${loadTokenFromStorage()}` },
+    })
+      .then((res) => {
+        if (res.ok) {
+          setRedirectTo(resolveRedirectPathByRole(storedRole))
+        } else {
+          localStorage.removeItem('user')
+          removeToken()
+          removeRefreshToken()
+        }
+      })
+      .catch(() => {
+        localStorage.removeItem('user')
+        removeToken()
+        removeRefreshToken()
+      })
+      .finally(() => setCheckingSession(false))
+  }, [])
+
+  if (redirectTo) {
+    return <Navigate to={redirectTo} replace />
+  }
+
+  if (checkingSession) {
+    return null
+  }
 
   const validate = () => {
     const nextErrors: FieldError = {}
@@ -377,13 +471,7 @@ export function LoginPage() {
         identifier: identifier.trim(),
         password: password
       })
-      const role = loginResponse.data.user.role.toLowerCase()
-      let redirectPath = '/'
-      if (role === 'admin') {
-        redirectPath = '/admin/dashboard'
-      } else if (role === 'technician') {
-        redirectPath = '/technician/provider-dashboard'
-      }
+      const redirectPath = resolveRedirectPathByRole(loginResponse.data.user.role)
 
       window.setTimeout(() => {
         setIsSubmitting(false)
@@ -391,7 +479,7 @@ export function LoginPage() {
         navigate(redirectPath)
       }, 1100)
 
-    } catch (error) {
+    } catch {
       setIsSubmitting(false)
       setSuccessMessage('Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.')
     }
@@ -415,6 +503,27 @@ export function LoginPage() {
 
         {successMessage ? <StatusBanner type="success" title="Hoàn tất" description={successMessage} /> : null}
 
+        <button
+          type="button"
+          className="auth-google-btn"
+          onClick={() => googleLoginAction()}
+          disabled={googleLoggingIn}
+        >
+          {googleLoggingIn ? (
+            <Loader2 size={20} className="spin" />
+          ) : (
+            <img
+              src="/image/logo-google.png"
+              alt="Google"
+              className="auth-google-icon"
+            />
+          )}
+          <span>Tiếp tục với Google</span>
+        </button>
+
+        <div className="auth-divider">
+          <span>hoặc</span>
+        </div>
         <form className="auth-form" onSubmit={onSubmit} noValidate>
 
           <TextField

@@ -15,4 +15,7 @@ public class ChatPartnerSummary {
 
     /** Best-effort online flag; defaults to false until presence service exists. */
     private Boolean isOnline;
+
+    /** Role of the partner: "ADMIN", "CUSTOMER", "TECHNICIAN". */
+    private String role;
 }
