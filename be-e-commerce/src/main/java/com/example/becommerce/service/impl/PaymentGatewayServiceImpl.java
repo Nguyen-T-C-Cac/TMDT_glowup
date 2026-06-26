@@ -28,6 +28,7 @@ import com.example.becommerce.repository.SystemSettingRepository;
 import com.example.becommerce.repository.WalletRepository;
 import com.example.becommerce.repository.WalletTransactionRepository;
 import com.example.becommerce.service.PaymentGatewayService;
+import com.example.becommerce.service.WalletSettlementService;
 import com.example.becommerce.service.WsEventPublisher;
 import com.example.becommerce.utils.HmacUtils;
 import com.example.becommerce.utils.TransactionCodeGenerator;
@@ -64,6 +65,7 @@ public class PaymentGatewayServiceImpl implements PaymentGatewayService {
     private final SystemSettingRepository systemSettingRepository;
     private final TransactionCodeGenerator transactionCodeGenerator;
     private final MessageMapper messageMapper;
+    private final WalletSettlementService settlementService;
     private final WsEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
 
@@ -186,6 +188,8 @@ public class PaymentGatewayServiceImpl implements PaymentGatewayService {
         wallet.normalizeForPersistence();
         wallet.setBalance(wallet.getBalance().add(tx.getAmount()));
         wallet.setTotalEarned(wallet.getTotalEarned().add(tx.getAmount()));
+        // Auto-unlock the account when topping up restores the credit balance.
+        settlementService.syncWalletLock(wallet, wallet.getUser());
         walletRepository.save(wallet);
 
         tx.setStatus(TransactionStatus.SUCCESS);
@@ -216,69 +220,10 @@ public class PaymentGatewayServiceImpl implements PaymentGatewayService {
                 updateInvoiceMessage(invoice, order);
             }
 
-            // Credit the technician's wallet
-            User technician = order.getTechnician();
-            if (technician != null && order.getFinalPrice() != null && order.getFinalPrice() > 0) {
-                Wallet techWallet = walletRepository.findWithLockByUser_Id(technician.getId())
-                        .orElseGet(() -> walletRepository.save(Wallet.builder()
-                                .user(technician)
-                                .balance(BigDecimal.ZERO)
-                                .personalBalance(BigDecimal.ZERO)
-                                .currency("VND")
-                                .build()));
-
-                BigDecimal finalPrice = BigDecimal.valueOf(order.getFinalPrice());
-                BigDecimal commissionFee = getFixedCommissionFee();
-
-                // Add revenue to personal balance
-                BigDecimal personalAfter = safePersonalBalance(techWallet).add(finalPrice);
-                WalletTransaction revenueTx = WalletTransaction.builder()
-                        .transactionCode(transactionCodeGenerator.generateTransactionCode(TransactionType.COMMISSION))
-                        .wallet(techWallet)
-                        .order(order)
-                        .type(TransactionType.COMMISSION)
-                        .walletType(WalletType.PERSONAL)
-                        .category("REVENUE")
-                        .title("Thu nhập từ đơn " + order.getCode())
-                        .amount(finalPrice)
-                        .fee(BigDecimal.ZERO)
-                        .netAmount(finalPrice)
-                        .afterBalance(personalAfter.longValueExact())
-                        .note("Cộng " + finalPrice + " từ đơn " + order.getCode() + " (thanh toán VNPay)")
-                        .actor("SYSTEM")
-                        .status(TransactionStatus.SUCCESS)
-                        .processedAt(LocalDateTime.now())
-                        .build();
-                walletTransactionRepository.save(revenueTx);
-
-                techWallet.setPersonalBalance(personalAfter);
-                techWallet.setTotalEarned(techWallet.getTotalEarned().add(finalPrice));
-
-                // Deduct commission fee from credit balance
-                BigDecimal creditAfter = techWallet.getBalance().subtract(commissionFee);
-                WalletTransaction commissionTx = WalletTransaction.builder()
-                        .transactionCode(transactionCodeGenerator.generateTransactionCode(TransactionType.COMMISSION))
-                        .wallet(techWallet)
-                        .order(order)
-                        .type(TransactionType.COMMISSION)
-                        .walletType(WalletType.CREDIT)
-                        .category("COMMISSION_DEDUCTION")
-                        .title("Trừ phí hoa hồng đơn " + order.getCode())
-                        .amount(commissionFee.negate())
-                        .fee(BigDecimal.ZERO)
-                        .netAmount(commissionFee.negate())
-                        .afterBalance(Math.max(0, creditAfter.longValueExact()))
-                        .note("Trừ phí hoa hồng cho đơn " + order.getCode())
-                        .actor("SYSTEM")
-                        .status(TransactionStatus.SUCCESS)
-                        .processedAt(LocalDateTime.now())
-                        .build();
-                walletTransactionRepository.save(commissionTx);
-
-                techWallet.normalizeForPersistence();
-                techWallet.setBalance(creditAfter.max(BigDecimal.ZERO));
-                walletRepository.save(techWallet);
-            }
+            // Unified settlement: credit the technician's PERSONAL wallet with the
+            // invoice amount (bank transfer) and deduct the fixed commission fee from
+            // the CREDIT wallet (negative allowed → account lock).
+            settlementService.settleCompletedOrder(order, PaymentMethod.VNPAY);
 
             eventPublisher.publishOrderStatusChanged(
                     order.getCode(), OrderStatus.IN_PROGRESS.apiValue(), OrderStatus.COMPLETED.apiValue());

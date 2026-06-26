@@ -73,6 +73,7 @@ public class TechnicianMapper {
                 .isAvailable(profile.isAvailable())
                 .type(profile.getType() == null ? null : profile.getType().apiValue())
                 .titleBadge(profile.getTitleBadge())
+                .rewardPoints(profile.getRewardPoints())
                 .verificationStatus(profile.getVerificationStatus() == null ? null : profile.getVerificationStatus().apiValue())
                 .yearsExperience(profile.getYearsExperience())
                 .schedule(emptyMapToNull(profile.getSchedule()))

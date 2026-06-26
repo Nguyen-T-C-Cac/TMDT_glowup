@@ -69,6 +69,11 @@ public class TechnicianProfile {
     @Column(name = "title_badge", length = 100)
     private String titleBadge;
 
+    /** Cumulative reward points earned from completed orders (TN4). */
+    @Column(name = "reward_points", nullable = false)
+    @Builder.Default
+    private long rewardPoints = 0L;
+
     @Column(name = "years_experience")
     private Integer yearsExperience;
 

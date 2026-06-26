@@ -34,6 +34,7 @@ import com.example.becommerce.repository.UserRepository;
 import com.example.becommerce.repository.WalletRepository;
 import com.example.becommerce.repository.WalletTransactionRepository;
 import com.example.becommerce.service.WalletService;
+import com.example.becommerce.service.WalletSettlementService;
 import com.example.becommerce.service.PaymentGatewayService;
 import com.example.becommerce.utils.MoneyUtils;
 import com.example.becommerce.utils.BankAccountMaskUtils;
@@ -74,6 +75,7 @@ public class WalletServiceImpl implements WalletService {
     private final BankAccountMapper bankAccountMapper;
     private final TransactionCodeGenerator transactionCodeGenerator;
     private final PaymentGatewayService paymentGatewayService;
+    private final WalletSettlementService settlementService;
 
     @Value("${app.wallet.default-currency:VND}")
     private String defaultCurrency;
@@ -209,6 +211,7 @@ public class WalletServiceImpl implements WalletService {
     @Transactional
     public WalletWithdrawResponse withdraw(WalletWithdrawRequest request) {
         User currentUser = getCurrentUser();
+        settlementService.assertActorNotLocked(currentUser.getId());
         Wallet wallet = walletRepository.findWithLockByUser_Id(currentUser.getId())
                 .orElseGet(() -> getOrCreateWallet(currentUser));
 
