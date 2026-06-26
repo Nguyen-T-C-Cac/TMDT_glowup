@@ -45,7 +45,7 @@ export const Provider: React.FC = () => {
   };
 
   return (
-    <div style={{ backgroundColor: '#f4f3ec', minHeight: '100vh' }}>
+    <div className="provider-list-container" style={{ flex: 1, minWidth: 0 }}>
       <Header onNavigate={onNavigate} />
       <main className="fp-main-container">
         <div className="fp-layout">

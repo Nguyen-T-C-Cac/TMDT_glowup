@@ -1,6 +1,6 @@
 import React from 'react';
 import './FilterSidebar.css';
-import { StarIcon } from '../common/Icons';
+//import { StarIcon } from '../common/Icons';
 
 interface FilterSidebarProps {
   currentPage?: number;
@@ -42,7 +42,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
       </div>
 
-      <div className="filter-section">
+      {/* <div className="filter-section">
         <h3 className="filter-title">Đánh giá</h3>
         <div className="filter-options">
           <label className="filter-checkbox">
@@ -58,7 +58,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
             </div>
           </label>
         </div>
-      </div>
+      </div>*/}
 
       {totalPages > 1 && onPageChange && (
         <div className="pl-pagination" style={{ marginTop: '24px' }}>

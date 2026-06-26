@@ -33,6 +33,22 @@ export const registerUser = async (userData: RegisterUserData): Promise<void> =>
   }
 }
 
+export const resendConfirmationEmail = async (email: string): Promise<void> => {
+  const response = await fetch(`${API_URL}/auth/resend-verification`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Không thể gửi lại email xác nhận')
+  }
+}
+
 export interface LoginUserData {
   identifier: string
   password: string
@@ -178,10 +194,8 @@ export const fetchWithAuth = async (
 ): Promise<Response> => {
   const { skipAuth, headers, ...rest } = init
   const nextHeaders = new Headers(headers || undefined)
-  const isFormDataBody = rest.body instanceof FormData
 
   if (!nextHeaders.has('Content-Type') && !(rest.body instanceof FormData)) {
-    /* if (!nextHeaders.has('Content-Type') && !isFormDataBody) {*/
     nextHeaders.set('Content-Type', 'application/json')
   }
 

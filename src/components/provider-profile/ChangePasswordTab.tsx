@@ -102,20 +102,21 @@ export const ChangePasswordTab: React.FC = () => {
 
         <label className="cp-field">
           <span>Mật khẩu hiện tại *</span>
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <div className="cp-field__input-wrapper">
             <input
               type={showOld ? 'text' : 'password'}
               value={oldPassword}
               onChange={(e) => setOldPassword(e.target.value)}
               placeholder="Nhập mật khẩu hiện tại"
               autoComplete="current-password"
-              style={{ width: '100%', paddingRight: '40px' }}
+              className="cp-field__input"
             />
             <button
               type="button"
               onClick={() => setShowOld(!showOld)}
               tabIndex={-1}
-              style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6 }}
+              className="cp-visibility-toggle"
+              aria-label={showOld ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
             >
               {showOld ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -124,38 +125,35 @@ export const ChangePasswordTab: React.FC = () => {
 
         <label className="cp-field">
           <span>Mật khẩu mới *</span>
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <div className="cp-field__input-wrapper">
             <input
               type={showNew ? 'text' : 'password'}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="Ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt"
               autoComplete="new-password"
-              style={{ width: '100%', paddingRight: '40px' }}
+              className="cp-field__input"
             />
             <button
               type="button"
               onClick={() => setShowNew(!showNew)}
               tabIndex={-1}
-              style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6 }}
+              className="cp-visibility-toggle"
+              aria-label={showNew ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
             >
               {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
           {/* Password strength meter */}
           {newPassword && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
-              <div style={{ flex: 1, height: '6px', borderRadius: '999px', background: 'rgba(110, 111, 115, 0.12)', overflow: 'hidden' }}>
+            <div className="cp-strength-row">
+              <div className="cp-strength-bar">
                 <div
-                  style={{
-                    height: '100%',
-                    width: `${strength.percent}%`,
-                    background: strength.color,
-                    transition: 'width 0.3s ease, background 0.3s ease'
-                  }}
+                  className="cp-strength-fill"
+                  style={{ width: `${strength.percent}%`, background: strength.color }}
                 />
               </div>
-              <span style={{ fontSize: '13px', fontWeight: 600, minWidth: '80px', textAlign: 'right', color: strength.color }}>
+              <span className="cp-strength-label" style={{ color: strength.color }}>
                 {strength.label}
               </span>
             </div>
@@ -164,26 +162,27 @@ export const ChangePasswordTab: React.FC = () => {
 
         <label className="cp-field">
           <span>Xác nhận mật khẩu mới *</span>
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <div className="cp-field__input-wrapper">
             <input
               type={showConfirm ? 'text' : 'password'}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Nhập lại mật khẩu mới"
               autoComplete="new-password"
-              style={{ width: '100%', paddingRight: '40px' }}
+              className="cp-field__input"
             />
             <button
               type="button"
               onClick={() => setShowConfirm(!showConfirm)}
               tabIndex={-1}
-              style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6 }}
+              className="cp-visibility-toggle"
+              aria-label={showConfirm ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
             >
               {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
           {confirmPassword && newPassword !== confirmPassword && (
-            <span style={{ display: 'block', marginTop: '6px', fontSize: '13px', color: '#ef4444', fontWeight: 500 }}>
+            <span className="cp-error-text">
               Mật khẩu không khớp
             </span>
           )}
@@ -193,7 +192,6 @@ export const ChangePasswordTab: React.FC = () => {
           className="cp-submit" 
           type="submit" 
           disabled={isSaving}
-          style={{ opacity: isSaving ? 0.7 : 1, cursor: isSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
         >
           {isSaving ? 'Đang xử lý...' : 'Xác nhận đổi mật khẩu'}
         </button>

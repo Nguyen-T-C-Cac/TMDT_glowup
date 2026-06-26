@@ -7,7 +7,7 @@ import './technicianSidebar.css';
 //import { fetchCurrentUser, getStoredUser, type User } from '../../services/auth';
 
 // Ảnh mặc định khi chưa có avatar hoặc ảnh bị lỗi
-const DEFAULT_AVATAR = 'https://i.pravatar.cc/150?img=28';
+const DEFAULT_AVATAR = 'https://segayanime.com/wp-content/uploads/2026/01/avatar-fb-mac-dinh-1.jpg';
 
 interface SidebarProps {
   activeItem?: string

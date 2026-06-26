@@ -25,8 +25,10 @@ public final class ApiConstant {
     public static final String AUTH_REFRESH          = "/refresh-token";
     public static final String AUTH_LOGOUT           = "/logout";
     public static final String AUTH_FORGOT_PASSWORD  = "/forgot-password";
+    public static final String AUTH_RESET_PASSWORD   = "/reset-password";
     public static final String AUTH_CHANGE_PASSWORD  = "/change-password";
     public static final String AUTH_VERIFY_EMAIL     = "/verify-email";
+    public static final String AUTH_RESEND_VERIFICATION = "/resend-verification";
     public static final String AUTH_ME               = "/me";
 
     // User endpoints

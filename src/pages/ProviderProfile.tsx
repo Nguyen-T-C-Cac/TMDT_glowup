@@ -67,8 +67,8 @@ export const ProviderProfile: React.FC = () => {
 
         <div className="pp-layout">
           <div className="pp-content-left">
-{activeTab === 'about' && <AboutTab providerId={providerId} onViewAllReviews={() => setActiveTab('reviews')} />}
-{activeTab === 'reviews' && <AboutTab providerId={providerId} onlyReviews={true} />}
+            {activeTab === 'about' && <AboutTab providerId={providerId} onViewAllReviews={() => setActiveTab('reviews')} />}
+            {activeTab === 'reviews' && <AboutTab providerId={providerId} onlyReviews={true} />}
             {activeTab === 'schedule' && <ScheduleTab />}
             {activeTab === 'projects' && <ProjectsTab />}
             {activeTab === 'security' && <ChangePasswordTab />}

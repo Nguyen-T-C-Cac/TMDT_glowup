@@ -381,6 +381,42 @@ public class AuthServiceImpl implements AuthService {
     }
 
     // ----------------------------------------------------------------
+    // Resend confirmation email
+    // ----------------------------------------------------------------
+
+    @Override
+    @Transactional
+    public void resendConfirmationEmail(ResendVerificationEmailRequest request) {
+        String email = request.getEmail().toLowerCase().trim();
+
+        User user = userRepository.findByEmailAndDeletedFalse(email)
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy tài khoản"));
+
+        if (user.getStatus() == UserStatus.ACTIVE) {
+            throw AppException.badRequest(ErrorCode.BAD_REQUEST, "Email đã được xác thực");
+        }
+
+        if (user.getStatus() == UserStatus.LOCKED || user.getStatus() == UserStatus.INACTIVE) {
+            throw AppException.badRequest(ErrorCode.BAD_REQUEST, "Không thể gửi lại email xác nhận cho tài khoản hiện tại");
+        }
+
+        emailConfirmationTokenRepository.invalidateAllByUserId(user.getId());
+
+        String confirmationToken = UUID.randomUUID().toString();
+        EmailConfirmationToken token = EmailConfirmationToken.builder()
+                .token(confirmationToken)
+                .user(user)
+                .expiredAt(LocalDateTime.now().plusHours(24))
+                .used(false)
+                .build();
+
+        emailConfirmationTokenRepository.save(token);
+        emailService.sendConfirmationEmail(user.getEmail(), user.getFullName(), confirmationToken);
+
+        log.info("Resent verification email to: {}", user.getEmail());
+    }
+
+    // ----------------------------------------------------------------
     // Private helpers
     // ----------------------------------------------------------------
 

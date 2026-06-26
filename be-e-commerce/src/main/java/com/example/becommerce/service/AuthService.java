@@ -35,5 +35,8 @@ public interface AuthService {
     /** Verify email with confirmation token. */
     void verifyEmail(VerifyEmailRequest request);
 
+    /** Resend email confirmation when user has not verified yet. */
+    void resendConfirmationEmail(ResendVerificationEmailRequest request);
+
     AuthResponse googleCustomerLogin( GoogleLoginRequest request);
 }
