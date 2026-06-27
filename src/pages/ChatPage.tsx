@@ -23,6 +23,7 @@ import type { UserRole } from '../types/UserRole';
 import type { ChatLocationState, ChatMessage, ConversationItem } from '../types/chat';
 import type { OrderResponse } from '../types/order/order';
 import type { Quote } from '../types/Quote';
+import { BookingCard } from '../components/chat/BookingCard';
 
 const pageMap: Record<string, string> = {
     home: '/',
@@ -35,26 +36,55 @@ const pageMap: Record<string, string> = {
     login: '/auth/login',
 };
 
+const stripHtml = (text: string): string =>
+    text.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+
+const friendlyPreview = (msg: ConversationItem['lastMessage']): string => {
+    if (!msg) return '';
+    const type = msg.type;
+    const content = msg.content || '';
+    if (type === 'image') return '📷 Hình ảnh';
+    if (type === 'quotation') return '📄 Báo giá';
+    if (type === 'invoice') return '🧾 Hoá đơn';
+    if (type === 'booking') return '🔧 Yêu cầu sửa chữa';
+    if (type === 'system') return '🔔 Thông báo hệ thống';
+    if (!content) return '';
+    const cleaned = stripHtml(content);
+    try { JSON.parse(cleaned); return '📄 Dữ liệu'; } catch { /* not json */ }
+    return cleaned;
+};
+
 const formatMessageTime = (value: string) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '';
     return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 };
 
+const formatMessageDate = (value: string): string => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const day = 86400000;
+    if (diff < day) return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    if (diff < 2 * day) return 'Hôm qua';
+    if (diff < 7 * day) return date.toLocaleDateString('vi-VN', { weekday: 'long' });
+    return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+};
+
 const toContact = (conversation: ConversationItem): Contact => ({
     id: conversation.id,
     name: conversation.partner?.fullName ?? 'Đối tác',
-    lastMessage:
-        conversation.lastMessage?.preview ??
-        conversation.lastMessage?.content ??
-        '',
+    lastMessage: friendlyPreview(conversation.lastMessage),
     time: conversation.lastMessage?.sentAt
-        ? formatMessageTime(conversation.lastMessage.sentAt)
+        ? formatMessageDate(conversation.lastMessage.sentAt)
         : '',
     avatar: conversation.partner?.avatar ?? 'https://placehold.co/48x48',
     isOnline: conversation.partner?.isOnline ?? false,
     unread: conversation.unreadCount > 0,
+    unreadCount: conversation.unreadCount,
     partnerType: conversation.partner?.role ?? undefined,
+    msgType: conversation.lastMessage?.type ?? undefined,
 });
 
 export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) => {
@@ -150,9 +180,11 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                             ? 'Báo giá mới'
                             : incoming.type === 'invoice'
                                 ? 'Hoá đơn mới'
-                                : incoming.title
-                                    ? `[${incoming.title}] ${incoming.content ?? ''}`
-                                    : incoming.content ?? '';
+                                : incoming.type === 'booking'
+                                    ? 'Yêu cầu sửa chữa mới'
+                                    : incoming.title
+                                        ? `[${incoming.title}] ${incoming.content ?? ''}`
+                                        : incoming.content ?? '';
                     return {
                         ...c,
                         lastMessage: {
@@ -375,6 +407,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
         const selected = conversations.find((c) => c.id === conversationId);
         await loadLinkedOrder(selected?.orderId);
         await loadMessages(conversationId);
+        if (window.innerWidth < 900) setIsSidebarOpen(false);
     };
 
     const handleSendMessage = async (text: string, title?: string) => {
@@ -647,9 +680,10 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
 
                         {!isLoading &&
                             messages.map((message) => {
-                                const isMe = message.senderId === currentUserCode;
+                                const isMe = message.type === 'booking' && role === 'customer' ? true : message.senderId === currentUserCode;
                                 const isQuotation = message.type === 'quotation' && message.quotation;
                                 const isInvoice = message.type === 'invoice';
+                                const isBooking = message.type === 'booking';
                                 let invoiceParsed: Record<string, unknown> | null = null;
                                 if (isInvoice && message.content) {
                                     try {
@@ -668,7 +702,9 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                                             <Avatar src={activeContact.avatar} size={32} isOnline={false} />
                                         )}
                                         <div className={styles.messageContent}>
-                                            {isInvoice && invoiceParsed ? (
+                                            {isBooking && message.booking ? (
+                                                <BookingCard booking={message.booking} />
+                                            ) : isInvoice && invoiceParsed ? (
                                                 <InvoiceCard
                                                     invoiceData={invoiceParsed as any}
                                                     orderId={linkedOrder?.id ?? ''}

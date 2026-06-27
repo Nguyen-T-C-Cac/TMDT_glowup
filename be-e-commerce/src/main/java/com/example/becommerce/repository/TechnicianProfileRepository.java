@@ -1,10 +1,12 @@
 package com.example.becommerce.repository;
 
 import com.example.becommerce.entity.TechnicianProfile;
+import com.example.becommerce.entity.enums.VerificationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -16,4 +18,10 @@ public interface TechnicianProfileRepository
     Optional<TechnicianProfile> findByUser_Code(String userCode);
 
     boolean existsByUser_Id(Long userId);
+
+    List<TechnicianProfile> findByIsAvailableTrueAndVerificationStatusAndUserDeletedFalse(
+            VerificationStatus verificationStatus);
+
+    List<TechnicianProfile> findByVerificationStatusAndUserDeletedFalse(
+            VerificationStatus verificationStatus);
 }

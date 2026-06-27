@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
@@ -83,6 +84,21 @@ public class GlobalExceptionHandler {
         log.warn("Access denied: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.error(ErrorCode.FORBIDDEN, "Bạn không có quyền thực hiện thao tác này"));
+    }
+
+    // ---- Data integrity ---------------------------------------------
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(
+            DataIntegrityViolationException ex, HttpServletRequest request) {
+
+        log.error("Data integrity violation on {}: ", request.getRequestURI(), ex);
+        String message = "Dữ liệu không hợp lệ hoặc bị trùng lặp";
+        if (ex.getMostSpecificCause() != null) {
+            message = ex.getMostSpecificCause().getMessage();
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(ErrorCode.CONFLICT, message));
     }
 
     // ---- Catch-all --------------------------------------------------

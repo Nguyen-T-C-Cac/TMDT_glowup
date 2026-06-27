@@ -1,0 +1,357 @@
+package com.example.becommerce.service.impl;
+
+import com.example.becommerce.constant.ErrorCode;
+import com.example.becommerce.dto.mapper.MessageMapper;
+import com.example.becommerce.dto.request.booking.CreateBookingRequest;
+import com.example.becommerce.dto.response.chat.EmbeddedBooking;
+import com.example.becommerce.dto.response.chat.MessageResponse;
+import com.example.becommerce.dto.response.booking.BookingResponse;
+import com.example.becommerce.dto.response.booking.BookingSubmitResponse;
+import com.example.becommerce.dto.response.booking.BrandResponse;
+import com.example.becommerce.dto.response.booking.DeviceTypeResponse;
+import com.example.becommerce.entity.*;
+import com.example.becommerce.entity.enums.*;
+import com.example.becommerce.exception.AppException;
+import com.example.becommerce.repository.*;
+import com.example.becommerce.service.BookingService;
+import com.example.becommerce.service.NotificationService;
+import com.example.becommerce.service.WsEventPublisher;
+import com.example.becommerce.utils.BookingCodeGenerator;
+import com.example.becommerce.utils.ConversationCodeGenerator;
+import com.example.becommerce.utils.MessageCodeGenerator;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class BookingServiceImpl implements BookingService {
+
+    private final CategoryRepository categoryRepository;
+    private final DeviceTypeRepository deviceTypeRepository;
+    private final BrandRepository brandRepository;
+    private final BookingRepository bookingRepository;
+    private final BookingImageRepository bookingImageRepository;
+    private final UserRepository userRepository;
+    private final ConversationRepository conversationRepository;
+    private final MessageRepository messageRepository;
+    private final TechnicianProfileRepository technicianProfileRepository;
+    private final BookingCodeGenerator bookingCodeGenerator;
+    private final ConversationCodeGenerator conversationCodeGenerator;
+    private final MessageCodeGenerator messageCodeGenerator;
+    private final MessageMapper messageMapper;
+    private final WsEventPublisher eventPublisher;
+    private final NotificationService notificationService;
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DeviceTypeResponse> getDeviceTypesByCategory(String categoryCode) {
+        List<DeviceType> types = deviceTypeRepository
+                .findByCategory_CodeAndStatusAndDeletedFalseOrderByNameAsc(categoryCode, VisibilityStatus.ACTIVE);
+        return types.stream()
+                .map(dt -> DeviceTypeResponse.builder()
+                        .code(dt.getCode())
+                        .name(dt.getName())
+                        .categoryCode(categoryCode)
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BrandResponse> getBrandsByCategory(String categoryCode) {
+        List<Brand> brands = brandRepository
+                .findByCategory_CodeAndStatusAndDeletedFalseOrderByNameAsc(categoryCode, VisibilityStatus.ACTIVE);
+        return brands.stream()
+                .map(b -> BrandResponse.builder()
+                        .code(b.getCode())
+                        .name(b.getName())
+                        .categoryCode(categoryCode)
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public BookingSubmitResponse createBooking(CreateBookingRequest request) {
+        log.info("createBooking started: categoryCode={}, description={}", request.getCategoryCode(),
+                request.getDescription() != null ? request.getDescription().substring(0, Math.min(50, request.getDescription().length())) : "");
+
+        try {
+            User customer = getCurrentUser();
+            log.debug("Authenticated customer: code={}, id={}", customer.getCode(), customer.getId());
+
+            // 1. Find category
+            Category category = categoryRepository.findByCodeAndDeletedFalse(request.getCategoryCode())
+                    .orElseThrow(() -> AppException.notFound("Không tìm thấy dịch vụ"));
+            log.debug("Found category: code={}, title={}", category.getCode(), category.getTitle());
+
+            // 2. Find device type (optional)
+            DeviceType deviceType = null;
+            if (request.getDeviceTypeCode() != null && !request.getDeviceTypeCode().isBlank()) {
+                log.debug("Looking up deviceType by code: {}", request.getDeviceTypeCode());
+                deviceType = deviceTypeRepository.findByCode(request.getDeviceTypeCode())
+                        .orElse(null);
+            }
+
+            // 3. Find brand (optional)
+            Brand brand = null;
+            if (request.getBrandCode() != null && !request.getBrandCode().isBlank()) {
+                log.debug("Looking up brand by code: {}", request.getBrandCode());
+                brand = brandRepository.findByCode(request.getBrandCode())
+                        .orElse(null);
+            }
+
+            // 4. Find technician
+            User technician;
+            if (request.getTechnicianCode() != null && !request.getTechnicianCode().isBlank()) {
+                log.debug("Using specified technician: {}", request.getTechnicianCode());
+                technician = userRepository.findByCodeAndDeletedFalse(request.getTechnicianCode())
+                        .orElseThrow(() -> AppException.notFound("Không tìm thấy thợ"));
+                if (technician.getRole() != Role.TECHNICIAN) {
+                    throw AppException.badRequest(ErrorCode.VALIDATION_ERROR, "Tài khoản không phải là thợ");
+                }
+            } else {
+                technician = findAvailableTechnician(category);
+                if (technician == null) {
+                    throw AppException.badRequest(ErrorCode.NO_TECHNICIAN_AVAILABLE,
+                            "Hiện chưa có thợ khả dụng cho dịch vụ này");
+                }
+                log.debug("Assigned available technician: code={}", technician.getCode());
+            }
+
+            // 5. Parse urgency
+            UrgencyLevel urgency = UrgencyLevel.NORMAL;
+            if (request.getUrgency() != null && !request.getUrgency().isBlank()) {
+                try {
+                    urgency = UrgencyLevel.valueOf(request.getUrgency().trim().toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    log.warn("Invalid urgency value '{}', falling back to NORMAL", request.getUrgency());
+                    urgency = UrgencyLevel.NORMAL;
+                }
+            }
+
+            // 6. Create or reuse conversation
+            log.debug("Finding or creating conversation for customer={} technician={}", customer.getId(), technician.getId());
+            Conversation conversation = conversationRepository
+                    .findFirstByCustomer_IdAndTechnician_IdOrderByLastMessageAtDesc(customer.getId(), technician.getId())
+                    .orElseGet(() -> {
+                        Conversation newConv = Conversation.builder()
+                                .code(conversationCodeGenerator.generate())
+                                .customer(customer)
+                                .technician(technician)
+                                .build();
+                        log.debug("Created new conversation: {}", newConv.getCode());
+                        return conversationRepository.save(newConv);
+                    });
+
+            // 7. Save booking
+            String bookingCode = bookingCodeGenerator.generate();
+            log.debug("Creating booking with code={}", bookingCode);
+            Booking booking = Booking.builder()
+                    .code(bookingCode)
+                    .category(category)
+                    .deviceType(deviceType)
+                    .brand(brand)
+                    .customer(customer)
+                    .technician(technician)
+                    .description(request.getDescription())
+                    .urgency(urgency)
+                    .scheduledDate(request.getScheduledDate())
+                    .preferredTime(request.getPreferredTime())
+                    .address(request.getAddress())
+                    .phone(request.getPhone())
+                    .conversation(conversation)
+                    .status(BookingStatus.PENDING)
+                    .build();
+            booking = bookingRepository.save(booking);
+            log.debug("Booking saved: id={}, code={}", booking.getId(), booking.getCode());
+
+            // 8. Save images
+            if (request.getImageUrls() != null) {
+                for (String url : request.getImageUrls()) {
+                    if (url != null && !url.isBlank()) {
+                        BookingImage image = BookingImage.builder()
+                                .booking(booking)
+                                .url(url)
+                                .build();
+                        bookingImageRepository.save(image);
+                    }
+                }
+            }
+
+            // 9. Build booking summary and create BOOKING message
+            List<String> imageUrls = request.getImageUrls() != null
+                    ? request.getImageUrls()
+                    : List.of();
+
+            String summaryJson = buildBookingSummary(booking, imageUrls);
+            log.debug("Booking summary JSON: {}", summaryJson);
+
+            String msgCode = messageCodeGenerator.generate();
+            log.debug("Creating booking message with code={}", msgCode);
+            Message message = Message.builder()
+                    .code(msgCode)
+                    .conversation(conversation)
+                    .sender(null)
+                    .type(MessageType.BOOKING)
+                    .content(summaryJson)
+                    .title("Yêu cầu sửa chữa mới")
+                    .build();
+            message = messageRepository.save(message);
+            log.debug("Booking message saved: id={}, sentAt={}", message.getId(), message.getSentAt());
+
+            // 10. Update conversation last message timestamp
+            conversation.setLastMessageAt(message.getSentAt());
+            conversationRepository.save(conversation);
+
+            // 11. Publish WebSocket event
+            try {
+                MessageResponse msgResponse = messageMapper.toResponse(message, customer, null);
+                eventPublisher.publishMessageNew(conversation.getCode(), msgResponse);
+            } catch (Exception ex) {
+                log.warn("Failed to publish WS event for booking {}: {}", booking.getCode(), ex.getMessage());
+            }
+
+            // 12. Notify technician
+            try {
+                notificationService.createNotification(
+                        technician,
+                        NotificationType.CHAT_MESSAGE,
+                        "Yêu cầu sửa chữa mới từ " + customer.getFullName(),
+                        "Dịch vụ: " + category.getTitle() + " | " + booking.getDescription(),
+                        Map.<String, Object>of(
+                                "conversationId", conversation.getCode(),
+                                "bookingId", booking.getCode(),
+                                "senderName", customer.getFullName()
+                        ));
+            } catch (Exception ex) {
+                log.warn("Failed to push booking notification to {}: {}", technician.getCode(), ex.getMessage());
+            }
+
+            log.info("Booking {} created for customer={} with technician={} in conversation={}",
+                    booking.getCode(), customer.getCode(), technician.getCode(), conversation.getCode());
+
+            // 13. Build response
+            BookingResponse bookingResponse = toBookingResponse(booking, imageUrls);
+
+            return BookingSubmitResponse.builder()
+                    .booking(bookingResponse)
+                    .conversationId(conversation.getCode())
+                    .build();
+
+        } catch (AppException ex) {
+            log.warn("AppException in createBooking: [{}] {}", ex.getErrorCode(), ex.getMessage());
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Unexpected error in createBooking: ", ex);
+            throw ex;
+        }
+    }
+
+    private String buildBookingSummary(Booking booking, List<String> imageUrls) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"id\":\"").append(escapeJson(booking.getCode())).append("\",");
+        sb.append("\"code\":\"").append(escapeJson(booking.getCode())).append("\",");
+        sb.append("\"categoryName\":\"").append(escapeJson(
+                booking.getCategory() != null ? booking.getCategory().getTitle() : "")).append("\",");
+        sb.append("\"deviceTypeName\":\"").append(escapeJson(
+                booking.getDeviceType() != null ? booking.getDeviceType().getName() : "")).append("\",");
+        sb.append("\"brandName\":\"").append(escapeJson(
+                booking.getBrand() != null ? booking.getBrand().getName() : "")).append("\",");
+        sb.append("\"customerName\":\"").append(escapeJson(
+                booking.getCustomer().getFullName())).append("\",");
+        sb.append("\"technicianName\":\"").append(escapeJson(
+                booking.getTechnician().getFullName())).append("\",");
+        sb.append("\"description\":\"").append(escapeJson(
+                booking.getDescription() != null ? booking.getDescription() : "")).append("\",");
+        sb.append("\"urgency\":\"").append(escapeJson(booking.getUrgency().name())).append("\",");
+        sb.append("\"scheduledDate\":");
+        if (booking.getScheduledDate() != null) {
+            sb.append("\"").append(booking.getScheduledDate().toString()).append("\"");
+        } else {
+            sb.append("null");
+        }
+        sb.append(",");
+        sb.append("\"preferredTime\":\"").append(escapeJson(
+                booking.getPreferredTime() != null ? booking.getPreferredTime() : "")).append("\",");
+        sb.append("\"address\":\"").append(escapeJson(
+                booking.getAddress() != null ? booking.getAddress() : "")).append("\",");
+        sb.append("\"phone\":\"").append(escapeJson(
+                booking.getPhone() != null ? booking.getPhone() : "")).append("\",");
+        sb.append("\"status\":\"").append(escapeJson(booking.getStatus().name())).append("\",");
+        sb.append("\"imageUrls\":[");
+        if (imageUrls != null && !imageUrls.isEmpty()) {
+            sb.append(imageUrls.stream()
+                    .map(u -> "\"" + escapeJson(u) + "\"")
+                    .collect(Collectors.joining(",")));
+        }
+        sb.append("]}");
+        return sb.toString();
+    }
+
+    private String escapeJson(String value) {
+        if (value == null) return "";
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
+    }
+
+    private BookingResponse toBookingResponse(Booking booking, List<String> imageUrls) {
+        return BookingResponse.builder()
+                .id(booking.getCode())
+                .code(booking.getCode())
+                .categoryCode(booking.getCategory() != null ? booking.getCategory().getCode() : null)
+                .categoryName(booking.getCategory() != null ? booking.getCategory().getTitle() : null)
+                .deviceTypeCode(booking.getDeviceType() != null ? booking.getDeviceType().getCode() : null)
+                .deviceTypeName(booking.getDeviceType() != null ? booking.getDeviceType().getName() : null)
+                .brandCode(booking.getBrand() != null ? booking.getBrand().getCode() : null)
+                .brandName(booking.getBrand() != null ? booking.getBrand().getName() : null)
+                .customerCode(booking.getCustomer().getCode())
+                .customerName(booking.getCustomer().getFullName())
+                .technicianCode(booking.getTechnician().getCode())
+                .technicianName(booking.getTechnician().getFullName())
+                .description(booking.getDescription())
+                .urgency(booking.getUrgency().name())
+                .scheduledDate(booking.getScheduledDate())
+                .preferredTime(booking.getPreferredTime())
+                .address(booking.getAddress())
+                .phone(booking.getPhone())
+                .status(booking.getStatus().name())
+                .conversationId(booking.getConversation() != null ? booking.getConversation().getCode() : null)
+                .imageUrls(imageUrls)
+                .createdAt(booking.getCreatedAt())
+                .build();
+    }
+
+    private User findAvailableTechnician(Category category) {
+        List<TechnicianProfile> profiles = technicianProfileRepository
+                .findByVerificationStatusAndUserDeletedFalse(
+                        VerificationStatus.APPROVED);
+        if (profiles.isEmpty()) return null;
+        return profiles.get(0).getUser();
+    }
+
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw AppException.unauthorized("Người dùng chưa đăng nhập");
+        }
+        String email = authentication.getName();
+        return userRepository.findByEmailAndDeletedFalse(email)
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy người dùng hiện tại"));
+    }
+}

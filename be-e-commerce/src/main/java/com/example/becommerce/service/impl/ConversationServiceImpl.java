@@ -124,7 +124,7 @@ public class ConversationServiceImpl implements ConversationService {
         }
 
         Optional<Conversation> existing = conversationRepository
-                .findByCustomer_IdAndTechnician_Id(currentUser.getId(), technician.getId());
+                .findFirstByCustomer_IdAndTechnician_IdOrderByLastMessageAtDesc(currentUser.getId(), technician.getId());
         boolean isNewConversation = existing.isEmpty();
 
         Conversation conversation = existing.orElseGet(() -> Conversation.builder()
@@ -289,7 +289,7 @@ public class ConversationServiceImpl implements ConversationService {
 
         // Check for existing admin-user conversation
         Optional<Conversation> existing = conversationRepository
-                .findByCustomer_IdAndTechnician_Id(customer.getId(), technician.getId());
+                .findFirstByCustomer_IdAndTechnician_IdOrderByLastMessageAtDesc(customer.getId(), technician.getId());
         boolean isNewConversation = existing.isEmpty();
 
         Conversation conversation = existing.orElseGet(() -> Conversation.builder()

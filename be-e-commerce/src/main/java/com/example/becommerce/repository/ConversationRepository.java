@@ -21,8 +21,11 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
 
     Optional<Conversation> findByOrder_Id(Long orderId);
 
-    /** Conversation between this exact (customer, technician) pair, regardless of order link. */
-    Optional<Conversation> findByCustomer_IdAndTechnician_Id(Long customerId, Long technicianId);
+    /** Conversation between this exact (customer, technician) pair, regardless of order link.
+     *  Uses LIMIT 1 via derived findFirstBy prefix to avoid NonUniqueResultException
+     *  even before the unique constraint is in place. */
+    Optional<Conversation> findFirstByCustomer_IdAndTechnician_IdOrderByLastMessageAtDesc(
+            Long customerId, Long technicianId);
 
     /** All conversations where the given user is either the customer or the technician. */
     @Query(value = """

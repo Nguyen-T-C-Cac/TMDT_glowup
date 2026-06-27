@@ -12,6 +12,7 @@ public final class ErrorCode {
     public static final String VALIDATION_ERROR      = "VALIDATION_ERROR";
     public static final String NOT_FOUND             = "NOT_FOUND";
     public static final String BAD_REQUEST           = "BAD_REQUEST";
+    public static final String CONFLICT              = "CONFLICT";
     public static final String FORBIDDEN             = "FORBIDDEN";
     public static final String UNAUTHORIZED          = "UNAUTHORIZED";
 
@@ -91,4 +92,10 @@ public final class ErrorCode {
     public static final String MESSAGE_NOT_FOUND                 = "MESSAGE_NOT_FOUND";
     public static final String QUOTATION_NOT_FOUND               = "QUOTATION_NOT_FOUND";
     public static final String QUOTATION_NOT_PENDING             = "QUOTATION_NOT_PENDING";
+
+    // Booking
+    public static final String BOOKING_NOT_FOUND                 = "BOOKING_NOT_FOUND";
+    public static final String DEVICE_TYPE_NOT_FOUND             = "DEVICE_TYPE_NOT_FOUND";
+    public static final String BRAND_NOT_FOUND                   = "BRAND_NOT_FOUND";
+    public static final String NO_TECHNICIAN_AVAILABLE           = "NO_TECHNICIAN_AVAILABLE";
 }

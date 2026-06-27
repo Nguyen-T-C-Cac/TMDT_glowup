@@ -170,7 +170,12 @@ export const ProviderList: React.FC<Props> = ({
         open={!!selectedProvider}
         onClose={() => setSelectedProvider(null)}
         technicianId={selectedProvider?.id}
-        provider={selectedProvider ?? undefined}
+        provider={selectedProvider ? {
+            id: selectedProvider.id,
+            name: (selectedProvider as any).name || selectedProvider.id,
+            avatar: (selectedProvider as any).avatar || 'https://placehold.co/80x80',
+            rating: (selectedProvider as any).rating || 0,
+        } : undefined}
       />
     </div>
   );

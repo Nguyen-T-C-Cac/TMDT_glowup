@@ -1,4 +1,4 @@
-export type ChatMessageType = 'text' | 'image' | 'quotation' | 'system' | 'invoice';
+export type ChatMessageType = 'text' | 'image' | 'quotation' | 'system' | 'invoice' | 'booking';
 
 export type EmbeddedQuotation = {
   id: string;
@@ -18,6 +18,7 @@ export type ChatMessage = {
   content?: string | null;
   title?: string | null;
   quotation?: EmbeddedQuotation | null;
+  booking?: import('../types/booking').EmbeddedBooking | null;
   sentAt: string;
   isRead?: boolean;
 };
