@@ -364,6 +364,7 @@ export const mapOrderToRequestData = (order: OrderResponse): RequestData => ({
     estPrice: formatMoney(order.estimatedPrice ?? order.finalPrice),
     expectedTime: formatDateTime(order.expectedTime ?? order.scheduledAt),
     images: order.images ?? [],
+    fromBooking: order.serviceCategory === 'booking',
 });
 
 export const mapOrderToScheduledOrder = (order: OrderResponse): ScheduledOrder => ({

@@ -12,5 +12,6 @@ public class BookingSubmitResponse {
 
     private BookingResponse booking;
     private String conversationId;
+    private String orderId;
     private ChatPartnerSummary partner;
 }

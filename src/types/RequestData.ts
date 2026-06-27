@@ -11,4 +11,5 @@ export interface RequestData {
     estPrice: number;
     expectedTime: string;
     images: string[];
+    fromBooking?: boolean;
 }

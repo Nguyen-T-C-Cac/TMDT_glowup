@@ -250,6 +250,136 @@
     border-radius: 999px;
 }
 
+/* Status badge */
+.bd-status-row {
+    margin-bottom: 14px;
+}
+
+.bd-status-badge {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 14px;
+    border-radius: 999px;
+}
+
+/* Action buttons */
+.bd-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.bd-accept-btn,
+.bd-reject-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.bd-accept-btn:disabled,
+.bd-reject-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.bd-accept-btn {
+    background: var(--primary, #68A877);
+    color: #fff;
+}
+
+.bd-accept-btn:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.bd-reject-btn {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.bd-reject-btn:hover:not(:disabled) {
+    background: #fecaca;
+}
+
+/* Reject confirmation popup */
+.bd-reject-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10002;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.bd-reject-popup {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px;
+    width: min(90vw, 380px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.bd-reject-popup h4 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    color: #1e293b;
+}
+
+.bd-reject-popup p {
+    margin: 0 0 20px;
+    font-size: 14px;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+.bd-reject-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.bd-reject-cancel,
+.bd-reject-confirm {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.bd-reject-cancel {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.bd-reject-cancel:hover {
+    background: #e2e8f0;
+}
+
+.bd-reject-confirm {
+    background: #dc2626;
+    color: #fff;
+}
+
+.bd-reject-confirm:hover {
+    background: #b91c1c;
+}
+
 @media (max-width: 768px) {
     .bd-overlay {
         padding: 0;

@@ -703,7 +703,21 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                                         )}
                                         <div className={styles.messageContent}>
                                             {isBooking && message.booking ? (
-                                                <BookingCard booking={message.booking} />
+                                                <BookingCard
+                                                    booking={message.booking}
+                                                    role={role}
+                                                    onStatusChange={(bookingCode, newStatus) => {
+                                                        setMessages(prev => prev.map(msg => {
+                                                            if (msg.booking?.code === bookingCode) {
+                                                                return {
+                                                                    ...msg,
+                                                                    booking: { ...msg.booking, status: newStatus }
+                                                                };
+                                                            }
+                                                            return msg;
+                                                        }));
+                                                    }}
+                                                />
                                             ) : isInvoice && invoiceParsed ? (
                                                 <InvoiceCard
                                                     invoiceData={invoiceParsed as any}

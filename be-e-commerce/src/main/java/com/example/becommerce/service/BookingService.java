@@ -14,4 +14,8 @@ public interface BookingService {
     List<BrandResponse> getBrandsByCategory(String categoryCode);
 
     BookingSubmitResponse createBooking(CreateBookingRequest request);
+
+    void acceptBooking(String code);
+
+    void rejectBooking(String code);
 }
