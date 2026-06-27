@@ -23,6 +23,10 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "conversations",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uq_conversations_customer_technician",
+                        columnNames = {"customer_id", "technician_id"})
+        },
         indexes = {
                 @Index(name = "idx_conv_code",       columnList = "code", unique = true),
                 @Index(name = "idx_conv_customer",   columnList = "customer_id"),

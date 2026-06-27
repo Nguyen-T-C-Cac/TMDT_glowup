@@ -80,7 +80,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         Conversation conversation = conversationRepository.findByOrder_Id(order.getId())
                 .orElseGet(() ->
-                    conversationRepository.findByCustomer_IdAndTechnician_Id(
+                    conversationRepository.findFirstByCustomer_IdAndTechnician_IdOrderByLastMessageAtDesc(
                             order.getCustomer().getId(), order.getTechnician().getId())
                     .map(existing -> {
                         existing.setOrder(order);

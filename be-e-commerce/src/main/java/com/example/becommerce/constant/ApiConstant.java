@@ -18,6 +18,7 @@ public final class ApiConstant {
     public static final String VERIFICATION_BASE = BASE_API + "/verifications";
     public static final String CONVERSATION_BASE = BASE_API + "/conversations";
     public static final String QUOTE_BASE        = BASE_API + "/quotes";
+    public static final String BOOKING_BASE      = BASE_API + "/bookings";
 
     // Auth endpoints
     public static final String AUTH_REGISTER         = "/register";

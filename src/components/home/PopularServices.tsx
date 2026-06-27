@@ -7,11 +7,7 @@ import {
   SnowflakeIcon,
   WashingMachineIcon,
   FridgeIcon,
-  BroomIcon,
   WrenchIcon,
-  BugIcon,
-  MicrowaveIcon,
-  CarIcon,
   ChevronDownIcon,
 } from '../common/Icons';
 
@@ -29,52 +25,52 @@ export interface ServiceItem {
 
 const fallbackServices: ServiceItem[] = [
   {
-    id: '1',
+    id: 'CAT-001',
     name: 'Máy lạnh',
-    description: 'Vệ sinh & Bảo trì',
+    description: 'Vệ sinh, bơm gas, sửa board mạch',
     icon: <SnowflakeIcon />,
   },
   {
-    id: '2',
-    name: 'Giặt ủi',
-    description: 'Sạch tận cơ sở',
+    id: 'CAT-002',
+    name: 'Máy giặt',
+    description: 'Sửa máy giặt cửa ngang, cửa trên',
     icon: <WashingMachineIcon />,
   },
   {
-    id: '3',
+    id: 'CAT-003',
     name: 'Tủ lạnh',
-    description: 'Bảo trì định kỳ',
+    description: 'Sửa tủ lạnh không lạnh, chảy nước',
     icon: <FridgeIcon />,
   },
   {
-    id: '4',
-    name: 'Dọn dẹp',
-    description: 'Theo giờ / Định kỳ',
-    icon: <BroomIcon />,
-  },
-  {
-    id: '5',
-    name: 'Điện nước',
-    description: 'Sửa chữa 24/7',
+    id: 'CAT-004',
+    name: 'Máy nước nóng',
+    description: 'Lắp đặt, sửa chữa, bảo trì',
     icon: <WrenchIcon />,
   },
   {
-    id: '6',
-    name: 'Côn trùng',
-    description: 'Phun / Diệt triệt để',
-    icon: <BugIcon />,
+    id: 'CAT-SD',
+    name: 'Sửa điện',
+    description: 'Sửa chữa điện dân dụng 24/7',
+    icon: <WrenchIcon />,
   },
   {
-    id: '7',
-    name: 'Lò vi sóng',
-    description: 'Sửa chữa & Bảo trì',
-    icon: <MicrowaveIcon />,
+    id: 'CAT-SW',
+    name: 'Sửa nước',
+    description: 'Sửa ống nước, thông tắc',
+    icon: <WrenchIcon />,
   },
   {
-    id: '8',
-    name: 'Xe hơi',
-    description: 'Rửa & Chăm sóc',
-    icon: <CarIcon />,
+    id: 'CAT-VML',
+    name: 'Vệ sinh máy lạnh',
+    description: 'Vệ sinh, bảo trì, nạp gas',
+    icon: <SnowflakeIcon />,
+  },
+  {
+    id: 'CAT-005',
+    name: 'Khác',
+    description: 'Các thiết bị gia dụng khác',
+    icon: <WrenchIcon />,
   },
 ];
 
@@ -82,13 +78,13 @@ export const services: ServiceItem[] = fallbackServices;
 
 const iconByTitle: Record<string, React.ReactNode> = {
   'Máy lạnh': <SnowflakeIcon />,
-  'Giặt ủi': <WashingMachineIcon />,
+  'Máy giặt': <WashingMachineIcon />,
   'Tủ lạnh': <FridgeIcon />,
-  'Dọn dẹp': <BroomIcon />,
-  'Điện nước': <WrenchIcon />,
-  'Côn trùng': <BugIcon />,
-  'Lò vi sóng': <MicrowaveIcon />,
-  'Xe hơi': <CarIcon />,
+  'Máy nước nóng': <WrenchIcon />,
+  'Sửa điện': <WrenchIcon />,
+  'Sửa nước': <WrenchIcon />,
+  'Vệ sinh máy lạnh': <SnowflakeIcon />,
+  'Khác': <WrenchIcon />,
 };
 
 const mapCategoryToServiceItem = (

@@ -6,7 +6,10 @@ export interface Contact {
     avatar: string;
     isOnline?: boolean;
     unread?: boolean;
+    unreadCount?: number;
     partnerType?: string;
+    /** Original message type for preview icon: 'text' | 'image' | 'quotation' | 'booking' | 'invoice' | 'system' */
+    msgType?: string;
 }
 
 export interface Message {
