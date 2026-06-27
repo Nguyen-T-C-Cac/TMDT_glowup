@@ -583,6 +583,131 @@
     background: rgba(104, 168, 119, 0.15);
 }
 
+.bookingStatusRow {
+    margin-top: 10px;
+}
+
+.bookingStatusBadge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 12px;
+    border-radius: 999px;
+}
+
+.bookingActions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.bookingAcceptBtn,
+.bookingRejectBtn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.bookingAcceptBtn:disabled,
+.bookingRejectBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.bookingAcceptBtn {
+    background: var(--primary, #68A877);
+    color: #fff;
+}
+
+.bookingAcceptBtn:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.bookingRejectBtn {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.bookingRejectBtn:hover:not(:disabled) {
+    background: #fecaca;
+}
+
+/* Reject confirmation popup */
+.rejectOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rejectPopup {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px;
+    width: min(90vw, 380px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.rejectPopup h4 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    color: #1e293b;
+}
+
+.rejectPopup p {
+    margin: 0 0 20px;
+    font-size: 14px;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+.rejectActions {
+    display: flex;
+    gap: 10px;
+}
+
+.rejectCancelBtn,
+.rejectConfirmBtn {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.rejectCancelBtn {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.rejectCancelBtn:hover {
+    background: #e2e8f0;
+}
+
+.rejectConfirmBtn {
+    background: #dc2626;
+    color: #fff;
+}
+
+.rejectConfirmBtn:hover {
+    background: #b91c1c;
+}
+
 .chatEmptyState {
     padding: 24px;
     text-align: center;

@@ -32,4 +32,12 @@ export const bookingService = {
         const response = await apiClient.post('/api/bookings', payload);
         return unwrap<BookingSubmitResponse>(response.data);
     },
+
+    acceptBooking: async (code: string): Promise<void> => {
+        await apiClient.patch(`/api/bookings/${code}/accept`);
+    },
+
+    rejectBooking: async (code: string): Promise<void> => {
+        await apiClient.patch(`/api/bookings/${code}/reject`);
+    },
 };

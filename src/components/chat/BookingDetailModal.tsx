@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight, MapPin, CalendarDays, Clock, AlertTriangle, Phone, User, Tag } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, MapPin, CalendarDays, Clock, AlertTriangle, Phone, User, Tag, Check } from 'lucide-react';
 import type { EmbeddedBooking } from '../../types/booking';
+import { bookingService } from '../../services/bookingService';
 import './BookingDetailModal.css';
 
 type BookingDetailModalProps = {
     booking: EmbeddedBooking;
+    role?: 'technician' | 'customer' | 'admin';
     onClose: () => void;
+    onStatusChange?: (bookingCode: string, newStatus: string) => void;
 };
 
 const urgencyLabels: Record<string, string> = {
@@ -23,12 +26,24 @@ const urgencyColors: Record<string, string> = {
     URGENT: '#ef4444',
 };
 
-export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({ booking, onClose }) => {
+const statusLabels: Record<string, { label: string; color: string; bg: string }> = {
+    PENDING: { label: 'Đang chờ', color: '#f59e0b', bg: '#fef3c7' },
+    CONFIRMED: { label: 'Đã xác nhận', color: '#10b981', bg: '#d1fae5' },
+    CANCELLED: { label: 'Đã hủy', color: '#ef4444', bg: '#fee2e2' },
+};
+
+export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({ booking, role = 'customer', onClose, onStatusChange }) => {
     const images = booking.imageUrls ?? [];
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+    const [currentStatus, setCurrentStatus] = useState(booking.status || 'PENDING');
+    const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
 
     const urgencyText = urgencyLabels[booking.urgency ?? ''] ?? 'Không gấp';
     const urgencyColor = urgencyColors[booking.urgency ?? ''] ?? '#6b7280';
+    const statusInfo = statusLabels[currentStatus] || statusLabels.PENDING;
+    const isTechnician = role === 'technician';
+    const isPending = currentStatus === 'PENDING';
 
     const formatDate = (d?: string) => {
         if (!d) return '';
@@ -38,6 +53,35 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({ booking,
             });
         } catch {
             return d;
+        }
+    };
+
+    const handleAccept = async () => {
+        setActionLoading('accept');
+        try {
+            await bookingService.acceptBooking(booking.code);
+            setCurrentStatus('CONFIRMED');
+            onStatusChange?.(booking.code, 'CONFIRMED');
+        } catch (err) {
+            console.error('Failed to accept booking:', err);
+            alert('Không thể chấp nhận yêu cầu. Vui lòng thử lại.');
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleReject = async () => {
+        setShowRejectConfirm(false);
+        setActionLoading('reject');
+        try {
+            await bookingService.rejectBooking(booking.code);
+            setCurrentStatus('CANCELLED');
+            onStatusChange?.(booking.code, 'CANCELLED');
+        } catch (err) {
+            console.error('Failed to reject booking:', err);
+            alert('Không thể từ chối yêu cầu. Vui lòng thử lại.');
+        } finally {
+            setActionLoading(null);
         }
     };
 
@@ -55,6 +99,15 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({ booking,
 
                 <div className="bd-body">
                     <h2 className="bd-title">{booking.categoryName || 'Yêu cầu sửa chữa'}</h2>
+
+                    <div className="bd-status-row">
+                        <span
+                            className="bd-status-badge"
+                            style={{ color: statusInfo.color, backgroundColor: statusInfo.bg }}
+                        >
+                            {statusInfo.label}
+                        </span>
+                    </div>
 
                     <div className="bd-details">
                         {booking.deviceTypeName && (
@@ -127,6 +180,27 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({ booking,
                         )}
                     </div>
 
+                    {isTechnician && isPending && (
+                        <div className="bd-actions">
+                            <button
+                                className="bd-accept-btn"
+                                onClick={handleAccept}
+                                disabled={actionLoading !== null}
+                            >
+                                <Check size={16} />
+                                {actionLoading === 'accept' ? 'Đang xử lý...' : 'Chấp nhận'}
+                            </button>
+                            <button
+                                className="bd-reject-btn"
+                                onClick={() => setShowRejectConfirm(true)}
+                                disabled={actionLoading !== null}
+                            >
+                                <X size={16} />
+                                {actionLoading === 'reject' ? 'Đang xử lý...' : 'Từ chối'}
+                            </button>
+                        </div>
+                    )}
+
                     {images.length > 0 && (
                         <div className="bd-images-section">
                             <h4>Hình ảnh ({images.length})</h4>
@@ -145,6 +219,23 @@ export const BookingDetailModal: React.FC<BookingDetailModalProps> = ({ booking,
                     )}
                 </div>
             </div>
+
+            {showRejectConfirm && (
+                <div className="bd-reject-overlay">
+                    <div className="bd-reject-popup">
+                        <h4>Từ chối yêu cầu?</h4>
+                        <p>Bạn có chắc chắn muốn từ chối yêu cầu sửa chữa này?</p>
+                        <div className="bd-reject-actions">
+                            <button className="bd-reject-cancel" onClick={() => setShowRejectConfirm(false)}>
+                                Quay lại
+                            </button>
+                            <button className="bd-reject-confirm" onClick={handleReject}>
+                                Xác nhận từ chối
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {lightboxIndex !== null && (
                 <div className="bd-lightbox" onClick={() => setLightboxIndex(null)}>

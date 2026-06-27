@@ -38,6 +38,7 @@ export interface BookingResponse {
 export interface BookingSubmitResponse {
     booking: BookingResponse;
     conversationId: string;
+    orderId?: string;
     partner?: {
         id: string;
         fullName: string;

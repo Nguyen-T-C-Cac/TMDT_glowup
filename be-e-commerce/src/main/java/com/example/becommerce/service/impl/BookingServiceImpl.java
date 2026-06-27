@@ -19,6 +19,7 @@ import com.example.becommerce.service.WsEventPublisher;
 import com.example.becommerce.utils.BookingCodeGenerator;
 import com.example.becommerce.utils.ConversationCodeGenerator;
 import com.example.becommerce.utils.MessageCodeGenerator;
+import com.example.becommerce.utils.OrderCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,6 +48,8 @@ public class BookingServiceImpl implements BookingService {
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final TechnicianProfileRepository technicianProfileRepository;
+    private final OrderRepository orderRepository;
+    private final OrderCodeGenerator orderCodeGenerator;
     private final BookingCodeGenerator bookingCodeGenerator;
     private final ConversationCodeGenerator conversationCodeGenerator;
     private final MessageCodeGenerator messageCodeGenerator;
@@ -190,11 +194,44 @@ public class BookingServiceImpl implements BookingService {
                 }
             }
 
-            // 9. Build booking summary and create BOOKING message
+            // 8b. Create linked Order with status NEW so it appears in "Yêu cầu mới"
             List<String> imageUrls = request.getImageUrls() != null
                     ? request.getImageUrls()
                     : List.of();
 
+            String orderCode = orderCodeGenerator.generate();
+            Order order = Order.builder()
+                    .code(orderCode)
+                    .customer(customer)
+                    .technician(technician)
+                    .deviceName(category.getTitle())
+                    .description(request.getDescription())
+                    .address(request.getAddress())
+                    .serviceCategory("booking")
+                    .status(OrderStatus.NEW)
+                    .build();
+            if (request.getScheduledDate() != null) {
+                order.setScheduledAt(request.getScheduledDate().atStartOfDay());
+            }
+            if (imageUrls != null) {
+                for (String url : imageUrls) {
+                    if (url != null && !url.isBlank()) {
+                        order.getImages().add(OrderImage.builder()
+                                .order(order)
+                                .url(url.trim())
+                                .role("booking")
+                                .build());
+                    }
+                }
+            }
+            order = orderRepository.save(order);
+            booking.setOrder(order);
+            booking = bookingRepository.save(booking);
+            conversation.setOrder(order);
+            conversationRepository.save(conversation);
+            log.debug("Linked order {} to booking {} and conversation {}", orderCode, bookingCode, conversation.getCode());
+
+            // 9. Build booking summary and create BOOKING message
             String summaryJson = buildBookingSummary(booking, imageUrls);
             log.debug("Booking summary JSON: {}", summaryJson);
 
@@ -248,6 +285,7 @@ public class BookingServiceImpl implements BookingService {
             return BookingSubmitResponse.builder()
                     .booking(bookingResponse)
                     .conversationId(conversation.getCode())
+                    .orderId(orderCode)
                     .build();
 
         } catch (AppException ex) {
@@ -255,6 +293,238 @@ public class BookingServiceImpl implements BookingService {
             throw ex;
         } catch (Exception ex) {
             log.error("Unexpected error in createBooking: ", ex);
+            throw ex;
+        }
+    }
+
+    // ===============================================================
+    // ACCEPT BOOKING (technician)
+    // ===============================================================
+
+    @Override
+    @Transactional
+    public void acceptBooking(String code) {
+        log.info("acceptBooking started: code={}", code);
+        try {
+            Booking booking = bookingRepository.findByCode(code)
+                    .orElseGet(() -> bookingRepository.findByOrder_Code(code).orElse(null));
+            if (booking == null) {
+                throw AppException.notFound("Không tìm thấy yêu cầu sửa chữa " + code);
+            }
+
+            User technician = getCurrentUser();
+            if (technician.getRole() != Role.TECHNICIAN) {
+                throw AppException.forbidden("Chỉ thợ mới có thể chấp nhận yêu cầu");
+            }
+            if (!booking.getTechnician().getId().equals(technician.getId())) {
+                throw AppException.forbidden("Bạn không phải thợ được chỉ định cho yêu cầu này");
+            }
+            if (booking.getStatus() != BookingStatus.PENDING) {
+                throw AppException.conflict(ErrorCode.INVALID_ORDER_STATUS_TRANSITION,
+                        "Yêu cầu đã được xử lý trước đó");
+            }
+
+            // Update booking status
+            booking.setStatus(BookingStatus.CONFIRMED);
+            Booking savedBooking = bookingRepository.save(booking);
+
+            // Update linked order status
+            Order order = savedBooking.getOrder();
+            if (order != null && order.getStatus() == OrderStatus.NEW) {
+                OrderStatus from = order.getStatus();
+                order.setTechnician(technician);
+                order.setStatus(OrderStatus.SCHEDULED);
+                if (order.getScheduledAt() == null && savedBooking.getScheduledDate() != null) {
+                    order.setScheduledAt(savedBooking.getScheduledDate().atStartOfDay());
+                }
+                orderRepository.save(order);
+                eventPublisher.publishOrderStatusChanged(
+                        order.getCode(), from.apiValue(), OrderStatus.SCHEDULED.apiValue());
+            }
+
+            // Update booking message content with new status
+            Conversation conversation = savedBooking.getConversation();
+            if (conversation != null) {
+                List<String> imageUrls = booking.getImages() != null
+                        ? booking.getImages().stream().map(BookingImage::getUrl).toList()
+                        : List.of();
+
+                String convCode = conversation.getCode();
+                // Find and update existing BOOKING message
+                messageRepository.findByConversation_IdAndTypeOrderBySentAtDesc(
+                        conversation.getId(), MessageType.BOOKING).stream()
+                        .findFirst()
+                        .ifPresent(msg -> {
+                            String updatedJson = buildBookingSummary(savedBooking, imageUrls);
+                            msg.setContent(updatedJson);
+                            messageRepository.save(msg);
+
+                            // Re-publish updated booking message via WS
+                            try {
+                                MessageResponse msgResponse = messageMapper.toResponse(msg, technician, null);
+                                eventPublisher.publishMessageNew(convCode, msgResponse);
+                            } catch (Exception ex) {
+                                log.warn("Failed to re-publish booking message after accept: {}", ex.getMessage());
+                            }
+                        });
+
+                // Create system message for the acceptance
+                String sysCode = messageCodeGenerator.generate();
+                Message systemMsg = Message.builder()
+                        .code(sysCode)
+                        .conversation(conversation)
+                        .sender(null)
+                        .type(MessageType.SYSTEM)
+                        .content("Đã chấp nhận yêu cầu sửa chữa")
+                        .title("Yêu cầu sửa chữa")
+                        .build();
+                systemMsg = messageRepository.save(systemMsg);
+                conversation.setLastMessageAt(systemMsg.getSentAt());
+                conversationRepository.save(conversation);
+
+                try {
+                    MessageResponse sysResponse = messageMapper.toResponse(systemMsg, technician, null);
+                    eventPublisher.publishMessageNew(conversation.getCode(), sysResponse);
+                } catch (Exception ex) {
+                    log.warn("Failed to publish system message for accept: {}", ex.getMessage());
+                }
+            }
+
+            // Notify customer
+            try {
+                notificationService.createNotification(
+                        savedBooking.getCustomer(),
+                        NotificationType.CHAT_MESSAGE,
+                        "Yêu cầu sửa chữa đã được chấp nhận",
+                        "Yêu cầu " + savedBooking.getCode() + " đã được thợ " + technician.getFullName() + " chấp nhận.",
+                        Map.<String, Object>of(
+                                "conversationId", conversation != null ? conversation.getCode() : "",
+                                "bookingId", savedBooking.getCode(),
+                                "senderName", technician.getFullName()
+                        ));
+            } catch (Exception ex) {
+                log.warn("Failed to push accept notification to customer: {}", ex.getMessage());
+            }
+
+            log.info("Booking {} accepted by technician {}", savedBooking.getCode(), technician.getCode());
+        } catch (AppException ex) {
+            log.warn("AppException in acceptBooking: [{}] {}", ex.getErrorCode(), ex.getMessage());
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Unexpected error in acceptBooking: ", ex);
+            throw ex;
+        }
+    }
+
+    // ===============================================================
+    // REJECT BOOKING (technician)
+    // ===============================================================
+
+    @Override
+    @Transactional
+    public void rejectBooking(String code) {
+        log.info("rejectBooking started: code={}", code);
+        try {
+            Booking booking = bookingRepository.findByCode(code)
+                    .orElseGet(() -> bookingRepository.findByOrder_Code(code).orElse(null));
+            if (booking == null) {
+                throw AppException.notFound("Không tìm thấy yêu cầu sửa chữa " + code);
+            }
+
+            User technician = getCurrentUser();
+            if (technician.getRole() != Role.TECHNICIAN) {
+                throw AppException.forbidden("Chỉ thợ mới có thể từ chối yêu cầu");
+            }
+            if (!booking.getTechnician().getId().equals(technician.getId())) {
+                throw AppException.forbidden("Bạn không phải thợ được chỉ định cho yêu cầu này");
+            }
+            if (booking.getStatus() != BookingStatus.PENDING) {
+                throw AppException.conflict(ErrorCode.INVALID_ORDER_STATUS_TRANSITION,
+                        "Yêu cầu đã được xử lý trước đó");
+            }
+
+            // Update booking status
+            booking.setStatus(BookingStatus.CANCELLED);
+            Booking savedBooking = bookingRepository.save(booking);
+
+            // Update linked order status
+            Order order = savedBooking.getOrder();
+            if (order != null && order.getStatus() == OrderStatus.NEW) {
+                OrderStatus from = order.getStatus();
+                order.setStatus(OrderStatus.CANCELLED);
+                orderRepository.save(order);
+                eventPublisher.publishOrderStatusChanged(
+                        order.getCode(), from.apiValue(), OrderStatus.CANCELLED.apiValue());
+            }
+
+            // Update booking message content with new status
+            Conversation conversation = savedBooking.getConversation();
+            if (conversation != null) {
+                String convCode = conversation.getCode();
+                List<String> imageUrls = booking.getImages() != null
+                        ? booking.getImages().stream().map(BookingImage::getUrl).toList()
+                        : List.of();
+
+                messageRepository.findByConversation_IdAndTypeOrderBySentAtDesc(
+                        conversation.getId(), MessageType.BOOKING).stream()
+                        .findFirst()
+                        .ifPresent(msg -> {
+                            String updatedJson = buildBookingSummary(savedBooking, imageUrls);
+                            msg.setContent(updatedJson);
+                            messageRepository.save(msg);
+
+                            try {
+                                MessageResponse msgResponse = messageMapper.toResponse(msg, technician, null);
+                                eventPublisher.publishMessageNew(convCode, msgResponse);
+                            } catch (Exception ex) {
+                                log.warn("Failed to re-publish booking message after reject: {}", ex.getMessage());
+                            }
+                        });
+
+                // Create system message for the rejection
+                String sysCode = messageCodeGenerator.generate();
+                Message systemMsg = Message.builder()
+                        .code(sysCode)
+                        .conversation(conversation)
+                        .sender(null)
+                        .type(MessageType.SYSTEM)
+                        .content("Đã từ chối yêu cầu sửa chữa")
+                        .title("Yêu cầu sửa chữa")
+                        .build();
+                systemMsg = messageRepository.save(systemMsg);
+                conversation.setLastMessageAt(systemMsg.getSentAt());
+                conversationRepository.save(conversation);
+
+                try {
+                    MessageResponse sysResponse = messageMapper.toResponse(systemMsg, technician, null);
+                    eventPublisher.publishMessageNew(conversation.getCode(), sysResponse);
+                } catch (Exception ex) {
+                    log.warn("Failed to publish system message for reject: {}", ex.getMessage());
+                }
+            }
+
+            // Notify customer
+            try {
+                notificationService.createNotification(
+                        savedBooking.getCustomer(),
+                        NotificationType.CHAT_MESSAGE,
+                        "Yêu cầu sửa chữa đã bị từ chối",
+                        "Yêu cầu " + savedBooking.getCode() + " đã bị thợ " + technician.getFullName() + " từ chối.",
+                        Map.<String, Object>of(
+                                "conversationId", conversation != null ? conversation.getCode() : "",
+                                "bookingId", savedBooking.getCode(),
+                                "senderName", technician.getFullName()
+                        ));
+            } catch (Exception ex) {
+                log.warn("Failed to push reject notification to customer: {}", ex.getMessage());
+            }
+
+            log.info("Booking {} rejected by technician {}", savedBooking.getCode(), technician.getCode());
+        } catch (AppException ex) {
+            log.warn("AppException in rejectBooking: [{}] {}", ex.getErrorCode(), ex.getMessage());
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Unexpected error in rejectBooking: ", ex);
             throw ex;
         }
     }
