@@ -10,6 +10,7 @@ import com.example.becommerce.entity.enums.PaymentMethod;
 import com.example.becommerce.entity.enums.PointTxType;
 import com.example.becommerce.entity.enums.TransactionStatus;
 import com.example.becommerce.entity.enums.TransactionType;
+import com.example.becommerce.entity.enums.UserStatus;
 import com.example.becommerce.entity.enums.WalletStatus;
 import com.example.becommerce.entity.enums.WalletType;
 import com.example.becommerce.exception.AppException;
@@ -112,10 +113,17 @@ public class WalletSettlementServiceImpl implements WalletSettlementService {
     @Transactional(readOnly = true)
     public void assertActorNotLocked(Long userId) {
         userRepository.findById(userId).ifPresent(user -> {
-            if (user.isLocked()) {
-                throw AppException.forbidden(user.getLockedReason() != null
+            // Chặn cả khóa ví (is_locked) lẫn khóa tài khoản của admin (status=LOCKED),
+            // tránh lỗ hổng: admin khóa tài khoản nhưng thợ còn token vẫn rút tiền được.
+            boolean walletLocked = user.isLocked();
+            boolean accountLocked = user.getStatus() == UserStatus.LOCKED;
+            if (walletLocked || accountLocked) {
+                String reason = walletLocked && user.getLockedReason() != null
                         ? user.getLockedReason()
-                        : "Tài khoản đang bị khoá do ví tín dụng âm, vui lòng nạp tiền để mở khoá");
+                        : accountLocked
+                            ? "Tài khoản đã bị khóa, không thể thực hiện thao tác này"
+                            : "Tài khoản đang bị khoá do ví tín dụng âm, vui lòng nạp tiền để mở khoá";
+                throw AppException.forbidden(reason);
             }
         });
     }

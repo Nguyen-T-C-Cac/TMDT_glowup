@@ -134,7 +134,10 @@ public class PaymentGatewayServiceImpl implements PaymentGatewayService {
         require(vnpaySecretKey, "VNPay secret key is missing");
 
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
-        LocalDateTime expireAt = tx.getExpiredAt() == null ? now.plusMinutes(30) : tx.getExpiredAt();
+        // vnp_ExpireDate PHẢI cùng múi giờ (GMT+7) và sau vnp_CreateDate. Không dùng
+        // tx.getExpiredAt() vì nó được set bằng LocalDateTime.now() (UTC) → lệch 7 tiếng,
+        // khiến ExpireDate < CreateDate → VNPay báo "giao dịch quá thời gian chờ" ngay lập tức.
+        LocalDateTime expireAt = now.plusMinutes(30);
 
         boolean isPayment = tx.getType() == TransactionType.PAYMENT;
         String orderInfo = isPayment

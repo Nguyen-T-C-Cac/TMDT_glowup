@@ -2,6 +2,7 @@ package com.example.becommerce.service.impl;
 
 import com.example.becommerce.constant.ErrorCode;
 import com.example.becommerce.dto.mapper.UserMapper;
+import com.example.becommerce.dto.request.UnlockWalletRequest;
 import com.example.becommerce.dto.request.UpdatePasswordRequest;
 import com.example.becommerce.dto.request.UpdateUserRequest;
 import com.example.becommerce.dto.request.UpdateUserStatusRequest;
@@ -140,6 +141,30 @@ public class UserServiceImpl implements UserService {
 
         log.info("User [{}] status changed to {} by admin. Reason: {}",
                 user.getCode(), newStatus, request.getReason());
+
+        return userMapper.toResponse(user);
+    }
+
+    // ----------------------------------------------------------------
+    // Admin: mở khóa nghiệp vụ ví (is_locked) — độc lập với status
+    // ----------------------------------------------------------------
+
+    @Override
+    @Transactional
+    public UserResponse unlockWallet(Long id, UnlockWalletRequest request) {
+        User user = findActiveUserById(id);
+
+        if (!user.isLocked()) {
+            throw AppException.badRequest(ErrorCode.VALIDATION_ERROR,
+                    "Tài khoản này không bị khóa ví");
+        }
+
+        user.setLocked(false);
+        user.setLockedReason(null);
+        user = userRepository.save(user);
+
+        log.info("Wallet of user [{}] manually unlocked by admin. Reason: {}",
+                user.getCode(), request != null ? request.getReason() : null);
 
         return userMapper.toResponse(user);
     }

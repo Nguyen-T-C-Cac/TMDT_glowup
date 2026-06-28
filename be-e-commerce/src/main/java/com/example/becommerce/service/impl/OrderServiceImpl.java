@@ -325,6 +325,14 @@ public class OrderServiceImpl implements OrderService {
 
         ensureCanTransition(order, current, target);
 
+        // Nghiệp vụ: đơn chỉ được "hoàn thành" SAU KHI đã thanh toán (settlement chạy ở
+        // bước thanh toán: confirm-cash / VNPay). Chặn complete khi chưa settle để tránh
+        // đơn treo COMPLETED nhưng chưa trừ phí / cộng tiền / cộng điểm.
+        if (target == OrderStatus.COMPLETED && !order.isSettled()) {
+            throw AppException.badRequest(ErrorCode.INVALID_ORDER_STATUS_TRANSITION,
+                    "Đơn chưa được thanh toán. Vui lòng thu tiền mặt hoặc để khách thanh toán trước khi hoàn thành.");
+        }
+
         OrderStatus from = order.getStatus();
         order.setStatus(target);
 

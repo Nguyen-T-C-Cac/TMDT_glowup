@@ -4,6 +4,7 @@ import com.example.becommerce.entity.enums.Role;
 import com.example.becommerce.entity.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -73,6 +74,7 @@ public class User {
      * accept/complete orders or withdraw until topping up the credit wallet.
      */
     @Column(name = "is_locked", nullable = false)
+    @ColumnDefault("false")
     @Builder.Default
     private boolean locked = false;
 

@@ -1,6 +1,7 @@
 package com.example.becommerce.controller;
 
 import com.example.becommerce.constant.ApiConstant;
+import com.example.becommerce.dto.request.UnlockWalletRequest;
 import com.example.becommerce.dto.request.UpdatePasswordRequest;
 import com.example.becommerce.dto.request.UpdateUserRequest;
 import com.example.becommerce.dto.request.UpdateUserStatusRequest;
@@ -80,6 +81,21 @@ public class UserController {
             @Valid @RequestBody UpdateUserStatusRequest request) {
 
         UserResponse data = userService.updateUserStatus(id, request);
+        return ResponseEntity.ok(ApiResponse.success(data));
+    }
+
+    // ----------------------------------------------------------------
+    // PATCH /api/users/{id}/unlock-wallet  — ADMIN only
+    // Mở khóa nghiệp vụ ví (is_locked) thủ công, không đụng tới status.
+    // ----------------------------------------------------------------
+
+    @PatchMapping("/{id}/unlock-wallet")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserResponse>> unlockWallet(
+            @PathVariable Long id,
+            @RequestBody(required = false) UnlockWalletRequest request) {
+
+        UserResponse data = userService.unlockWallet(id, request);
         return ResponseEntity.ok(ApiResponse.success(data));
     }
 

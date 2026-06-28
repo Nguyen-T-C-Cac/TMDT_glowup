@@ -42,6 +42,7 @@ import com.example.becommerce.repository.UserRepository;
 import com.example.becommerce.repository.WalletRepository;
 import com.example.becommerce.repository.WalletTransactionRepository;
 import com.example.becommerce.service.AdminService;
+import com.example.becommerce.service.WalletSettlementService;
 import com.example.becommerce.utils.BankAccountMaskUtils;
 import com.example.becommerce.utils.TransactionCodeGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -92,6 +93,7 @@ public class AdminServiceImpl implements AdminService {
     private final TransactionCodeGenerator transactionCodeGenerator;
     private final ObjectMapper objectMapper;
     private final ApplicationContext applicationContext;
+    private final WalletSettlementService walletSettlementService;
 
     @Override
     @Transactional(readOnly = true)
@@ -524,6 +526,10 @@ public class AdminServiceImpl implements AdminService {
         wallet.normalizeForPersistence();
         wallet.setBalance(newBalance);
         walletRepository.save(wallet);
+
+        // Nạp/điều chỉnh ví xong thì đồng bộ lại trạng thái khóa: nếu số dư đã hồi phục
+        // >= ngưỡng thì tự mở khóa tài khoản (is_locked=false), xóa lý do khóa.
+        walletSettlementService.syncWalletLock(wallet, technician);
 
         WalletTransaction transaction = WalletTransaction.builder()
                 .transactionCode(transactionCodeGenerator.generateTransactionCode(TransactionType.COMMISSION))

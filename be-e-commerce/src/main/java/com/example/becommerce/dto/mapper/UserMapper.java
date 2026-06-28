@@ -24,6 +24,8 @@ public class UserMapper {
                 .phone(user.getPhone())
                 .role(user.getRole().name().toLowerCase())
                 .status(user.getStatus().name().toLowerCase())
+                .isLocked(user.isLocked())
+                .lockedReason(user.getLockedReason())
                 .avatar(user.getAvatar())
                 .district(user.getDistrict())
                 .address(user.getAddress())

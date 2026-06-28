@@ -2,6 +2,7 @@ package com.example.becommerce.exception;
 
 import com.example.becommerce.constant.ErrorCode;
 import com.example.becommerce.dto.response.ApiResponse;
+import io.jsonwebtoken.JwtException;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -83,6 +84,19 @@ public class GlobalExceptionHandler {
         log.warn("Access denied: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.error(ErrorCode.FORBIDDEN, "Bạn không có quyền thực hiện thao tác này"));
+    }
+
+    /**
+     * Expired/invalid JWT (e.g. ExpiredJwtException, SignatureException, MalformedJwtException).
+     * Must return 401 — NOT 500 — so the frontend's refresh-token / re-login flow can kick in.
+     * Without this the token re-parse in endpoints like /api/auth/me bubbles up as a 500.
+     */
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<ApiResponse<Void>> handleJwtException(JwtException ex) {
+        log.warn("Invalid/expired JWT: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(ErrorCode.UNAUTHORIZED,
+                        "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại"));
     }
 
     // ---- Catch-all --------------------------------------------------

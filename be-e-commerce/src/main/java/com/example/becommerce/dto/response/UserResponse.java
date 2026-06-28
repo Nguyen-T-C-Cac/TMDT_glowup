@@ -22,6 +22,10 @@ public class UserResponse {
     private String phone;
     private String role;
     private String status;
+    /** Khóa nghiệp vụ ví (is_locked) — độc lập với status. true = ví tín dụng âm/bị khóa. */
+    private Boolean isLocked;
+    /** Lý do khóa ví (nếu có). */
+    private String lockedReason;
     private String avatar;
     private String district;
     private String address;
