@@ -1,5 +1,6 @@
 package com.example.becommerce.service;
 
+import com.example.becommerce.dto.request.UnlockWalletRequest;
 import com.example.becommerce.dto.request.UpdatePasswordRequest;
 import com.example.becommerce.dto.request.UpdateUserRequest;
 import com.example.becommerce.dto.request.UpdateUserStatusRequest;
@@ -32,6 +33,9 @@ public interface UserService {
 
     /** Admin-only: update user status with optional reason. */
     UserResponse updateUserStatus(Long id, UpdateUserStatusRequest request);
+
+    /** Admin-only: mở khóa nghiệp vụ ví (is_locked=false), độc lập với status. */
+    UserResponse unlockWallet(Long id, UnlockWalletRequest request);
 
     /** Đổi mật khẩu: xác minh mật khẩu cũ, rồi cập nhật bằng mật khẩu mới. */
     void changePassword(String email, UpdatePasswordRequest request);

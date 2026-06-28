@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -125,6 +126,16 @@ public class Order {
 
     @Builder.Default
     private boolean deleted = false;
+
+    /**
+     * Whether wallet settlement (commission fee + revenue + points) has already
+     * been applied for this order. Guarantees the settlement runs exactly once
+     * regardless of which payment path completes the order.
+     */
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    @Builder.Default
+    private boolean settled = false;
 
     // ---- Relationships ---------------------------------------------
 

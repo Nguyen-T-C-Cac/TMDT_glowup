@@ -4,6 +4,7 @@ import com.example.becommerce.entity.enums.Role;
 import com.example.becommerce.entity.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -66,6 +67,19 @@ public class User {
 
     @Column(name = "average_rating")
     private Double averageRating;
+
+    /**
+     * Account lock flag. Set when a technician's credit wallet goes negative
+     * (after commission deduction or admin refund). A locked technician cannot
+     * accept/complete orders or withdraw until topping up the credit wallet.
+     */
+    @Column(name = "is_locked", nullable = false)
+    @ColumnDefault("false")
+    @Builder.Default
+    private boolean locked = false;
+
+    @Column(name = "locked_reason")
+    private String lockedReason;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

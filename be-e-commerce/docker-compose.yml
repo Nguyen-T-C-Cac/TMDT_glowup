@@ -36,6 +36,8 @@ services:
       # VNPay đã có default rỗng trong application.yml
       VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-}
       VNPAY_SECRET_KEY: ${VNPAY_SECRET_KEY:-}
+      # Return URL sau khi thanh toán đơn — trỏ đúng cổng FE (Vite đang chạy 5174).
+      VNPAY_PAYMENT_RETURN_URL: ${VNPAY_PAYMENT_RETURN_URL:-http://localhost:5174/orders/%s}
     ports:
       - "8080:8080"
     volumes:

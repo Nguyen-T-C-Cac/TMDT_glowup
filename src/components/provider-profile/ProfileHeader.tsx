@@ -16,6 +16,7 @@ export interface ProfileHeaderProps {
     isAvailable: boolean;
     type?: string;
     titleBadge?: string;
+    rewardPoints?: number;
 }
 
 export const ProfileHeader: React.FC<{
@@ -55,6 +56,26 @@ export const ProfileHeader: React.FC<{
                         <h1 className="ph-name">{profile.name}</h1>
                         {profile.type === 'premium' && profile.titleBadge && (
                             <div className="ph-premium-badge">{profile.titleBadge}</div>
+                        )}
+                        {typeof profile.rewardPoints === 'number' && (
+                            <div
+                                className="ph-points-badge"
+                                title="Điểm tích luỹ từ các đơn hoàn thành"
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    padding: '4px 12px',
+                                    borderRadius: 100,
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                    color: 'var(--service-green-dark, #047857)',
+                                    background: 'rgba(var(--service-green-rgb, 5,150,105), 0.12)',
+                                    border: '1px solid rgba(var(--service-green-rgb, 5,150,105), 0.25)',
+                                }}
+                            >
+                                ⭐ {profile.rewardPoints.toLocaleString('vi-VN')} điểm
+                            </div>
                         )}
                     </div>
 

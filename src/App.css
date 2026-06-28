@@ -125,6 +125,15 @@
 
   /* --- Misc --- */
   --green-dot-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+
+  /* --- Service (appliance repair) emerald theme — TN1 ---
+   * Dedicated, modern green used by the customer-facing "Tất cả dịch vụ" page
+   * so it stands out from the shared (sage) primary used in dashboards. */
+  --service-green: #059669;
+  --service-green-dark: #047857;
+  --service-green-light: #34d399;
+  --service-green-rgb: 5, 150, 105;
+  --service-green-soft: #ecfdf5;
 }
 
 /*

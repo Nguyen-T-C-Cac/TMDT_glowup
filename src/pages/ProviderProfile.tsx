@@ -41,7 +41,8 @@ export const ProviderProfile: React.FC = () => {
     location: 'Quận 1, HCMC',
     isAvailable: true,
     type: 'normal',
-    titleBadge: ''
+    titleBadge: '',
+    rewardPoints: 0,
   };
 
   const sourceData = fetchedData || providerData;
@@ -56,6 +57,7 @@ export const ProviderProfile: React.FC = () => {
     type: sourceData.type || defaultProfile.type,
     titleBadge: sourceData.titleBadge || defaultProfile.titleBadge,
     isAvailable: sourceData.isAvailable ?? defaultProfile.isAvailable,
+    rewardPoints: sourceData.rewardPoints ?? defaultProfile.rewardPoints,
   } : defaultProfile;
 
   return (

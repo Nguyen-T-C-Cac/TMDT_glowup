@@ -150,7 +150,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
+        // Dùng pattern để chấp nhận mọi cổng localhost (Vite có thể nhảy 5173->5174...).
+        // setAllowedOriginPatterns hỗ trợ wildcard và vẫn hoạt động với allowCredentials=true.
+        configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

@@ -2,8 +2,10 @@ package com.example.becommerce.service;
 
 import com.example.becommerce.dto.request.admin.AdminSettingsRequest;
 import com.example.becommerce.dto.request.admin.CommissionUpdateRequest;
+import com.example.becommerce.dto.request.admin.PointsAdjustRequest;
 import com.example.becommerce.dto.request.admin.WalletAdjustRequest;
 import com.example.becommerce.dto.response.admin.AdminSettingsSavedResponse;
+import com.example.becommerce.dto.response.admin.TechnicianPointsResponse;
 import com.example.becommerce.dto.response.admin.AdminStatsResponse;
 import com.example.becommerce.dto.response.admin.AdminTransactionsResponse;
 import com.example.becommerce.dto.response.admin.CommissionResponse;
@@ -42,6 +44,10 @@ public interface AdminService {
     AdminSettingsRequest getSettings();
 
     AdminSettingsSavedResponse updateSettings(AdminSettingsRequest request);
+
+    TechnicianPointsResponse getTechnicianPoints(String technicianCode);
+
+    TechnicianPointsResponse adjustTechnicianPoints(String technicianCode, PointsAdjustRequest request);
 }
 
 

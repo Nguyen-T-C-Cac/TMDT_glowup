@@ -2,6 +2,7 @@ package com.example.becommerce.controller;
 
 import com.example.becommerce.dto.request.admin.AdminSettingsRequest;
 import com.example.becommerce.dto.request.admin.CommissionUpdateRequest;
+import com.example.becommerce.dto.request.admin.PointsAdjustRequest;
 import com.example.becommerce.dto.request.admin.WalletAdjustRequest;
 import com.example.becommerce.dto.response.ApiResponse;
 import com.example.becommerce.dto.response.admin.AdminSettingsSavedResponse;
@@ -13,6 +14,7 @@ import com.example.becommerce.dto.response.admin.CommissionWalletsResponse;
 import com.example.becommerce.dto.response.admin.RecentOrdersResponse;
 import com.example.becommerce.dto.response.admin.RevenueStatsResponse;
 import com.example.becommerce.dto.response.admin.ServiceDistributionResponse;
+import com.example.becommerce.dto.response.admin.TechnicianPointsResponse;
 import com.example.becommerce.dto.response.admin.WalletAdjustResponse;
 import com.example.becommerce.dto.response.admin.WithdrawApproveResponse;
 import com.example.becommerce.dto.response.admin.WithdrawRequestsResponse;
@@ -154,6 +156,18 @@ public class AdminController {
     @PostMapping("/wallet/adjust")
     public ResponseEntity<ApiResponse<WalletAdjustResponse>> adjustWallet(@Valid @RequestBody WalletAdjustRequest request) {
         return ResponseEntity.ok(ApiResponse.success(adminService.adjustWallet(request)));
+    }
+
+    @GetMapping("/technicians/{code}/points")
+    public ResponseEntity<ApiResponse<TechnicianPointsResponse>> getTechnicianPoints(@PathVariable String code) {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getTechnicianPoints(code)));
+    }
+
+    @PatchMapping("/technicians/{code}/points")
+    public ResponseEntity<ApiResponse<TechnicianPointsResponse>> adjustTechnicianPoints(
+            @PathVariable String code,
+            @Valid @RequestBody PointsAdjustRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(adminService.adjustTechnicianPoints(code, request)));
     }
 
     @GetMapping("/settings")

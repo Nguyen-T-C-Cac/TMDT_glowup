@@ -65,7 +65,8 @@ app:
   version: 1.0.0
   frontend-url: http://localhost:5173
   cors:
-    allowed-origins: http://localhost:3000,http://localhost:5173,http://localhost:4200
+    # Pattern: chấp nhận mọi cổng localhost/127.0.0.1 (dùng với setAllowedOriginPatterns)
+    allowed-origins: http://localhost:*,http://127.0.0.1:*
   wallet:
     default-currency: VND
     topup-min-amount: 10000

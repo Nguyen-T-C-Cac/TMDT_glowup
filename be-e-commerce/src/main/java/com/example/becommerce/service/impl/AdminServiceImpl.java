@@ -3,9 +3,11 @@ package com.example.becommerce.service.impl;
 import com.example.becommerce.constant.ErrorCode;
 import com.example.becommerce.dto.request.admin.AdminSettingsRequest;
 import com.example.becommerce.dto.request.admin.CommissionUpdateRequest;
+import com.example.becommerce.dto.request.admin.PointsAdjustRequest;
 import com.example.becommerce.dto.request.admin.WalletAdjustRequest;
 import com.example.becommerce.dto.response.PagedResponse;
 import com.example.becommerce.dto.response.admin.AdminSettingsSavedResponse;
+import com.example.becommerce.dto.response.admin.TechnicianPointsResponse;
 import com.example.becommerce.dto.response.admin.AdminStatsResponse;
 import com.example.becommerce.dto.response.admin.AdminTransactionsResponse;
 import com.example.becommerce.dto.response.admin.CommissionResponse;
@@ -17,10 +19,13 @@ import com.example.becommerce.dto.response.admin.ServiceDistributionResponse;
 import com.example.becommerce.dto.response.admin.WalletAdjustResponse;
 import com.example.becommerce.dto.response.admin.WithdrawApproveResponse;
 import com.example.becommerce.dto.response.admin.WithdrawRequestsResponse;
+import com.example.becommerce.entity.PointTransaction;
 import com.example.becommerce.entity.SystemSetting;
+import com.example.becommerce.entity.TechnicianProfile;
 import com.example.becommerce.entity.User;
 import com.example.becommerce.entity.Wallet;
 import com.example.becommerce.entity.WalletTransaction;
+import com.example.becommerce.entity.enums.PointTxType;
 import com.example.becommerce.entity.enums.Role;
 import com.example.becommerce.entity.enums.TransactionStatus;
 import com.example.becommerce.entity.enums.TransactionType;
@@ -30,11 +35,14 @@ import com.example.becommerce.entity.enums.WalletType;
 import com.example.becommerce.exception.AppException;
 import com.example.becommerce.repository.CategoryRepository;
 import com.example.becommerce.repository.OrderRepository;
+import com.example.becommerce.repository.PointTransactionRepository;
 import com.example.becommerce.repository.SystemSettingRepository;
+import com.example.becommerce.repository.TechnicianProfileRepository;
 import com.example.becommerce.repository.UserRepository;
 import com.example.becommerce.repository.WalletRepository;
 import com.example.becommerce.repository.WalletTransactionRepository;
 import com.example.becommerce.service.AdminService;
+import com.example.becommerce.service.WalletSettlementService;
 import com.example.becommerce.utils.BankAccountMaskUtils;
 import com.example.becommerce.utils.TransactionCodeGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -80,9 +88,12 @@ public class AdminServiceImpl implements AdminService {
     private final CategoryRepository categoryRepository;
     private final OrderRepository orderRepository;
     private final SystemSettingRepository systemSettingRepository;
+    private final TechnicianProfileRepository technicianProfileRepository;
+    private final PointTransactionRepository pointTransactionRepository;
     private final TransactionCodeGenerator transactionCodeGenerator;
     private final ObjectMapper objectMapper;
     private final ApplicationContext applicationContext;
+    private final WalletSettlementService walletSettlementService;
 
     @Override
     @Transactional(readOnly = true)
@@ -516,6 +527,10 @@ public class AdminServiceImpl implements AdminService {
         wallet.setBalance(newBalance);
         walletRepository.save(wallet);
 
+        // Nạp/điều chỉnh ví xong thì đồng bộ lại trạng thái khóa: nếu số dư đã hồi phục
+        // >= ngưỡng thì tự mở khóa tài khoản (is_locked=false), xóa lý do khóa.
+        walletSettlementService.syncWalletLock(wallet, technician);
+
         WalletTransaction transaction = WalletTransaction.builder()
                 .transactionCode(transactionCodeGenerator.generateTransactionCode(TransactionType.COMMISSION))
                 .wallet(wallet)
@@ -792,6 +807,65 @@ public class AdminServiceImpl implements AdminService {
         operations.setIncidentEscalation(true);
         request.setOperations(operations);
         return request;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TechnicianPointsResponse getTechnicianPoints(String technicianCode) {
+        User technician = findTechnician(technicianCode);
+        TechnicianProfile profile = technicianProfileRepository.findByUser_Id(technician.getId())
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy hồ sơ thợ"));
+
+        List<TechnicianPointsResponse.HistoryItem> history = pointTransactionRepository
+                .findByTechnician_IdOrderByCreatedAtDesc(technician.getId(), PageRequest.of(0, 50))
+                .getContent().stream()
+                .map(TechnicianPointsResponse.HistoryItem::of)
+                .toList();
+
+        return TechnicianPointsResponse.builder()
+                .technicianCode(technician.getCode())
+                .technicianName(technician.getFullName())
+                .rewardPoints(profile.getRewardPoints())
+                .history(history)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public TechnicianPointsResponse adjustTechnicianPoints(String technicianCode, PointsAdjustRequest request) {
+        User technician = findTechnician(technicianCode);
+        TechnicianProfile profile = technicianProfileRepository.findByUser_Id(technician.getId())
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy hồ sơ thợ"));
+
+        long delta = request.getPoints();
+        long balanceAfter = profile.getRewardPoints() + delta;
+        if (balanceAfter < 0) {
+            throw AppException.badRequest(ErrorCode.BAD_REQUEST,
+                    "Điểm sau điều chỉnh không được âm (hiện tại " + profile.getRewardPoints() + ")");
+        }
+
+        profile.setRewardPoints(balanceAfter);
+        technicianProfileRepository.save(profile);
+
+        pointTransactionRepository.save(PointTransaction.builder()
+                .technician(technician)
+                .points(delta)
+                .balanceAfter(balanceAfter)
+                .type(PointTxType.ADMIN_ADJUST)
+                .note(request.getReason() == null || request.getReason().isBlank()
+                        ? "Admin điều chỉnh" : request.getReason())
+                .build());
+
+        return getTechnicianPoints(technicianCode);
+    }
+
+    private User findTechnician(String technicianCode) {
+        User user = userRepository.findByCodeAndDeletedFalse(technicianCode)
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy người dùng " + technicianCode));
+        if (user.getRole() != Role.TECHNICIAN) {
+            throw AppException.badRequest(ErrorCode.BAD_REQUEST, "Người dùng không phải là thợ");
+        }
+        return user;
     }
 
     private void saveSystemSetting(String key, String value) {
