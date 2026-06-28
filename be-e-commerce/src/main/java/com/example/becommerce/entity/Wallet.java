@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -67,6 +68,7 @@ public class Wallet {
     private WalletStatus walletStatus = WalletStatus.NORMAL;
 
     @Version
+    @ColumnDefault("0")
     private Long version;
 
     @CreationTimestamp

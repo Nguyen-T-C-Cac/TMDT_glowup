@@ -11,6 +11,7 @@ import {
   BugIcon,
   MicrowaveIcon,
   CarIcon,
+  SearchIcon,
 } from '../components/common/Icons';
 import { getCategories, type Category } from '../services/categoryService';
 import './ServicePage.css'; // Reusing the CSS
@@ -31,6 +32,7 @@ export const ServicesPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   const iconByTitle = useMemo(() => ({
     'Máy lạnh': <SnowflakeIcon />,
@@ -80,6 +82,14 @@ export const ServicesPage: React.FC = () => {
     };
   }, []);
 
+  const filteredCategories = useMemo(() => {
+    const keyword = query.trim().toLowerCase();
+    if (!keyword) return categories;
+    return categories.filter((category) =>
+      `${category.title} ${category.description ?? ''}`.toLowerCase().includes(keyword),
+    );
+  }, [categories, query]);
+
   const handleServiceClick = (serviceName: string) => {
     navigate(`/provider?service=${encodeURIComponent(serviceName)}`);
   };
@@ -96,30 +106,54 @@ export const ServicesPage: React.FC = () => {
       <main style={{ flexGrow: 1, padding: '40px 0' }}>
         <section className="services-page" style={{ margin: '0 auto' }}>
           <div className="services-page__header">
-            <div>
-              <h1 className="services-page__title">Tất cả dịch vụ</h1>
-              <p className="services-page__subtitle">Khám phá các dịch vụ chăm sóc nhà cửa toàn diện từ GlowUp.</p>
+            <span className="services-page__eyebrow">🛠️ Sửa chữa thiết bị gia dụng</span>
+            <h1 className="services-page__title">
+              Tất cả <em>dịch vụ</em>
+            </h1>
+            <p className="services-page__subtitle">
+              Thợ chuyên nghiệp cho mọi thiết bị trong nhà — đặt nhanh, minh bạch, bảo hành rõ ràng.
+            </p>
+          </div>
+
+          <div className="services-page__toolbar">
+            <div className="services-page__search">
+              <SearchIcon />
+              <input
+                type="text"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Tìm dịch vụ (máy lạnh, tủ lạnh, điện nước...)"
+                aria-label="Tìm dịch vụ"
+              />
             </div>
+            {!loading && !error && (
+              <div className="services-page__count">
+                <strong>{filteredCategories.length}</strong> dịch vụ
+              </div>
+            )}
           </div>
 
           <div className="services-page__grid">
-            {loading && (
-              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '32px 16px' }}>
-                Đang tải danh sách dịch vụ...
-              </div>
-            )}
+            {loading &&
+              Array.from({ length: 8 }).map((_, index) => (
+                <div key={`skeleton-${index}`} className="services-page__skeleton" />
+              ))}
 
             {error && !loading && (
-              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '32px 16px', color: '#e74c3c' }}>
-                {error}
-              </div>
+              <div className="services-page__state services-page__state--error">{error}</div>
             )}
 
-            {!loading && !error && categories.map((category) => (
+            {!loading && !error && filteredCategories.map((category) => (
               <div
                 key={category.id}
                 className="services-page__card"
                 onClick={() => handleServiceClick(category.title)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleServiceClick(category.title);
+                  }
+                }}
                 role="button"
                 tabIndex={0}
               >
@@ -135,9 +169,11 @@ export const ServicesPage: React.FC = () => {
               </div>
             ))}
 
-            {!loading && !error && categories.length === 0 && (
-              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '32px 16px' }}>
-                Không có dịch vụ nào để hiển thị.
+            {!loading && !error && filteredCategories.length === 0 && (
+              <div className="services-page__state">
+                {query.trim()
+                  ? `Không tìm thấy dịch vụ phù hợp với "${query.trim()}".`
+                  : 'Không có dịch vụ nào để hiển thị.'}
               </div>
             )}
           </div>

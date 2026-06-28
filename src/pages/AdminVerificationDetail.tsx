@@ -1,20 +1,43 @@
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AdminHeader } from '../components/admin/AdminHeader'
 import { AdminSidebar } from '../components/admin/AdminSidebar'
 import { Footer } from '../components/layout/Footer'
 import {
   formatDate,
-  getVerificationRequestById,
+  getVerificationStatus,
   verificationStatusColor,
   verificationStatusLabel,
+  getImageUrl,
 } from '../services/verificationService'
+import type { VerificationRequest } from '../types/VerificationRequest'
 import './AdminVerificationDetail.css'
 
 export default function AdminVerificationDetail() {
   const navigate = useNavigate()
   const { requestId } = useParams()
-  const request = useMemo(() => (requestId ? getVerificationRequestById(requestId) : undefined), [requestId])
+  const [request, setRequest] = useState<VerificationRequest | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (requestId) {
+      getVerificationStatus(requestId)
+        .then(res => {
+          if (res.success) setRequest(res.data)
+          setLoading(false)
+        })
+        .catch(err => {
+          console.error('Error fetching verification status', err)
+          setLoading(false)
+        })
+    } else {
+      setLoading(false)
+    }
+  }, [requestId])
+
+  if (loading) {
+    return <div className="avd-empty-page"><h2>Đang tải...</h2></div>
+  }
 
   if (!request) {
     return (
@@ -56,20 +79,20 @@ export default function AdminVerificationDetail() {
 
             <div className="avd-doc-grid">
               <figure>
-                <img src={request.documents.idFront} alt="CCCD mặt trước" />
+                <img src={getImageUrl(request.documents.idFront)} alt="CCCD mặt trước" />
                 <figcaption>CCCD mặt trước</figcaption>
               </figure>
               <figure>
-                <img src={request.documents.idBack} alt="CCCD mặt sau" />
+                <img src={getImageUrl(request.documents.idBack)} alt="CCCD mặt sau" />
                 <figcaption>CCCD mặt sau</figcaption>
               </figure>
               <figure>
-                <img src={request.documents.portrait} alt="Ảnh chân dung" />
+                <img src={getImageUrl(request.documents.portrait)} alt="Ảnh chân dung" />
                 <figcaption>Ảnh chân dung</figcaption>
               </figure>
               {request.documents.certificate && (
                 <figure>
-                  <img src={request.documents.certificate} alt="Chứng chỉ nghề" />
+                  <img src={getImageUrl(request.documents.certificate)} alt="Chứng chỉ nghề" />
                   <figcaption>Chứng chỉ nghề</figcaption>
                 </figure>
               )}
@@ -78,7 +101,7 @@ export default function AdminVerificationDetail() {
 
           <aside className="avd-profile-card">
             <div className="avd-tech">
-              <img src={request.documents.portrait} alt={request.fullName} />
+              <img src={getImageUrl(request.documents.portrait)} alt={request.fullName} />
               <div>
                 <h3>{request.fullName}</h3>
                 <p>ID thợ: {request.technicianId}</p>
@@ -115,13 +138,6 @@ export default function AdminVerificationDetail() {
                 onClick={() => navigate(`/admin/verification/${request.id}/update?decision=rejected`)}
               >
                 Từ chối hồ sơ
-              </button>
-              <button
-                className="avd-btn avd-btn-outline"
-                type="button"
-                onClick={() => navigate(`/admin/verification/${request.id}/update?decision=needs_resubmit`)}
-              >
-                Yêu cầu bổ sung
               </button>
             </div>
           </aside>

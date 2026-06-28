@@ -41,7 +41,8 @@ export const ProviderProfile: React.FC = () => {
     location: 'Quận 1, HCMC',
     isAvailable: true,
     type: 'normal',
-    titleBadge: ''
+    titleBadge: '',
+    rewardPoints: 0,
   };
 
   const sourceData = fetchedData || providerData;
@@ -56,19 +57,20 @@ export const ProviderProfile: React.FC = () => {
     type: sourceData.type || defaultProfile.type,
     titleBadge: sourceData.titleBadge || defaultProfile.titleBadge,
     isAvailable: sourceData.isAvailable ?? defaultProfile.isAvailable,
+    rewardPoints: sourceData.rewardPoints ?? defaultProfile.rewardPoints,
   } : defaultProfile;
 
   return (
     <div style={{ backgroundColor: 'var(--bg-page)', minHeight: '100vh' }}>
       <main className="pp-main-container">
-        <ProfileHeader profile={profileData} onBack={() => onNavigate('find-provider')} onReviewsClick={() => setActiveTab('reviews')} />
+        <ProfileHeader profile={profileData} onBack={() => onNavigate('provider')} onReviewsClick={() => setActiveTab('reviews')} />
         
         <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} reviewCount={profileData.reviewCount} />
 
         <div className="pp-layout">
           <div className="pp-content-left">
-{activeTab === 'about' && <AboutTab providerId={providerId} onViewAllReviews={() => setActiveTab('reviews')} />}
-{activeTab === 'reviews' && <AboutTab providerId={providerId} onlyReviews={true} />}
+            {activeTab === 'about' && <AboutTab providerId={providerId} onViewAllReviews={() => setActiveTab('reviews')} />}
+            {activeTab === 'reviews' && <AboutTab providerId={providerId} onlyReviews={true} />}
             {activeTab === 'schedule' && <ScheduleTab />}
             {activeTab === 'projects' && <ProjectsTab />}
             {activeTab === 'security' && <ChangePasswordTab />}

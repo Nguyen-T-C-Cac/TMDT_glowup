@@ -9,6 +9,7 @@ export interface Technician {
   location: string
   district: string
   skills: string[]
+  areas?: string[]
   pricePerHour: number
   isAvailable: boolean
   timeAvailable?: string

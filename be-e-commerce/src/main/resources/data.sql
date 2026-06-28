@@ -25,11 +25,13 @@ ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
 --   hoang@email.com  / password   (role: customer)
 --   tuan@glowup.pro  / password   (role: technician)
 --   minh@glowup.pro  / password   (role: technician)
+--   khoa@glowup.pro  / password   (role: technician — demo ví LOCKED)
 -- =====================================================================
 
 
 -- ---------------------------------------------------------------------
--- 1. USERS — 1 admin + 2 customers + 2 technicians
+-- 1. USERS — 1 admin + 2 customers + 3 technicians
+--    (thợ USR-006 = fixture demo ví LOCKED cho feature wallet/refund/points)
 -- ---------------------------------------------------------------------
 
 INSERT INTO users (code, full_name, email, phone, password, role, status, district, address, bio, avatar, deleted, created_at, updated_at)
@@ -59,7 +61,14 @@ VALUES
  '$2a$10$v7D/LWQ3B1QEhFUKA9tCP.9U.xWWiDv92EL7pSQnkPXUIB51i0Mwm',
  'TECHNICIAN', 'ACTIVE', 'Quận Bình Thạnh', '78 Đinh Bộ Lĩnh, Bình Thạnh',
  'Chuyên sửa máy giặt cửa ngang, tủ lạnh inverter các hãng.',
- 'https://i.pravatar.cc/150?img=13', FALSE, NOW(), NOW())
+ 'https://i.pravatar.cc/150?img=13', FALSE, NOW(), NOW()),
+
+-- Thợ demo trạng thái ví LOCKED (ví tín dụng về 0) — phục vụ test wallet/refund/points
+('USR-006', 'Lê Văn Khoá', 'khoa@glowup.pro', '0987654323',
+ '$2a$10$v7D/LWQ3B1QEhFUKA9tCP.9U.xWWiDv92EL7pSQnkPXUIB51i0Mwm',
+ 'TECHNICIAN', 'ACTIVE', 'Quận Tân Bình', '12 Cộng Hòa, Tân Bình',
+ 'Thợ điện lạnh — tài khoản demo trạng thái khóa ví.',
+ 'https://i.pravatar.cc/150?img=51', FALSE, NOW(), NOW())
 
 ON CONFLICT (code) DO NOTHING;
 
@@ -238,7 +247,12 @@ INSERT INTO system_settings (setting_key, setting_value, created_at, updated_at)
 VALUES
   ('fixed_commission_fee', '10000', NOW(), NOW()),
   ('minimum_commission_balance', '20000', NOW(), NOW()),
-  ('auto_lock_enabled', 'true', NOW(), NOW())
+  ('auto_lock_enabled', 'true', NOW(), NOW()),
+  -- TN2/TN3: khóa thợ khi ví tín dụng < ngưỡng này
+  ('refund_lock_threshold', '0', NOW(), NOW()),
+  -- TN4: điểm thưởng = points_per_order + floor(final_price * points_rate / 100)
+  ('points_per_order', '10', NOW(), NOW()),
+  ('points_rate', '0', NOW(), NOW())
 ON CONFLICT (setting_key) DO UPDATE SET
   setting_value = EXCLUDED.setting_value,
   updated_at = NOW();
@@ -499,22 +513,9 @@ FROM categories c WHERE c.code = 'CAT-005'
 -- Idempotent inserts (ON CONFLICT DO NOTHING)
 -- ---------------------------------------------------------------------
 
--- 1) Bulk technicians (100)
-INSERT INTO users (code, full_name, email, phone, password, role, status, district, address, bio, avatar, deleted, created_at, updated_at)
-SELECT 'USR-T-' || LPAD(s::text,3,'0') AS code,
-       'Kỹ thuật viên ' || s AS full_name,
-       'tech' || s || '@example.com' AS email,
-       ('0900' || LPAD(s::text,4,'0')) AS phone,
-       '$2a$10$v7D/LWQ3B1QEhFUKA9tCP.9U.xWWiDv92EL7pSQnkPXUIB51i0Mwm' AS password,
-       'TECHNICIAN' AS role,
-       'ACTIVE' AS status,
-       'Quận 1' AS district,
-       ('Địa chỉ kỹ thuật viên ' || s) AS address,
-       NULL AS bio,
-       ('https://i.pravatar.cc/150?img=' || ((s % 70) + 1)) AS avatar,
-       FALSE, NOW(), NOW()
-FROM generate_series(1,100) s
-ON CONFLICT (code) DO NOTHING;
+-- 1) Bulk technicians: ĐÃ XÓA — trước đây seed 100 thợ ảo "Kỹ thuật viên 1..100"
+--    gây nhiễu danh sách quản lý. Giờ chỉ giữ 3 thợ thật ở phần USERS bên trên
+--    (USR-004 Tuấn, USR-005 Minh, USR-006 Khoá-demo-LOCKED).
 
 -- 2) Bulk customers (300)
 INSERT INTO users (code, full_name, email, phone, password, role, status, district, address, bio, avatar, deleted, created_at, updated_at)
@@ -534,79 +535,54 @@ FROM generate_series(1,300) s
 ON CONFLICT (code) DO NOTHING;
 
 -- 3.5) Commission wallet demo data (status is computed dynamically)
+-- Cột đúng theo entity Wallet: balance = ví tín dụng (credit), personal_balance = ví cá nhân,
+-- pending_balance = chờ rút, version = 0 (bắt buộc cho optimistic locking khi insert thô).
 INSERT INTO wallets (
-    user_id,
-    total_earned,
-    total_withdrawn,
-    balance,
-    personal_balance,
-    pending_balance,
-    currency,
-    created_at,
-    updated_at
+    user_id, balance, personal_balance, pending_balance,
+    total_earned, total_withdrawn, currency, version, created_at, updated_at
 )
 SELECT
     u.id,
-    70000,
-    0,
-    70000,
-    0,
-    0,
-    'VND',
-    NOW(),
-    NOW()
+    70000,  -- balance (credit)
+    0,      -- personal_balance
+    0,      -- pending_balance
+    70000,  -- total_earned
+    0,      -- total_withdrawn
+    'VND', 0, NOW(), NOW()
 FROM users u
 WHERE u.code = 'USR-004'
     ON CONFLICT (user_id) DO NOTHING;
 
 INSERT INTO wallets (
-    user_id,
-    total_earned,
-    total_withdrawn,
-    balance,
-    personal_balance,
-    pending_balance,
-    currency,
-    created_at,
-    updated_at
+    user_id, balance, personal_balance, pending_balance,
+    total_earned, total_withdrawn, currency, version, created_at, updated_at
 )
 SELECT
     u.id,
-    35000,
-    20000,
-    15000,
-    0,
-    0,
-    'VND',
-    NOW(),
-    NOW()
+    15000,  -- balance (credit)
+    0,      -- personal_balance
+    0,      -- pending_balance
+    35000,  -- total_earned
+    20000,  -- total_withdrawn
+    'VND', 0, NOW(), NOW()
 FROM users u
 WHERE u.code = 'USR-005'
     ON CONFLICT (user_id) DO NOTHING;
 
 INSERT INTO wallets (
-    user_id,
-    total_earned,
-    total_withdrawn,
-    balance,
-    personal_balance,
-    pending_balance,
-    currency,
-    created_at,
-    updated_at
+    user_id, balance, personal_balance, pending_balance,
+    total_earned, total_withdrawn, currency, version, created_at, updated_at
 )
 SELECT
     u.id,
-    15000,
-    15000,
-    0,
-    0,
-    0,
-    'VND',
-    NOW(),
-    NOW()
+    0,      -- balance (credit)
+    0,      -- personal_balance
+    0,      -- pending_balance
+    15000,  -- total_earned
+    15000,  -- total_withdrawn
+    'VND', 0, NOW(), NOW()
 FROM users u
-WHERE u.code = 'USR-T-001'
+WHERE u.code = 'USR-006'
     ON CONFLICT (user_id) DO NOTHING;
 
 INSERT INTO wallet_transactions (
@@ -658,7 +634,7 @@ SELECT 'TX-COMM-004', w.id, 'COMMISSION', 'CREDIT', 'COMMISSION_TOPUP', 'Nạp h
        'SUCCESS', NOW() - INTERVAL '12 hours', NOW() - INTERVAL '12 hours'
 FROM wallets w
 JOIN users u ON u.id = w.user_id
-WHERE u.code = 'USR-T-001'
+WHERE u.code = 'USR-006'
   AND NOT EXISTS (SELECT 1 FROM wallet_transactions wt WHERE wt.transaction_code = 'TX-COMM-004');
 
 INSERT INTO wallet_transactions (
@@ -671,7 +647,7 @@ SELECT 'TX-COMM-005', w.id, 'COMMISSION', 'CREDIT', 'COMMISSION_DEDUCTION', 'Kh�
        'SUCCESS', NOW() - INTERVAL '11 hours', NOW() - INTERVAL '11 hours'
 FROM wallets w
 JOIN users u ON u.id = w.user_id
-WHERE u.code = 'USR-T-001'
+WHERE u.code = 'USR-006'
   AND NOT EXISTS (SELECT 1 FROM wallet_transactions wt WHERE wt.transaction_code = 'TX-COMM-005');
 
 -- 3) Ensure required categories exist (Sửa điện, Sửa nước, Vệ sinh máy lạnh)

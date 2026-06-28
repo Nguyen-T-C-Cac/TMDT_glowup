@@ -1,21 +1,36 @@
+/* ============================================
+   Provider List — Redesigned
+   Clean header with modern sort dropdown
+   ============================================ */
+
 .provider-list-container {
   flex-grow: 1;
   text-align: left;
+  min-width: 0;
 }
 
+/* ─── Header ─── */
 .pl-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
   margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.pl-header-left {
+  flex: 1;
+  min-width: 0;
 }
 
 .pl-title {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
   color: var(--primary);
   margin: 0 0 8px 0;
   text-align: left;
+  letter-spacing: -0.02em;
 }
 
 .pl-subtitle {
@@ -26,94 +41,124 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  line-height: 1.5;
 }
 
 .pl-service-tag {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: var(--accent-bg);
+  background: linear-gradient(135deg, var(--accent-bg), #dcf0de);
   color: var(--accent);
   font-size: 13px;
   font-weight: 700;
-  padding: 3px 12px;
-  border-radius: var(--radius-sm);
+  padding: 4px 14px;
+  border-radius: 8px;
   letter-spacing: 0.2px;
 }
 
+/* ─── Sort Controls ─── */
 .pl-sort {
   display: flex;
   align-items: center;
   gap: 8px;
+  position: relative;
 }
 
 .sort-label {
-  font-size: 13px;
-  color: var(--text-secondary);
-  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .sort-btn {
-  background: none;
-  border: none;
+  background: #f8faf9;
+  border: 1.5px solid #e2e8f0;
   color: var(--primary);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   cursor: pointer;
-  padding: 0;
+  padding: 8px 14px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  letter-spacing: 0.3px;
+}
+
+.sort-btn:hover {
+  border-color: var(--primary-light);
+  background: #f0faf2;
 }
 
 .sort-icon {
-  margin-top: 2px;
+  margin-top: 1px;
+  transition: transform 0.2s;
 }
 
 .sort-dropdown {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 6px);
   right: 0;
-  margin-top: 8px;
-  background-color: var(--bg);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  padding: 8px 0;
-  z-index: 10;
-  min-width: 180px;
-  border: 1px solid var(--border-default);
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.08),
+    0 2px 6px rgba(0, 0, 0, 0.04);
+  padding: 6px;
+  z-index: 100;
+  min-width: 190px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  animation: dropdownSlide 0.2s ease-out;
+}
+
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .sort-option {
-  padding: 8px 16px;
+  padding: 10px 14px;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
+  border-radius: 8px;
 }
 
 .sort-option:hover {
-  background-color: var(--bg-subtle);
+  background-color: #f0faf2;
   color: var(--primary);
 }
 
 .sort-option.active {
-  color: var(--primary);
-  background-color: var(--bg-muted);
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
 }
 
+/* ─── Cards Container ─── */
 .pl-cards {
   display: flex;
   flex-direction: column;
 }
 
+/* ─── Empty State ─── */
 .pl-empty {
   text-align: center;
   padding: 64px 24px;
-  background: var(--bg);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--border-light);
+  background: #ffffff;
+  border-radius: 20px;
+  border: 2px dashed #e2e8f0;
   margin-top: 16px;
 }
 
@@ -129,44 +174,4 @@
   color: var(--text-primary);
 }
 
-.pl-pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin-top: 32px;
-  margin-bottom: 32px;
-}
 
-.page-btn {
-  background-color: var(--bg);
-  border: 1px solid var(--border-default);
-  color: var(--text-secondary);
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.page-btn:hover:not(:disabled) {
-  background-color: var(--bg-subtle);
-  color: var(--primary);
-  border-color: var(--border-dark);
-}
-
-.page-btn.active {
-  background-color: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
-
-.page-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}

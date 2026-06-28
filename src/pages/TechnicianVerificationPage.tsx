@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Check, Camera, Upload, Phone, Mail, MapPin, Grid, Image, X } from 'lucide-react'
 import { getCategories, type Category } from '../services/categoryService'
+import { getStoredUser } from '../services/auth'
+import { submitVerification, getVerificationByTechnician } from '../services/verificationService'
 import './TechnicianVerificationPage.css'
 
 type VerificationStep = 'identity' | 'face' | 'description' | 'complete'
@@ -28,6 +31,7 @@ const HCMC_DISTRICTS = [
 ]
 
 export const TechnicianVerificationPage: React.FC = () => {
+  const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState<VerificationStep>('identity')
   const [verificationData, setVerificationData] = useState<VerificationData>({
     idFront: null,
@@ -40,6 +44,45 @@ export const TechnicianVerificationPage: React.FC = () => {
     services: [],
     experience: '',
   })
+
+  const location = useLocation()
+  const [isChecking, setIsChecking] = useState(true)
+
+  useEffect(() => {
+    let isMounted = true
+    const checkExistingVerification = async () => {
+      const searchParams = new URLSearchParams(location.search)
+      if (searchParams.get('resubmit') === 'true') {
+        setIsChecking(false)
+        return
+      }
+
+      const user = getStoredUser()
+      if (user) {
+        const techId = user.code || `TECH-${user.id}`
+        try {
+          const response = await getVerificationByTechnician(techId)
+          if (response && response.success && response.data && isMounted) {
+            // Đã có hồ sơ
+            navigate('/technician/verification-status')
+          } else if (isMounted) {
+            setIsChecking(false)
+          }
+        } catch (error) {
+           if (isMounted) setIsChecking(false)
+        }
+      } else {
+        setIsChecking(false)
+      }
+    }
+    
+    checkExistingVerification()
+    return () => { isMounted = false }
+  }, [navigate, location.search])
+
+  if (isChecking) {
+    return <div className="verification-page-container"><div className="verification-loading">Đang kiểm tra hồ sơ...</div></div>
+  }
 
   const handleFileUpload = (fileType: 'idFront' | 'idBack', file: File | null) => {
     if (file) {
@@ -75,10 +118,57 @@ export const TechnicianVerificationPage: React.FC = () => {
     else if (currentStep === 'complete') setCurrentStep('description')
   }
 
-  const handleContinue = () => {
-    // Submit verification data
-    console.log('Submitting verification:', verificationData)
-    // Here you would send the data to the backend
+  const handleContinue = async () => {
+    try {
+      if (!verificationData.idFront || !verificationData.idBack) {
+        alert('Vui lòng tải lên mặt trước và mặt sau CCCD.')
+        setCurrentStep('identity')
+        return
+      }
+      if (!verificationData.faceSelfie) {
+        alert('Vui lòng chụp ảnh khuôn mặt.')
+        setCurrentStep('face')
+        return
+      }
+      if (!verificationData.phone || !verificationData.email || !verificationData.area || verificationData.services.length === 0) {
+        alert('Vui lòng điền đầy đủ thông tin mô tả bản thân.')
+        setCurrentStep('description')
+        return
+      }
+
+      const user = getStoredUser()
+      const techId = user?.code || (user?.id ? `TECH-${user.id}` : 'TECH-9921')
+      const name = user?.fullName || 'Kỹ thuật viên'
+      
+      console.log('Submitting verification:', verificationData)
+      
+      const formData = new FormData()
+      formData.append('technicianId', techId)
+      formData.append('fullName', name)
+      formData.append('phone', verificationData.phone || '')
+      formData.append('email', verificationData.email || '')
+      
+      // Match backend CreateVerificationRequest expectations:
+      formData.append('district', verificationData.area || '')
+      formData.append('serviceCategory', verificationData.services.join(', '))
+      
+      // Extract years of experience
+      const match = verificationData.experience?.match(/(\d+)\s*năm/i)
+      const yearsExp = match ? parseInt(match[1]) : (verificationData.experience ? 1 : 0)
+      formData.append('yearsExperience', yearsExp.toString())
+      
+      if (verificationData.idFront) formData.append('idFront', verificationData.idFront)
+      if (verificationData.idBack) formData.append('idBack', verificationData.idBack)
+      if (verificationData.faceSelfie) formData.append('portrait', verificationData.faceSelfie)
+      if (verificationData.certificate) formData.append('certificate', verificationData.certificate)
+
+      await submitVerification(formData)
+      
+      navigate('/technician/provider-dashboard')
+    } catch (error) {
+      console.error('Failed to submit verification', error)
+      alert('Có lỗi xảy ra khi nộp hồ sơ. Vui lòng thử lại.')
+    }
   }
 
   const isStepComplete = (step: VerificationStep): boolean => {
@@ -422,10 +512,13 @@ const FaceVerificationStep: React.FC<FaceVerificationStepProps> = ({
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user' },
       })
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        setIsCapturing(true)
-      }
+      setIsCapturing(true)
+      // Đợi render để videoRef được gắn vào DOM
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+        }
+      }, 100)
     } catch (error) {
       console.error('Error accessing camera:', error)
       alert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.')
@@ -505,10 +598,33 @@ const FaceVerificationStep: React.FC<FaceVerificationStepProps> = ({
         )}
 
         {!isCapturing && !preview && (
-          <button className="start-camera-button" onClick={startCamera}>
-            <Camera size={24} />
-            <span>Chụp ảnh ngay</span>
-          </button>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <button className="start-camera-button" onClick={startCamera}>
+              <Camera size={24} />
+              <span>Mở camera chụp ngay</span>
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <input
+                type="file"
+                id="face-upload"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    onFaceCapture(file)
+                    const reader = new FileReader()
+                    reader.onload = (ev) => setPreview(ev.target?.result as string)
+                    reader.readAsDataURL(file)
+                  }
+                }}
+              />
+              <label htmlFor="face-upload" className="secondary-button" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Upload size={20} />
+                <span>Tải ảnh lên</span>
+              </label>
+            </div>
+          </div>
         )}
       </div>
 

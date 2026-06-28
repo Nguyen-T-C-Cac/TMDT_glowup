@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { userService } from '../services/userService';
 import { technicianService } from '../services/technicianService';
 import { authService } from '../services/authService';
+import { getVerificationByTechnician } from '../services/verificationService';
 
 import { uploadService } from '../services/uploadService';
 import { useUserProfile } from '../contexts/UserProfileContext';
@@ -51,6 +52,7 @@ export default function TechnicianProfileSettingsPage() {
   const [userId, setUserId] = useState<string>('');
   const [userCode, setUserCode] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [verificationStatus, setVerificationStatus] = useState<string>('checking');
 
   const navigate = useNavigate();
   const { profile: userProfileContext, setAvatar, updateProfile } = useUserProfile();
@@ -103,6 +105,19 @@ export default function TechnicianProfileSettingsPage() {
               }
             })
             .catch(err => console.log('Could not load technician specific profile, maybe not initialized yet', err));
+          
+          getVerificationByTechnician(u.code)
+            .then(verRes => {
+              if (verRes && verRes.success && verRes.data) {
+                setVerificationStatus(verRes.data.status);
+              } else {
+                setVerificationStatus('not_submitted');
+              }
+            })
+            .catch(err => {
+              console.log('Could not load verification status', err);
+              setVerificationStatus('error');
+            });
         }
 
         setLoading(false);
@@ -212,7 +227,7 @@ export default function TechnicianProfileSettingsPage() {
       if (userCode) {
         await technicianService.updateTechnicianProfile(userCode, {
           skills,
-          district: areas[0] || '',
+          areas, // Gửi danh sách khu vực (not just first item as district)
           bio: profile.bio,
         });
       }
@@ -232,6 +247,10 @@ export default function TechnicianProfileSettingsPage() {
   };
 
   const handleToggleAvailable = async () => {
+    if (verificationStatus !== 'approved') {
+      showToast('Bạn cần xác minh hồ sơ thành công trước khi có thể nhận đơn.', 'warning');
+      return;
+    }
     const newState = !isAvailable;
     setIsAvailable(newState);
     if (userCode) {
@@ -370,7 +389,7 @@ export default function TechnicianProfileSettingsPage() {
           >
             <SettingsSwitchRow
               title="Sẵn sàng nhận đơn"
-              description="Bật để hệ thống ưu tiên hiển thị bạn trong luồng đề xuất và điều phối đơn gần khu vực."
+              description={verificationStatus === 'approved' ? "Bật để hệ thống ưu tiên hiển thị bạn trong luồng đề xuất và điều phối đơn gần khu vực." : "Tính năng này bị khóa vì hồ sơ chưa được duyệt."}
               checked={isAvailable}
               onToggle={handleToggleAvailable}
             />

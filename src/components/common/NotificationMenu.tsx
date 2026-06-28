@@ -42,35 +42,59 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  const loadNotifications = useCallback(async () => {
-    if (!isAuthenticated()) {
-      setItems([]);
-      setUnreadCount(0);
-      return;
-    }
+  const handleModalRead = useCallback((id: string) => {
+  setItems((current) =>
+    current.map((item) =>
+      item.id === id ? { ...item, isRead: true } : item
+    )
+  );
+  setUnreadCount((count) => Math.max(0, count - 1));
+}, []);
+  // ✅ Sau — tách riêng: useEffect để mount, useCallback để toggle/reload
+const loadNotifications = useCallback(async () => {
+  if (!isAuthenticated()) {
+    setItems([]);
+    setUnreadCount(0);
+    return;
+  }
+  setIsLoading(true);
+  try {
+    const data = await getMyNotifications(1, 10);
+    setItems(data.items);
+    setUnreadCount(data.unreadCount);
+  } catch {
+    setItems([]);
+    setUnreadCount(0);
+  } finally {
+    setIsLoading(false);
+  }
+}, []);
 
+// mount: dùng async IIFE bên trong effect
+useEffect(() => {
+  if (!isAuthenticated()) return;
+
+  let cancelled = false;
+
+  (async () => {
     setIsLoading(true);
     try {
       const data = await getMyNotifications(1, 10);
+      if (cancelled) return;
       setItems(data.items);
       setUnreadCount(data.unreadCount);
     } catch {
-      setItems([]);
-      setUnreadCount(0);
+      if (!cancelled) {
+        setItems([]);
+        setUnreadCount(0);
+      }
     } finally {
-      setIsLoading(false);
+      if (!cancelled) setIsLoading(false);
     }
-  }, []);
+  })();
 
-  useEffect(() => {
-    if (!isAuthenticated()) {
-      return;
-    }
-    loadNotifications();
-    // Chỉ tải một lần khi mount — tránh gọi API lặp khi component cha re-render
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+  return () => { cancelled = true; };
+}, []); 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (!menuRef.current?.contains(event.target as Node)) {
@@ -221,6 +245,8 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
         <NotificationDetailModal
           notificationId={detailModalId}
           onClose={() => setDetailModalId(null)}
+          onRead={handleModalRead}
+          
         />
       )}
     </div>

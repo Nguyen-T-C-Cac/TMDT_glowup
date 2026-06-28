@@ -38,6 +38,7 @@ public class TechnicianDetailResponse {
     private Boolean isAvailable;
     private String type;
     private String titleBadge;
+    private Long rewardPoints;
     private String verificationStatus;
     private Integer yearsExperience;
 

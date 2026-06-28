@@ -54,6 +54,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeItem = 'users'
         <rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line>
       </svg>
     )},
+    { id: 'refunds', label: 'Hoàn tiền', icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="1 4 1 10 7 10"></polyline>
+        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+      </svg>
+    )},
     { id: 'categories', label: 'Danh mục dịch vụ', icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3"></circle>
@@ -76,6 +82,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeItem = 'users'
     'chat': '/admin/chat',
     'complaints': '/admin/complaints',
     'finance': '/admin/finance',
+    'refunds': '/admin/refunds',
     'categories': '/admin/categories',
     'settings': '/admin/settings',
   };

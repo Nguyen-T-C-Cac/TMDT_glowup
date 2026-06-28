@@ -54,18 +54,99 @@
   box-shadow: 0 2px 8px rgba(47, 58, 85, 0.06);
 }
 
+.status-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.summary-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #999;
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+  text-align: left;
+  letter-spacing: 0.08em;
+}
+
+.summary-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a2942;
+  margin: 0;
+  text-align: left;
+}
+
+.summary-note {
+  font-size: 13px;
+  color: #606f8d;
+  margin: 8px 0 0 0;
+  max-width: 620px;
+}
+
+.summary-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.summary-pill.pending,
+.summary-pill.processing {
+  background: #fff3cd;
+  color: #f39c12;
+}
+
+.summary-pill.completed,
+.summary-pill.approved {
+  background: #e6f4ea;
+  color: #1d7a3a;
+}
+
+.summary-pill.rejected {
+  background: #ffe5e5;
+  color: #d32f2f;
+}
+
 .timeline-progress {
   display: flex;
-  flex-direction: column;
-  gap: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: relative;
+}
+
+.timeline-progress::before {
+  content: '';
+  position: absolute;
+  top: 28px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: #e8e7e1;
+  border-radius: 999px;
+  z-index: 0;
 }
 
 .timeline-step {
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 16px 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 0;
+  text-align: center;
+  flex: 1;
   position: relative;
+  z-index: 1;
 }
 
 .timeline-step.completed .step-circle,
@@ -79,18 +160,9 @@
   animation: pulse 2s infinite;
 }
 
-@keyframes pulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(243, 156, 18, 0);
-  }
-}
-
 .step-circle {
-  width: 40px;
-  height: 40px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: #e8e7e1;
   color: #999;
@@ -102,23 +174,17 @@
 }
 
 .step-content {
-  flex: 1;
-  padding-top: 4px;
+  padding: 0;
 }
 
 .step-label {
   font-size: 14px;
   font-weight: 600;
   color: #2f3a55;
-  margin: 0 0 4px 0;
-}
-
-.step-date {
-  font-size: 12px;
-  color: #999;
   margin: 0;
 }
 
+.step-date,
 .step-description {
   font-size: 12px;
   color: #999;
@@ -126,15 +192,16 @@
 }
 
 .timeline-connector {
-  width: 2px;
-  height: 24px;
-  background: #e8e7e1;
-  margin-left: 19px;
-  transition: background-color 0.3s ease;
+  display: none;
 }
 
-.timeline-connector.completed {
-  background: #4caf50;
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(243, 156, 18, 0);
+  }
 }
 
 /* Processing Message */
@@ -214,25 +281,30 @@
 
 .documents-list {
   display: flex;
-  flex-direction: column;
   gap: 16px;
+  flex-wrap: wrap;
+  justify-content: space-between;
 }
 
 .document-item {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 20px;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  padding: 16px;
+  gap: 12px;
+  flex: 1 1 28%;
+  max-width: calc(33.333% - 10px);
+  min-width: 220px;
+  padding: 18px;
   background: #f9f9f9;
   border-radius: 12px;
   border: 1px solid #e8e7e1;
+  text-align: center;
 }
 
 .document-image {
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
+  width: 100%;
+  height: 160px;
+  border-radius: 14px;
   object-fit: cover;
   background: #e8e7e1;
 }
@@ -240,23 +312,42 @@
 .document-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  width: 100%;
 }
 
 .document-type {
-  font-size: 11px;
-  color: #999;
-  font-weight: 600;
+  font-size: 13px;
+  color: #2f3a55;
+  font-weight: 700;
   margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-.document-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #2f3a55;
-  margin: 0;
+.status-value {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 auto;
+  padding: 10px 14px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.status-value.approved,
+.status-value.completed {
+  background: #e6f4ea;
+  color: #1d7a3a;
+}
+
+.status-value.pending {
+  background: #fff3cd;
+  color: #f39c12;
+}
+
+.status-value.rejected {
+  background: #ffe5e5;
+  color: #d32f2f;
 }
 
 .document-status {

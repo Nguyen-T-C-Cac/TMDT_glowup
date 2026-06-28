@@ -13,6 +13,7 @@ import { PendingEmailVerificationPage } from '../pages/PendingEmailVerificationP
 import AdminCategoriesPage from '../pages/AdminCategoriesPage'
 import AdminDashboard from '../pages/AdminDashboard'
 import AdminFinancePage from '../pages/AdminFinancePage'
+import AdminRefundsPage from '../pages/AdminRefundsPage'
 import AdminSystemSettingsPage from '../pages/AdminSystemSettingsPage'
 import AdminUserDetail from '../pages/AdminUserDetail'
 import AdminUserManagement from '../pages/AdminUserManagement'
@@ -70,8 +71,8 @@ export default function AppRouter() {
         <Route path="wallet/topup-result" element={<TechnicianLayout activeItem="wallet"><TechnicianWalletTopUpResultPage /></TechnicianLayout>} />
         <Route path="wallet/withdraw" element={<TechnicianLayout activeItem="wallet"><TechnicianWalletWithdrawPage /></TechnicianLayout>} />
         <Route path="profile" element={<TechnicianLayout activeItem="profile"><TechnicianProfileSettingsPage /></TechnicianLayout>} />
-        <Route path="verification" element={<TechnicianVerificationPage />} />
-        <Route path="verification-status" element={<TechnicianVerificationStatusPage />} />
+        <Route path="verification" element={<TechnicianLayout activeItem="verification"><TechnicianVerificationPage /></TechnicianLayout>} />
+        <Route path="verification-status" element={<TechnicianLayout activeItem="verification"><TechnicianVerificationStatusPage /></TechnicianLayout>} />
         <Route path="provider-dashboard" element={<TechnicianLayout activeItem="dashboard"><ProviderDashboard /></TechnicianLayout>} />
         <Route path="chat" element={<TechnicianLayout activeItem="chat"><ChatPage role="technician" /></TechnicianLayout>} />
       </Route>
@@ -90,6 +91,7 @@ export default function AppRouter() {
         <Route path="users" element={<AdminUserManagement />} />
         <Route path="users/:id" element={<AdminUserDetail />} />
         <Route path="finance" element={<AdminFinancePage />} />
+        <Route path="refunds" element={<AdminRefundsPage />} />
         <Route path="categories" element={<AdminCategoriesPage />} />
         <Route path="verification" element={<AdminVerificationRequests />} />
         <Route path="verification/:requestId" element={<AdminVerificationDetail />} />

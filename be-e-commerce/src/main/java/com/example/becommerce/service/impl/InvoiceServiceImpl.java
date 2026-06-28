@@ -25,6 +25,7 @@ import com.example.becommerce.repository.WalletRepository;
 import com.example.becommerce.repository.WalletTransactionRepository;
 import com.example.becommerce.service.InvoiceService;
 import com.example.becommerce.service.PaymentGatewayService;
+import com.example.becommerce.service.WalletSettlementService;
 import com.example.becommerce.service.WsEventPublisher;
 import com.example.becommerce.utils.ConversationCodeGenerator;
 import com.example.becommerce.utils.InvoiceCodeGenerator;
@@ -57,6 +58,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final InvoiceCodeGenerator invoiceCodeGenerator;
     private final ConversationCodeGenerator conversationCodeGenerator;
     private final PaymentGatewayService paymentGatewayService;
+    private final WalletSettlementService settlementService;
     private final WsEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
 
@@ -200,50 +202,21 @@ public class InvoiceServiceImpl implements InvoiceService {
             throw AppException.badRequest(ErrorCode.BAD_REQUEST, "Hoá đơn đã được thanh toán");
         }
 
-        // Deduct from technician's credit wallet (commission)
-        Wallet techWallet = walletRepository.findWithLockByUser_Id(technician.getId())
-                .orElseThrow(() -> AppException.notFound("Không tìm thấy ví của thợ"));
-
-        BigDecimal amount = BigDecimal.valueOf(invoice.getTotalPrice());
-        techWallet.normalizeForPersistence();
-        if (techWallet.getBalance().compareTo(amount) < 0) {
-            throw AppException.badRequest(ErrorCode.INSUFFICIENT_BALANCE,
-                    "Số dư ví tín dụng không đủ để xác nhận. Vui lòng nạp thêm.");
-        }
-        techWallet.setBalance(techWallet.getBalance().subtract(amount));
-        walletRepository.save(techWallet);
-
-        // Record credit deduction transaction
-        WalletTransaction deduction = WalletTransaction.builder()
-                .transactionCode("CASH-" + invoice.getCode())
-                .wallet(techWallet)
-                .order(order)
-                .type(TransactionType.PAYMENT)
-                .walletType(WalletType.CREDIT)
-                .category("CASH_CONFIRM")
-                .title("Xác nhận thu tiền mặt - " + orderCode)
-                .amount(amount.negate())
-                .fee(BigDecimal.ZERO)
-                .netAmount(amount.negate())
-                .afterBalance(techWallet.getBalance().longValueExact())
-                .note("Thợ xác nhận đã thu tiền mặt từ khách")
-                .actor("TECHNICIAN")
-                .status(TransactionStatus.SUCCESS)
-                .processedAt(LocalDateTime.now())
-                .build();
-        walletTransactionRepository.save(deduction);
-
-        // Update invoice
+        // Mark invoice + order as paid by cash.
         invoice.setStatus(InvoiceStatus.PAID_CASH);
         invoice.setPaymentMethod("CASH");
         invoice.setPaidAt(LocalDateTime.now());
-        invoice.setTransactionCode(deduction.getTransactionCode());
         invoiceRepository.save(invoice);
 
-        // Complete the order
+        order.setFinalPrice(invoice.getTotalPrice());
         order.setStatus(OrderStatus.COMPLETED);
         order.setCompletedAt(LocalDateTime.now());
         orderRepository.save(order);
+
+        // Unified settlement: deduct only the fixed commission fee from the CREDIT
+        // wallet (negative allowed → account lock). Cash means the technician already
+        // collected the money, so the PERSONAL wallet is NOT credited.
+        settlementService.settleCompletedOrder(order, PaymentMethod.CASH);
 
         eventPublisher.publishOrderStatusChanged(
                 order.getCode(), OrderStatus.IN_PROGRESS.apiValue(), OrderStatus.COMPLETED.apiValue());

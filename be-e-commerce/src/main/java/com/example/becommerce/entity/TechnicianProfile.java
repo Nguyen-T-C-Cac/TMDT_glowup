@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -68,6 +69,12 @@ public class TechnicianProfile {
 
     @Column(name = "title_badge", length = 100)
     private String titleBadge;
+
+    /** Cumulative reward points earned from completed orders (TN4). */
+    @Column(name = "reward_points", nullable = false)
+    @ColumnDefault("0")
+    @Builder.Default
+    private long rewardPoints = 0L;
 
     @Column(name = "years_experience")
     private Integer yearsExperience;

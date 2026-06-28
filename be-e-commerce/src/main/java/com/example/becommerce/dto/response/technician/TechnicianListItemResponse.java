@@ -26,6 +26,7 @@ public class TechnicianListItemResponse {
     private String district;
 
     private List<String> skills;
+    private List<String> areas;
 
     private Long pricePerHour;
 
