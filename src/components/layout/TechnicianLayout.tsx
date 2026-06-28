@@ -22,10 +22,9 @@ export const TechnicianLayout: React.FC<LayoutProps> = ({ children, activeItem }
                     <main className={`tech-content-area ${isChatLayout ? 'tech-content-area--chat' : ''}`}>
                         {children}
                     </main>
+                    {!isChatLayout && <Footer />}
                 </div>
             </div>
-
-            {!isChatLayout && <Footer />}
         </div>
     );
 };

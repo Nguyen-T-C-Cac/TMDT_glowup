@@ -4,6 +4,8 @@ server:
     context-path: /
 
 spring:
+  config:
+    import: optional:dotenv
   application:
     name: be-e-commerce
 

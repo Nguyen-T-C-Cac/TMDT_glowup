@@ -3,6 +3,24 @@ import type { Technician } from './providerService';
 
 export const technicianService = {
   /**
+   * GET /api/technicians
+   * Tìm kiếm và lấy danh sách thợ
+   */
+  getTechniciansList: async (filters?: {
+    skills?: string[];
+    district?: string;
+    isAvailable?: boolean;
+    page?: number;
+    limit?: number;
+  }): Promise<{ success: boolean; data: Technician[]; pagination?: any }> => {
+    const response = await apiClient.get<{ success: boolean; data: Technician[]; pagination?: any }>(
+      '/api/technicians',
+      { params: filters }
+    );
+    return response.data;
+  },
+
+  /**
    * GET /api/technicians/:id
    * Xem chi tiết hồ sơ thợ
    */
