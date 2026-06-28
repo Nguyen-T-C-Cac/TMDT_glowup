@@ -24,6 +24,7 @@ import type { ChatLocationState, ChatMessage, ConversationItem } from '../types/
 import type { OrderResponse } from '../types/order/order';
 import type { Quote } from '../types/Quote';
 import { BookingCard } from '../components/chat/BookingCard';
+import { WarrantyCard } from '../components/chat/WarrantyCard';
 
 const pageMap: Record<string, string> = {
     home: '/',
@@ -47,6 +48,7 @@ const friendlyPreview = (msg: ConversationItem['lastMessage']): string => {
     if (type === 'quotation') return '📄 Báo giá';
     if (type === 'invoice') return '🧾 Hoá đơn';
     if (type === 'booking') return '🔧 Yêu cầu sửa chữa';
+    if (type === 'warranty') return '🛡️ Yêu cầu bảo hành';
     if (type === 'system') return '🔔 Thông báo hệ thống';
     if (!content) return '';
     const cleaned = stripHtml(content);
@@ -182,7 +184,9 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                                 ? 'Hoá đơn mới'
                                 : incoming.type === 'booking'
                                     ? 'Yêu cầu sửa chữa mới'
-                                    : incoming.title
+                                    : incoming.type === 'warranty'
+                                        ? 'Yêu cầu bảo hành'
+                                        : incoming.title
                                         ? `[${incoming.title}] ${incoming.content ?? ''}`
                                         : incoming.content ?? '';
                     return {
@@ -684,6 +688,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                                 const isQuotation = message.type === 'quotation' && message.quotation;
                                 const isInvoice = message.type === 'invoice';
                                 const isBooking = message.type === 'booking';
+                                const isWarranty = message.type === 'warranty' && message.warranty;
                                 let invoiceParsed: Record<string, unknown> | null = null;
                                 if (isInvoice && message.content) {
                                     try {
@@ -730,6 +735,16 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                                                     onConfirmCash={
                                                         role === 'technician' ? handleConfirmCash : undefined
                                                     }
+                                                />
+                                            ) : isWarranty ? (
+                                                <WarrantyCard
+                                                    warranty={message.warranty!}
+                                                    role={role}
+                                                    onStatusChange={() => {
+                                                        if (activeConversationId) {
+                                                            loadMessages(activeConversationId);
+                                                        }
+                                                    }}
                                                 />
                                             ) : isQuotation ? (
                                                 <QuotationCard

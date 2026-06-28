@@ -27,6 +27,7 @@ public class WarrantyMapper {
                 .scheduledAt(claim.getScheduledAt())
                 .warrantyExpiresAt(claim.getWarrantyExpiresAt())
                 .remainingDays(remainingDays)
+                .rejectReason(claim.getRejectReason())
                 .technician(claim.getTechnician() == null ? null : OrderPartySummary.builder()
                         .id(claim.getTechnician().getCode())
                         .fullName(claim.getTechnician().getFullName())

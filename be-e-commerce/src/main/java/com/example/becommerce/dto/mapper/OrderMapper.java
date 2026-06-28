@@ -61,6 +61,7 @@ public class OrderMapper {
                 .cancelledBy(order.getCancelledBy() == null ? null : order.getCancelledBy().apiValue())
                 .cancelReason(order.getCancelReason())
                 .cancelledAt(order.getCancelledAt())
+                .isWarranty(order.getIsWarranty())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
                 .build();
@@ -91,6 +92,7 @@ public class OrderMapper {
                 .cancelledAt(order.getCancelledAt())
                 .cancelledBy(order.getCancelledBy() == null ? null : order.getCancelledBy().apiValue())
                 .cancelReason(order.getCancelReason())
+                .isWarranty(order.getIsWarranty())
                 .createdAt(order.getCreatedAt())
                 .build();
     }

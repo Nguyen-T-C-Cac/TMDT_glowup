@@ -649,6 +649,7 @@ public class OrderServiceImpl implements OrderService {
                     .cancelledBy(response.getCancelledBy())
                     .cancelReason(response.getCancelReason())
                     .cancelledAt(response.getCancelledAt())
+                    .isWarranty(response.getIsWarranty())
                     .reviewed(true)
                     .myRating(review.getRating())
                     .createdAt(response.getCreatedAt())

@@ -1,6 +1,7 @@
 package com.example.becommerce.dto.mapper;
 
 import com.example.becommerce.dto.response.chat.EmbeddedBooking;
+import com.example.becommerce.dto.response.chat.EmbeddedWarranty;
 import com.example.becommerce.dto.response.chat.MessageResponse;
 import com.example.becommerce.entity.Conversation;
 import com.example.becommerce.entity.Message;
@@ -47,6 +48,11 @@ public class MessageMapper {
             embeddedBooking = parseBookingContent(m.getContent());
         }
 
+        EmbeddedWarranty embeddedWarranty = null;
+        if (m.getType() == MessageType.WARRANTY && m.getContent() != null) {
+            embeddedWarranty = parseWarrantyContent(m.getContent());
+        }
+
         return MessageResponse.builder()
                 .id(m.getCode())
                 .conversationId(conv == null ? null : conv.getCode())
@@ -57,6 +63,7 @@ public class MessageMapper {
                 .title(m.getTitle())
                 .quotation(quotationMapper.toEmbedded(m.getQuotation()))
                 .booking(embeddedBooking)
+                .warranty(embeddedWarranty)
                 .sentAt(m.getSentAt())
                 .isRead(isRead)
                 .build();
@@ -97,6 +104,31 @@ public class MessageMapper {
                     .build();
         } catch (JsonProcessingException e) {
             log.warn("Failed to parse booking content JSON: {}", json, e);
+            return null;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private EmbeddedWarranty parseWarrantyContent(String json) {
+        try {
+            Map<String, Object> map = objectMapper.readValue(json, Map.class);
+            List<String> imageUrls = Collections.emptyList();
+            if (map.get("images") instanceof List) {
+                imageUrls = (List<String>) map.get("images");
+            }
+            return EmbeddedWarranty.builder()
+                    .event(asStr(map.get("event")))
+                    .warrantyId(asStr(map.get("warrantyId")))
+                    .description(asStr(map.get("description")))
+                    .images(imageUrls.isEmpty() ? null : imageUrls)
+                    .scheduledAt(asStr(map.get("scheduledAt")))
+                    .warrantyExpiresAt(asStr(map.get("warrantyExpiresAt")))
+                    .customerName(asStr(map.get("customerName")))
+                    .technicianName(asStr(map.get("technicianName")))
+                    .note(asStr(map.get("note")))
+                    .build();
+        } catch (JsonProcessingException e) {
+            log.warn("Failed to parse warranty content JSON: {}", json, e);
             return null;
         }
     }

@@ -23,6 +23,7 @@ import { InProgressCard } from '../components/orderManagement/InProgressCard.tsx
 import { CompletedCard } from '../components/orderManagement/CompletedCard.tsx';
 import { CancelledCard } from '../components/orderManagement/CancelledCard.tsx';
 import { OrderDetailPanel } from '../components/orderManagement/OrderDetailPanel.tsx';
+import { WarrantyDetailPanel } from '../components/orderManagement/WarrantyDetailPanel.tsx';
 import ReviewModal from '../components/modal/ReviewModal.tsx';
 import ReportModal from '../components/modal/ReportModal.tsx';
 
@@ -58,6 +59,13 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
     const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
     const [cancelReason, setCancelReason] = useState('');
 
+    const [warrantyData, setWarrantyData] = useState<Record<string, { status: string; id: string }>>({});
+
+    const [showWarrantyRejectModal, setShowWarrantyRejectModal] = useState(false);
+    const [warrantyToReject, setWarrantyToReject] = useState<string | null>(null);
+    const [warrantyRejectReason, setWarrantyRejectReason] = useState('');
+    const [submittingWarrantyReject, setSubmittingWarrantyReject] = useState(false);
+
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
     const [reviewOrder, setReviewOrder] = useState<OrderResponse | null>(null);
@@ -82,6 +90,27 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                 : result.items;
 
             setOrders(visibleItems);
+
+            // Fetch warranty data for warranty orders
+            if (activeTab === 'warranty') {
+                const warrantyOrders = visibleItems.filter(o => o.isWarranty);
+                if (warrantyOrders.length > 0) {
+                    const results = await Promise.all(
+                        warrantyOrders.map(o => orderService.getWarranty(o.id).catch(() => null))
+                    );
+                    const wMap: Record<string, { status: string; id: string }> = {};
+                    warrantyOrders.forEach((o, i) => {
+                        const w = results[i];
+                        if (w) wMap[o.id] = { status: w.status, id: w.id };
+                    });
+                    setWarrantyData(wMap);
+                } else {
+                    setWarrantyData({});
+                }
+            } else {
+                setWarrantyData({});
+            }
+
             setTotalPages(Math.max(1, result.totalPages || 1));
             setTotalElements(activeTab === 'warranty' ? visibleItems.length : result.totalElements);
         } catch (loadError) {
@@ -90,6 +119,7 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
             setOrders([]);
             setTotalPages(1);
             setTotalElements(0);
+            setWarrantyData({});
         } finally {
             setLoadingList(false);
         }
@@ -129,6 +159,14 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
         } finally {
             setLoadingDetail(false);
         }
+    };
+
+    const handleViewWarranty = async (orderId: string) => {
+        setActiveTab('warranty');
+        setPage(1);
+        setSelectedOrder(null);
+        const order = await orderService.getOrderById(orderId);
+        setSelectedOrder(order);
     };
 
     const handleOpenCancelModal = (orderId: string) => {
@@ -205,6 +243,63 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
         }
     };
 
+    const handleAcceptWarranty = useCallback(async (orderId: string) => {
+        setError(null);
+        try {
+            const warranty = await orderService.getWarranty(orderId);
+            if (!warranty) {
+                alert('Không tìm thấy yêu cầu bảo hành');
+                return;
+            }
+            if (warranty.status !== 'pending') {
+                alert('Yêu cầu bảo hành này đã được xử lý');
+                return;
+            }
+            await orderService.acceptWarranty(warranty.id);
+            alert('Đã chấp nhận yêu cầu bảo hành!');
+            await loadOrders();
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Không thể chấp nhận yêu cầu bảo hành';
+            setError(msg);
+            alert(msg);
+        }
+    }, [loadOrders]);
+
+    const handleRejectWarranty = useCallback((orderId: string) => {
+        setWarrantyToReject(orderId);
+        setWarrantyRejectReason('');
+        setShowWarrantyRejectModal(true);
+    }, []);
+
+    const handleConfirmRejectWarranty = async () => {
+        if (!warrantyToReject || !warrantyRejectReason.trim()) return;
+        setSubmittingWarrantyReject(true);
+        setError(null);
+        try {
+            const warranty = await orderService.getWarranty(warrantyToReject);
+            if (!warranty) {
+                alert('Không tìm thấy yêu cầu bảo hành');
+                return;
+            }
+            if (warranty.status !== 'pending') {
+                alert('Yêu cầu bảo hành này đã được xử lý');
+                return;
+            }
+            await orderService.rejectWarranty(warranty.id, warrantyRejectReason.trim());
+            alert('Đã từ chối yêu cầu bảo hành!');
+            setShowWarrantyRejectModal(false);
+            setWarrantyToReject(null);
+            setWarrantyRejectReason('');
+            await loadOrders();
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Không thể từ chối yêu cầu bảo hành';
+            setError(msg);
+            alert(msg);
+        } finally {
+            setSubmittingWarrantyReject(false);
+        }
+    };
+
     const handleOpenReview = (order: OrderResponse) => {
         setReviewEditData(undefined);
         setReviewOrder(order);
@@ -278,16 +373,25 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
         }
 
         if (activeTab === 'scheduled' || activeTab === 'warranty') {
-            return visibleOrders.map((order) => (
-                <ScheduledCard
-                    key={order.id}
-                    data={mapOrderToScheduledOrder(order)}
-                    role={role}
-                    onViewDetail={handleSelectOrder}
-                    onCancel={handleOpenCancelModal}
-                    onUpdateStatus={handleUpdateStatus}
-                />
-            ));
+            return visibleOrders.map((order) => {
+                const wData = warrantyData[order.id];
+                const scheduledData = {
+                    ...mapOrderToScheduledOrder(order),
+                    warrantyStatus: wData?.status,
+                };
+                return (
+                    <ScheduledCard
+                        key={order.id}
+                        data={scheduledData}
+                        role={role}
+                        onViewDetail={handleSelectOrder}
+                        onCancel={handleOpenCancelModal}
+                        onUpdateStatus={handleUpdateStatus}
+                        onAcceptWarranty={handleAcceptWarranty}
+                        onRejectWarranty={handleRejectWarranty}
+                    />
+                );
+            });
         }
 
         if (activeTab === 'in-progress') {
@@ -322,14 +426,22 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                 onViewDetail={handleSelectOrder}
             />
         ));
-    }, [activeTab, handleSelectOrder, role, visibleOrders]);
+    }, [activeTab, handleSelectOrder, role, visibleOrders, warrantyData, handleAcceptWarranty, handleRejectWarranty]);
 
     return (
         <div className="layout-wrapper">
             <div className="main-content">
                 <main className="page-body bg-plate-white">
                     <div className="orders-container">
-                        {selectedOrder && (
+                        {selectedOrder && activeTab === 'warranty' && (
+            <WarrantyDetailPanel
+                orderId={selectedOrder.id}
+                role={role}
+                onBack={() => setSelectedOrder(null)}
+            />
+                        )}
+
+                        {selectedOrder && activeTab !== 'warranty' && (
             <OrderDetailPanel
                 order={selectedOrder}
                 role={role}
@@ -338,6 +450,7 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                 onReview={handleOpenReview}
                 onEditReview={handleOpenEditReview}
                 onReport={handleOpenReport}
+                onViewWarranty={handleViewWarranty}
             />
                         )}
 
@@ -466,6 +579,49 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                             onSuccess={handleReviewSuccess}
                             editData={reviewEditData}
                         />
+
+                        {showWarrantyRejectModal && (
+                            <div className="order-cancel-modal-overlay" style={{ zIndex: 9999 }}>
+                                <div className="order-cancel-modal-content">
+                                    <div className="order-cancel-modal-header">
+                                        <h2 style={{ color: '#ef4444' }}>
+                                            Từ chối bảo hành
+                                        </h2>
+                                    </div>
+                                    <div className="order-cancel-modal-body">
+                                        <p style={{ fontSize: '14px', color: 'var(--stem-grey)', marginBottom: '16px' }}>
+                                            Vui lòng nhập lý do từ chối yêu cầu bảo hành của đơn <strong>{warrantyToReject}</strong>.
+                                        </p>
+                                        <textarea
+                                            className="order-cancel-reason-input"
+                                            placeholder="Nhập lý do từ chối..."
+                                            value={warrantyRejectReason}
+                                            onChange={(event) => setWarrantyRejectReason(event.target.value)}
+                                            style={{ minHeight: '120px' }}
+                                        />
+                                    </div>
+                                    <div className="order-cancel-modal-footer">
+                                        <button
+                                            type="button"
+                                            className="order-cancel-btn-back"
+                                            onClick={() => { setShowWarrantyRejectModal(false); setWarrantyToReject(null); setWarrantyRejectReason(''); }}
+                                            disabled={submittingWarrantyReject}
+                                        >
+                                            Quay lại
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="order-cancel-btn-confirm"
+                                            style={{ background: '#ef4444' }}
+                                            onClick={handleConfirmRejectWarranty}
+                                            disabled={submittingWarrantyReject || !warrantyRejectReason.trim()}
+                                        >
+                                            {submittingWarrantyReject ? 'Đang xử lý...' : 'Xác nhận từ chối'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <ReportModal
                             open={showReportModal}

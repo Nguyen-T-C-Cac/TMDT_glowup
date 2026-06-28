@@ -11,4 +11,6 @@ export interface ScheduledOrder {
     statusText: string; // VD: "ĐÃ XÁC NHẬN", "ĐANG DI CHUYỂN"
     estPrice: number;
     note?: string;
+    isWarranty?: boolean;
+    warrantyStatus?: string;
 }
