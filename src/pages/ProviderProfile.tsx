@@ -61,7 +61,7 @@ export const ProviderProfile: React.FC = () => {
   return (
     <div style={{ backgroundColor: 'var(--bg-page)', minHeight: '100vh' }}>
       <main className="pp-main-container">
-        <ProfileHeader profile={profileData} onBack={() => onNavigate('find-provider')} onReviewsClick={() => setActiveTab('reviews')} />
+        <ProfileHeader profile={profileData} onBack={() => onNavigate('provider')} onReviewsClick={() => setActiveTab('reviews')} />
         
         <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} reviewCount={profileData.reviewCount} />
 

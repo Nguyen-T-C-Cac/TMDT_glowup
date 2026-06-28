@@ -17,8 +17,8 @@ export function PendingEmailVerificationPage({ email: initialEmail }: PendingEma
   const [statusType, setStatusType] = useState<'success' | 'error'>('success')
 
   useEffect(() => {
-    // Get email from session storage if not provided
-    const sessionEmail = sessionStorage.getItem('registerEmail')
+    // Get email from local storage if not provided
+    const sessionEmail = localStorage.getItem('registerEmail')
     if (sessionEmail) {
       setEmail(sessionEmail)
     }

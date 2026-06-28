@@ -19,12 +19,15 @@ import com.example.becommerce.repository.TechnicianProfileRepository;
 import com.example.becommerce.repository.UserRepository;
 import com.example.becommerce.repository.VerificationRepository;
 import com.example.becommerce.service.FileStorageService;
+import com.example.becommerce.service.NotificationService;
 import com.example.becommerce.service.VerificationService;
+import com.example.becommerce.entity.enums.NotificationType;
 import com.example.becommerce.utils.VerificationCodeGenerator;
 import com.example.becommerce.utils.VerificationSpecification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import java.util.Map;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -60,6 +63,7 @@ public class VerificationServiceImpl implements VerificationService {
     private final UserRepository              userRepository;
     private final TechnicianProfileRepository profileRepository;
     private final FileStorageService          fileStorageService;
+    private final NotificationService          notificationService;
     private final VerificationMapper          verificationMapper;
     private final VerificationCodeGenerator   codeGenerator;
 
@@ -152,6 +156,23 @@ public class VerificationServiceImpl implements VerificationService {
         return verificationMapper.toDetail(v);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public VerificationDetailResponse getByTechnician(String technicianId) {
+        User technician = userRepository.findByCodeAndDeletedFalse(technicianId)
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy thợ " + technicianId));
+
+        Verification v = verificationRepository.findTopByTechnician_IdOrderBySubmittedAtDesc(technician.getId())
+                .orElse(null);
+
+        if (v == null) {
+            return null; // Trả về null nếu thợ chưa có hồ sơ nào
+        }
+
+        ensureCanRead(v);
+        return verificationMapper.toDetail(v);
+    }
+
     // ===============================================================
     // REVIEW (admin approve/reject)
     // ===============================================================
@@ -172,7 +193,8 @@ public class VerificationServiceImpl implements VerificationService {
         } catch (IllegalArgumentException ex) {
             throw AppException.badRequest(ErrorCode.VALIDATION_ERROR, "Trạng thái duyệt không hợp lệ");
         }
-        if (target != VerificationStatus.APPROVED && target != VerificationStatus.REJECTED) {
+        if (target != VerificationStatus.APPROVED
+                && target != VerificationStatus.REJECTED) {
             throw AppException.badRequest(ErrorCode.VALIDATION_ERROR,
                     "Chỉ chấp nhận status approved hoặc rejected");
         }
@@ -191,10 +213,32 @@ public class VerificationServiceImpl implements VerificationService {
         profileRepository.save(profile);
 
         if (Boolean.TRUE.equals(request.getNotifyTechnician())) {
-            // Wire up to NotificationService when ready — left as no-op to keep
-            // this module independent of notification implementation details.
-            log.info("[notify] verification {} -> technician {}: status={}",
-                    saved.getCode(), v.getTechnician().getCode(), target);
+            String title;
+            String body;
+            switch (target) {
+                case APPROVED:
+                    title = "Xác minh hồ sơ đã được chấp thuận";
+                    body = "Hồ sơ xác minh của bạn đã được phê duyệt. Trạng thái tài khoản kỹ thuật viên hiện là " + target.apiValue() + ".";
+                    break;
+                case REJECTED:
+                    title = "Xác minh hồ sơ không đạt";
+                    body = "Hồ sơ xác minh của bạn đã bị từ chối. Vui lòng kiểm tra ghi chú và gửi lại.";
+                    break;
+                default:
+                    title = "Cập nhật trạng thái xác minh";
+                    body = "Trạng thái hồ sơ xác minh của bạn đã được cập nhật thành " + target.apiValue() + ".";
+            }
+
+            try {
+                notificationService.createNotification(
+                        v.getTechnician(),
+                        NotificationType.SYSTEM,
+                        title,
+                        body,
+                        Map.of("verificationId", v.getCode(), "status", target.apiValue()));
+            } catch (Exception ex) {
+                log.error("Không thể gửi thông báo xác minh tới kỹ thuật viên {}", v.getTechnician().getCode(), ex);
+            }
         }
 
         return verificationMapper.toReviewResponse(saved, syncedStatus);

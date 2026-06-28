@@ -1,6 +1,5 @@
 import React from 'react';
 import './FilterSidebar.css';
-//import { StarIcon } from '../common/Icons';
 
 interface FilterSidebarProps {
   currentPage?: number;
@@ -11,57 +10,57 @@ interface FilterSidebarProps {
 export const FilterSidebar: React.FC<FilterSidebarProps> = ({
   currentPage = 1,
   totalPages = 1,
-  onPageChange
+  onPageChange,
 }) => {
   return (
     <aside className="filter-sidebar">
       <div className="filter-section">
         <h3 className="filter-title">Lọc theo khu vực</h3>
+        <p className="filter-subtitle">TP.HCM</p>
+        
         <div className="filter-options">
           <label className="filter-checkbox">
             <input type="checkbox" defaultChecked />
-            <span className="checkmark"></span>
+            <span className="checkmark">
+              <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </span>
             <span className="filter-text">Quận 1, HCMC</span>
           </label>
           <label className="filter-checkbox">
             <input type="checkbox" />
-            <span className="checkmark"></span>
+            <span className="checkmark">
+              <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </span>
             <span className="filter-text">Quận 7, HCMC</span>
           </label>
           <label className="filter-checkbox">
             <input type="checkbox" />
-            <span className="checkmark"></span>
+            <span className="checkmark">
+              <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </span>
             <span className="filter-text">Thủ Đức, HCMC</span>
           </label>
           <label className="filter-checkbox">
             <input type="checkbox" />
-            <span className="checkmark"></span>
+            <span className="checkmark">
+              <svg className="check-icon" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </span>
             <span className="filter-text">Quận Bình Thạnh, HCMC</span>
           </label>
         </div>
-
       </div>
 
-      {/* <div className="filter-section">
-        <h3 className="filter-title">Đánh giá</h3>
-        <div className="filter-options">
-          <label className="filter-checkbox">
-            <input type="radio" name="rating" />
-            <span className="checkmark border-circle"></span>
-            <div className="filter-rating">
-              <StarIcon size={14} className="star-icon text-yellow-500" />
-              <StarIcon size={14} className="star-icon text-yellow-500" />
-              <StarIcon size={14} className="star-icon text-yellow-500" />
-              <StarIcon size={14} className="star-icon text-yellow-500" />
-              <StarIcon size={14} className="star-icon text-gray-300" />
-              <span className="rating-text">4.0+</span>
-            </div>
-          </label>
-        </div>
-      </div>*/}
-
+      {/* Phân trang nằm dưới lọc khu vực */}
       {totalPages > 1 && onPageChange && (
-        <div className="pl-pagination" style={{ marginTop: '24px' }}>
+        <div className="sidebar-pagination">
           <button
             className="page-btn"
             disabled={currentPage === 1}

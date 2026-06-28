@@ -32,8 +32,8 @@ public interface AuthService {
     /** Return current authenticated user's profile. */
     UserResponse getCurrentUser(String bearerToken);
 
-    /** Verify email with confirmation token. */
-    void verifyEmail(VerifyEmailRequest request);
+    /** Verify email with confirmation token and return user role. */
+    String verifyEmail(VerifyEmailRequest request);
 
     /** Resend email confirmation when user has not verified yet. */
     void resendConfirmationEmail(ResendVerificationEmailRequest request);

@@ -118,3 +118,7 @@ export const InstagramIcon = ({ size = 24, className = "" }: { size?: number, cl
 export const MicrowaveIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><rect x="6" y="8" width="8" height="8" rx="1" ry="1"></rect><circle cx="18" cy="10" r="1"></circle><circle cx="18" cy="14" r="1"></circle></svg>
 );
+
+export const MapPinIcon = ({ size = 16, className = "" }: { size?: number, className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+);

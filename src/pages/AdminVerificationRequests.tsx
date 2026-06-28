@@ -1,51 +1,79 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AdminHeader } from '../components/admin/AdminHeader'
 import { AdminSidebar } from '../components/admin/AdminSidebar'
 import { Footer } from '../components/layout/Footer'
 import {
   formatDate,
-  getVerificationRequests,
+  getAllVerifications,
   verificationStatusColor,
   verificationStatusLabel,
+  getImageUrl,
 } from '../services/verificationService'
 import type { VerificationRequest, VerificationStatus } from '../types/VerificationRequest'
 import './AdminVerificationRequests.css'
 
-const statusFilters: Array<'all' | VerificationStatus> = ['all', 'pending', 'approved', 'rejected', 'needs_resubmit']
+const statusFilters: Array<'all' | VerificationStatus> = ['all', 'pending', 'approved', 'rejected']
 
 const statusFilterLabel: Record<'all' | VerificationStatus, string> = {
   all: 'Tất cả',
   pending: 'Chờ duyệt',
   approved: 'Đã phê duyệt',
   rejected: 'Từ chối',
-  needs_resubmit: 'Yêu cầu bổ sung',
 }
 
 export default function AdminVerificationRequests() {
   const navigate = useNavigate()
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | VerificationStatus>('pending')
-  const [requests] = useState<VerificationRequest[]>(() => getVerificationRequests())
+  const [requests, setRequests] = useState<VerificationRequest[]>([])
+
+  useEffect(() => {
+    let isMounted = true
+    const fetchRequests = async () => {
+      try {
+        const response = await getAllVerifications()
+        if (!isMounted) return
+        
+        let data = []
+        if (Array.isArray(response)) {
+          data = response
+        } else if (response && Array.isArray(response.data)) {
+          data = response.data
+        } else if (response && response.data && Array.isArray((response.data as any).data)) {
+          data = (response.data as any).data
+        } else if (response && response.data && Array.isArray((response.data as any).items)) {
+          data = (response.data as any).items
+        }
+        
+        setRequests(data)
+      } catch (error) {
+        console.error("Failed to fetch requests", error)
+      }
+    }
+    fetchRequests()
+    return () => { isMounted = false }
+  }, [])
 
   const filtered = useMemo(() => {
     const normalized = keyword.trim().toLowerCase()
     return requests.filter((item) => {
-      const statusMatched = statusFilter === 'all' ? true : item.status === statusFilter
+      const itemStatus = (item.status || 'pending').toLowerCase() as VerificationStatus
+      const statusMatched = statusFilter === 'all' ? true : itemStatus === statusFilter
       const keywordMatched =
         normalized.length === 0
           ? true
-          : item.fullName.toLowerCase().includes(normalized) ||
-            item.phone.toLowerCase().includes(normalized) ||
-            item.id.toLowerCase().includes(normalized)
+          : (item.fullName || '').toLowerCase().includes(normalized) ||
+            (item.phone || '').toLowerCase().includes(normalized) ||
+            String(item.id || '').toLowerCase().includes(normalized)
 
       return statusMatched && keywordMatched
     })
   }, [requests, statusFilter, keyword])
 
-  const pendingCount = requests.filter((req) => req.status === 'pending').length
-  const approvedCount = requests.filter((req) => req.status === 'approved').length
-  const rejectedCount = requests.filter((req) => req.status === 'rejected').length
+  const pendingCount = requests.filter((req) => (req.status || 'pending').toLowerCase() === 'pending').length
+  const approvedCount = requests.filter((req) => (req.status || '').toLowerCase() === 'approved').length
+  const rejectedCount = requests.filter((req) => (req.status || '').toLowerCase() === 'rejected').length
 
   return (
     <div className="avr-layout">
@@ -110,24 +138,27 @@ export default function AdminVerificationRequests() {
               </thead>
               <tbody>
                 {filtered.map((item) => {
-                  const statusStyle = verificationStatusColor[item.status]
+                  const status = (item.status || 'pending').toLowerCase() as VerificationStatus
+                  const statusStyle = verificationStatusColor[status] || verificationStatusColor.pending
+                  const label = verificationStatusLabel[status] || verificationStatusLabel.pending
+
                   return (
                     <tr key={item.id}>
                       <td className="avr-id">{item.id}</td>
                       <td>
                         <div className="avr-user">
-                          <img src={item.documents.portrait} alt={item.fullName} className="avr-avatar" />
+                          <img src={getImageUrl(item.documents?.portrait) || 'https://i.pravatar.cc/150'} alt={item.fullName || 'User'} className="avr-avatar" />
                           <div>
-                            <div className="avr-name">{item.fullName}</div>
-                            <div className="avr-phone">{item.phone}</div>
+                            <div className="avr-name">{item.fullName || 'Chưa cập nhật'}</div>
+                            <div className="avr-phone">{item.phone || 'Chưa cập nhật'}</div>
                           </div>
                         </div>
                       </td>
-                      <td>{item.serviceCategory}</td>
-                      <td>{formatDate(item.submittedAt)}</td>
+                      <td>{item.serviceCategory || 'Chưa cập nhật'}</td>
+                      <td>{item.submittedAt ? formatDate(item.submittedAt) : 'Chưa cập nhật'}</td>
                       <td>
                         <span className="avr-status" style={{ color: statusStyle.color, backgroundColor: statusStyle.bg }}>
-                          {verificationStatusLabel[item.status]}
+                          {label}
                         </span>
                       </td>
                       <td>

@@ -13,6 +13,7 @@ interface Props {
   onNavigate?: (page: string, data?: unknown) => void;
   selectedService?: string;
   currentPage?: number;
+  totalPages?: number;
   setCurrentPage?: (page: number) => void;
   setTotalPages?: (total: number) => void;
 }
@@ -21,6 +22,7 @@ export const ProviderList: React.FC<Props> = ({
   onNavigate,
   selectedService,
   currentPage = 1,
+  totalPages = 1,
   setCurrentPage,
   setTotalPages,
 }) => {
@@ -174,6 +176,7 @@ useEffect(() => {
           <p>Hãy thử tìm kiếm dịch vụ khác.</p>
         </div>
       )}
+
 
       <RepairRequestModal
         open={!!selectedProvider}

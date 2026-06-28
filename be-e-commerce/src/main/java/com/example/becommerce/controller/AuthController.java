@@ -141,11 +141,11 @@ public class AuthController {
     // ----------------------------------------------------------------
 
     @PostMapping(ApiConstant.AUTH_VERIFY_EMAIL)
-    public ResponseEntity<ApiResponse<Void>> verifyEmail(
+    public ResponseEntity<ApiResponse<String>> verifyEmail(
             @Valid @RequestBody VerifyEmailRequest request) {
 
-        authService.verifyEmail(request);
-        return ResponseEntity.ok(ApiResponse.success());
+        String role = authService.verifyEmail(request);
+        return ResponseEntity.ok(ApiResponse.success(role));
     }
 
     // ----------------------------------------------------------------

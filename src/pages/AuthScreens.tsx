@@ -353,6 +353,9 @@ function resolveRedirectPathByRole(role?: string | null) {
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const redirectParam = searchParams.get('redirect')
+  const isVerified = searchParams.get('verified') === 'true'
   const [redirectTo, setRedirectTo] = useState<string | null>(null)
   const [checkingSession, setCheckingSession] = useState(true)
 
@@ -362,7 +365,7 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<FieldError>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
+  const [successMessage, setSuccessMessage] = useState(isVerified ? 'Email xác thực thành công! Vui lòng đăng nhập để tiếp tục.' : '')
   const [googleLoggingIn, setGoogleLoggingIn] = useState(false)
 
   const googleLoginAction = useGoogleLogin({
@@ -471,7 +474,8 @@ export function LoginPage() {
         identifier: identifier.trim(),
         password: password
       })
-      const redirectPath = resolveRedirectPathByRole(loginResponse.data.user.role)
+      // Ưu tiên redirect param (ví dụ: từ trang xác thực email chuyển sang)
+      const redirectPath = redirectParam || resolveRedirectPathByRole(loginResponse.data.user.role)
 
       window.setTimeout(() => {
         setIsSubmitting(false)
@@ -501,7 +505,7 @@ export function LoginPage() {
           description="Đăng nhập bằng email hoặc số điện thoại để tiếp tục."
         />
 
-        {successMessage ? <StatusBanner type="success" title="Hoàn tất" description={successMessage} /> : null}
+        {successMessage ? <StatusBanner type={isVerified ? 'info' : 'success'} title={isVerified ? 'Xác thực thành công' : 'Hoàn tất'} description={successMessage} /> : null}
 
         <button
           type="button"
@@ -682,8 +686,8 @@ export function RegisterPage() {
       await registerUser({ fullName, email, phone, password, accountType })
       setIsSubmitting(false)
 
-      // Lưu email vào sessionStorage để sử dụng ở trang pending verification
-      sessionStorage.setItem('registerEmail', email)
+      // Lưu email vào localStorage để sử dụng ở trang pending verification
+      localStorage.setItem('registerEmail', email)
 
       // Redirect đến trang chờ xác nhận email
       window.setTimeout(() => {

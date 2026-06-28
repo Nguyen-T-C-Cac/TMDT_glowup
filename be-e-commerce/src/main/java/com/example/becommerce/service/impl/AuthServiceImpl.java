@@ -354,7 +354,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void verifyEmail(VerifyEmailRequest request) {
+    public String verifyEmail(VerifyEmailRequest request) {
         // 1. Find valid confirmation token
         EmailConfirmationToken confirmToken = emailConfirmationTokenRepository
                 .findByTokenAndUsedFalse(request.getToken())
@@ -378,6 +378,8 @@ public class AuthServiceImpl implements AuthService {
         emailConfirmationTokenRepository.invalidateAllByUserId(user.getId());
 
         log.info("Email verified successfully for user: {}", user.getEmail());
+        
+        return user.getRole().name();
     }
 
     // ----------------------------------------------------------------

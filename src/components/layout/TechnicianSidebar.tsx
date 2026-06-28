@@ -101,6 +101,14 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashbo
                 </svg>
             )
         },
+        {
+            id: 'verification', label: 'Trạng thái xác minh', icon: (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                    strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2l2.7 5.6 6.2.9-4.5 4.4 1.1 6.2L12 17.6 6.5 19.1l1.1-6.2L3 8.5l6.2-.9L12 2z"></path>
+                </svg>
+            )
+        },
     ];
 
     const pageMap: Record<string, string> = {
@@ -109,6 +117,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashbo
         chat: '/technician/chat',
         wallet: '/technician/wallet',
         profile: '/technician/profile',
+        verification: '/technician/verification-status',
     };
 
     const handleNavigate = (itemId: string) => {

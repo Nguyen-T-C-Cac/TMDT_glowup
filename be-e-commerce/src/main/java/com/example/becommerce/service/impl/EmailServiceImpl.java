@@ -144,6 +144,11 @@ public class EmailServiceImpl implements EmailService {
     // ─────────────────────────────────────────────
 
     private void sendHtmlEmail(String to, String subject, String htmlContent) throws MessagingException {
+        if (senderEmail == null || senderEmail.isBlank()) {
+            log.error("Failed to send email because sender email is not configured.");
+            throw new RuntimeException("SMTP sender email is not configured. Please set spring.mail.username / MAIL_USERNAME.");
+        }
+
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
         helper.setFrom(senderEmail);
