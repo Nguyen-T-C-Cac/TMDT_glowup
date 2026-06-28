@@ -30,6 +30,9 @@ public class MessageResponse {
     /** Set only when {@code type == "booking"}. */
     private EmbeddedBooking booking;
 
+    /** Set only when {@code type == "warranty"}. */
+    private EmbeddedWarranty warranty;
+
     private LocalDateTime sentAt;
     private Boolean isRead;
 }

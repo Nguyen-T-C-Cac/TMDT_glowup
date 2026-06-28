@@ -126,6 +126,11 @@ public class Order {
     @Builder.Default
     private boolean deleted = false;
 
+    /** Mark this order as a warranty re-claim of a previously completed order. */
+    @Column(name = "is_warranty", columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Builder.Default
+    private Boolean isWarranty = false;
+
     // ---- Relationships ---------------------------------------------
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

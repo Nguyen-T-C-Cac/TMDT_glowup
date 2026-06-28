@@ -58,6 +58,8 @@ export interface OrderResponse {
     reviewed?: boolean;
     myRating?: number;
 
+    isWarranty?: boolean;
+
     createdAt?: string;
     updatedAt?: string;
 }

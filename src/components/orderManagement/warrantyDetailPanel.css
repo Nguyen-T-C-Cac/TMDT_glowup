@@ -1,0 +1,345 @@
+.wd-panel {
+    padding: 8px 0 24px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.wd-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--white);
+}
+
+.wd-back-btn {
+    background: none;
+    border: none;
+    font-weight: var(--fw-bold);
+    color: var(--blueberry-skin);
+    font-size: var(--fs-base);
+    cursor: pointer;
+    padding: 0;
+    font-family: var(--font-family);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wd-code {
+    color: var(--text-sub);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+}
+
+.wd-loading,
+.wd-error,
+.wd-empty {
+    padding: 28px 20px;
+    border-radius: 16px;
+    border: 1px dashed var(--border);
+    text-align: center;
+    color: var(--text-sub);
+    background: rgba(255, 255, 255, 0.75);
+}
+
+.wd-error {
+    color: #b91c1c;
+    border-color: #fecaca;
+    background: #fef2f2;
+}
+
+/* Status row */
+.wd-status-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 16px 20px;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+}
+
+.wd-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-bold);
+}
+
+.wd-badge-pending {
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+}
+
+.wd-badge-progress {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.wd-badge-done {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+}
+
+.wd-badge-rejected {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.wd-badge-expired {
+    background: #f8fafc;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+.wd-remaining {
+    font-size: var(--fs-sm);
+    color: var(--text-sub);
+}
+
+/* Cards */
+.wd-card {
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--white);
+    margin-bottom: 16px;
+}
+
+.wd-card-danger {
+    border-color: #fecaca;
+    background: #fef2f2;
+}
+
+.wd-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.wd-card-title {
+    margin: 0 0 12px 0;
+    font-size: var(--fs-base);
+    color: var(--blueberry-skin);
+    font-weight: var(--fw-bold);
+}
+
+.wd-card-danger .wd-card-title {
+    color: #dc2626;
+}
+
+.wd-count {
+    font-size: var(--fs-xs);
+    color: var(--text-sub);
+    font-weight: var(--fw-semibold);
+}
+
+/* Info grid */
+.wd-info-grid {
+    display: grid;
+    gap: 14px;
+}
+
+.wd-info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.wd-info-icon {
+    color: var(--blueberry-skin);
+    font-size: 16px;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.wd-info-label {
+    display: block;
+    font-size: var(--fs-xs);
+    color: var(--text-sub);
+    margin-bottom: 2px;
+}
+
+.wd-info-value {
+    font-size: var(--fs-sm);
+    color: var(--text-main);
+    font-weight: var(--fw-medium);
+}
+
+/* Description */
+.wd-description {
+    margin: 0;
+    color: var(--text-main);
+    line-height: 1.6;
+    font-size: var(--fs-sm);
+}
+
+/* Image grid */
+.wd-image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.wd-image-grid img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.wd-image-grid img:hover {
+    transform: scale(1.03);
+}
+
+/* Reject reason */
+.wd-reject-reason {
+    margin: 0;
+    color: #991b1b;
+    line-height: 1.6;
+    font-size: var(--fs-sm);
+    padding: 12px;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #fecaca;
+}
+
+/* Action buttons */
+.wd-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.wd-btn {
+    flex: 1;
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-family: var(--font-family);
+    font-size: var(--fs-base);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+    transition: 0.2s;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.wd-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.wd-btn-accept {
+    background: #16a34a;
+    color: white;
+}
+
+.wd-btn-accept:hover:not(:disabled) {
+    background: #15803d;
+}
+
+.wd-btn-reject {
+    background: #ef4444;
+    color: white;
+}
+
+.wd-btn-reject:hover:not(:disabled) {
+    background: #dc2626;
+}
+
+.wd-btn-cancel {
+    background: var(--white);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+}
+
+.wd-btn-cancel:hover:not(:disabled) {
+    background: var(--plate-white);
+}
+
+/* Reject modal */
+.wd-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 9999;
+}
+
+.wd-modal-content {
+    background: var(--white);
+    border-radius: 16px;
+    overflow: hidden;
+    width: min(500px, 95vw);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.24);
+    border: 1px solid var(--border);
+}
+
+.wd-modal-header {
+    padding: 20px 24px 12px;
+}
+
+.wd-modal-header h3 {
+    margin: 0;
+    font-size: var(--fs-lg);
+    font-weight: var(--fw-bold);
+    color: #dc2626;
+    line-height: 1.3;
+}
+
+.wd-modal-body {
+    padding: 12px 24px 20px;
+}
+
+.wd-modal-body p {
+    font-size: 14px;
+    color: var(--stem-grey);
+    margin: 0 0 16px;
+}
+
+.wd-reject-input {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    font-family: var(--font-family);
+    font-size: var(--fs-sm);
+    color: var(--text-main);
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.wd-reject-input:focus {
+    outline: none;
+    border-color: #ef4444;
+}
+
+.wd-modal-footer {
+    padding: 0 24px 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}

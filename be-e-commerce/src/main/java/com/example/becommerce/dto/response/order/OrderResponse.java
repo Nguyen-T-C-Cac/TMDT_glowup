@@ -50,6 +50,8 @@ public class OrderResponse {
     private Boolean reviewed;
     private Integer myRating;
 
+    private Boolean isWarranty;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

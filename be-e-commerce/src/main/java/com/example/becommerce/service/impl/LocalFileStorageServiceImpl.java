@@ -24,7 +24,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class LocalFileStorageServiceImpl implements FileStorageService {
 
-    private static final Set<String> ALLOWED_FOLDERS = Set.of("avatars", "orders", "verifications", "categories", "reports", "bookings");
+    private static final Set<String> ALLOWED_FOLDERS = Set.of("avatars", "orders", "verifications", "categories", "reports", "bookings", "warranty");
     private static final Set<String> ALLOWED_MIME_TYPES = Set.of("image/jpeg", "image/png", "image/webp", "image/gif");
 
     @Value("${app.upload.base-dir:uploads}")

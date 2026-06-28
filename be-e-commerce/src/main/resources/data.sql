@@ -1,6 +1,10 @@
--- Drop legacy CHECK constraint that only allows uppercase enum values.
+-- Drop legacy CHECK constraints that only allow uppercase enum values.
 -- The MessageTypeConverter now writes lowercase values (e.g. 'booking', 'invoice').
 ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_type_check;
+
+-- Drop the notifications.type check constraint if present.
+-- WARRANTY_REQUEST and WARRANTY_RESPONSE were added to NotificationType.
+ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
 
 -- =====================================================================
 -- GlowUp Concierge — demo seed data

@@ -13,6 +13,7 @@ export interface CompletedOrder {
     totalPrice: number;
     rating: number;
     reviewed?: boolean;
+    isWarranty?: boolean;
 }
 
 interface CompletedCardProps {

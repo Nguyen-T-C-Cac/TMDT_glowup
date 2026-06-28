@@ -15,7 +15,9 @@ public enum NotificationType {
     WITHDRAW_FAILED,
     SYSTEM,
     PROMOTION,
-    CHAT_MESSAGE;
+    CHAT_MESSAGE,
+    WARRANTY_REQUEST,
+    WARRANTY_RESPONSE;
 
     public String apiValue() {
         return name().toLowerCase(Locale.ROOT);
