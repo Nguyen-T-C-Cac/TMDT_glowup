@@ -113,6 +113,18 @@ public class AuthController {
     }
 
     // ----------------------------------------------------------------
+    // POST /api/auth/reset-password
+    // ----------------------------------------------------------------
+
+    @PostMapping(ApiConstant.AUTH_RESET_PASSWORD)
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @Valid @RequestBody ChangePasswordRequest request) {
+
+        authService.changePassword(request);
+        return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    // ----------------------------------------------------------------
     // GET /api/auth/me  (requires Bearer token)
     // ----------------------------------------------------------------
 
@@ -129,10 +141,23 @@ public class AuthController {
     // ----------------------------------------------------------------
 
     @PostMapping(ApiConstant.AUTH_VERIFY_EMAIL)
-    public ResponseEntity<ApiResponse<Void>> verifyEmail(
+    public ResponseEntity<ApiResponse<String>> verifyEmail(
             @Valid @RequestBody VerifyEmailRequest request) {
 
-        authService.verifyEmail(request);
+        String role = authService.verifyEmail(request);
+        return ResponseEntity.ok(ApiResponse.success(role));
+    }
+
+    // ----------------------------------------------------------------
+    // POST /api/auth/resend-verification
+    // ----------------------------------------------------------------
+
+    @PostMapping(ApiConstant.AUTH_RESEND_VERIFICATION)
+    public ResponseEntity<ApiResponse<Void>> resendVerificationEmail(
+            @Valid @RequestBody ResendVerificationEmailRequest request) {
+
+        authService.resendConfirmationEmail(request);
         return ResponseEntity.ok(ApiResponse.success());
     }
 }
+

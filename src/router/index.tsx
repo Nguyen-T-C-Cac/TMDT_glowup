@@ -71,8 +71,8 @@ export default function AppRouter() {
         <Route path="wallet/topup-result" element={<TechnicianLayout activeItem="wallet"><TechnicianWalletTopUpResultPage /></TechnicianLayout>} />
         <Route path="wallet/withdraw" element={<TechnicianLayout activeItem="wallet"><TechnicianWalletWithdrawPage /></TechnicianLayout>} />
         <Route path="profile" element={<TechnicianLayout activeItem="profile"><TechnicianProfileSettingsPage /></TechnicianLayout>} />
-        <Route path="verification" element={<TechnicianVerificationPage />} />
-        <Route path="verification-status" element={<TechnicianVerificationStatusPage />} />
+        <Route path="verification" element={<TechnicianLayout activeItem="verification"><TechnicianVerificationPage /></TechnicianLayout>} />
+        <Route path="verification-status" element={<TechnicianLayout activeItem="verification"><TechnicianVerificationStatusPage /></TechnicianLayout>} />
         <Route path="provider-dashboard" element={<TechnicianLayout activeItem="dashboard"><ProviderDashboard /></TechnicianLayout>} />
         <Route path="chat" element={<TechnicianLayout activeItem="chat"><ChatPage role="technician" /></TechnicianLayout>} />
       </Route>

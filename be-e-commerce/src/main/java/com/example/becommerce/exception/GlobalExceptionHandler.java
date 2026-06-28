@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
@@ -97,6 +98,26 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error(ErrorCode.UNAUTHORIZED,
                         "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại"));
+    // ---- Data integrity ---------------------------------------------
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(
+            DataIntegrityViolationException ex, HttpServletRequest request) {
+
+        log.error("Data integrity violation on {}: ", request.getRequestURI(), ex);
+        String message = "Dữ liệu không hợp lệ hoặc bị trùng lặp";
+        if (ex.getMostSpecificCause() != null) {
+            message = ex.getMostSpecificCause().getMessage();
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(ErrorCode.CONFLICT, message));
+            }
+            
+    @ExceptionHandler(io.jsonwebtoken.JwtException.class)
+    public ResponseEntity<ApiResponse<Void>> handleJwtException(io.jsonwebtoken.JwtException ex) {
+        log.warn("JWT exception: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(ErrorCode.UNAUTHORIZED, "Phiên đăng nhập đã hết hạn hoặc không hợp lệ"));
     }
 
     // ---- Catch-all --------------------------------------------------

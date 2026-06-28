@@ -16,6 +16,7 @@ public enum MessageType {
     IMAGE,
     QUOTATION,
     INVOICE,
+    BOOKING,
     SYSTEM;
 
     public String apiValue() {

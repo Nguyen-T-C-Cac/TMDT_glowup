@@ -47,16 +47,21 @@ export const authService = {
         );
         return response.data;
     },
-
-    /**
-     * POST /api/auth/change-password
+     /**
+     * POST /api/auth/reset-password
      * Đặt lại mật khẩu qua token (quên mật khẩu)
      */
-    resetPassword: async (token: string, newPassword: string, confirmPassword: string): Promise<{ success: boolean; message?: string }> => {
-        const response = await apiClient.post<{ success: boolean; message?: string }>(
-            '/api/auth/change-password',
+    resetPassword: async (
+    token: string,
+    newPassword: string,
+    confirmPassword: string
+    ): Promise<{ success: boolean; message?: string }> => {
+
+        const response = await apiClient.post(
+            '/api/auth/reset-password',
             { token, newPassword, confirmPassword },
         );
+
         return response.data;
     },
 

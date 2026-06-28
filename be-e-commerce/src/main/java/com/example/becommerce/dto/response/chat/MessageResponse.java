@@ -27,6 +27,9 @@ public class MessageResponse {
     /** Set only when {@code type == "quotation"}. */
     private EmbeddedQuotation quotation;
 
+    /** Set only when {@code type == "booking"}. */
+    private EmbeddedBooking booking;
+
     private LocalDateTime sentAt;
     private Boolean isRead;
 }

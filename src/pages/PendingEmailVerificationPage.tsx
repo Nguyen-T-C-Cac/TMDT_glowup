@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Mail, ArrowRight, RefreshCw } from 'lucide-react'
+import { resendConfirmationEmail } from '../services/auth'
 import './AuthScreens.css'
 
 interface PendingEmailVerificationPageProps {
@@ -12,24 +13,40 @@ export function PendingEmailVerificationPage({ email: initialEmail }: PendingEma
   const [email, setEmail] = useState(initialEmail || '')
   const [resendCount, setResendCount] = useState(0)
   const [canResend, setCanResend] = useState(true)
+  const [statusMessage, setStatusMessage] = useState('')
+  const [statusType, setStatusType] = useState<'success' | 'error'>('success')
 
   useEffect(() => {
-    // Get email from session storage if not provided
-    const sessionEmail = sessionStorage.getItem('registerEmail')
+    // Get email from local storage if not provided
+    const sessionEmail = localStorage.getItem('registerEmail')
     if (sessionEmail) {
       setEmail(sessionEmail)
     }
   }, [])
 
   const handleResendEmail = async () => {
-    // TODO: Implement resend email API call
+    if (!email) {
+      setStatusType('error')
+      setStatusMessage('Không tìm thấy địa chỉ email để gửi lại. Vui lòng đăng nhập lại.')
+      return
+    }
+
     setCanResend(false)
-    setResendCount(prev => prev + 1)
-    
-    // Re-enable resend after 60 seconds
-    setTimeout(() => {
-      setCanResend(true)
-    }, 60000)
+    setStatusMessage('')
+
+    try {
+      await resendConfirmationEmail(email)
+      setStatusType('success')
+      setStatusMessage('Email xác nhận đã được gửi lại. Vui lòng kiểm tra hộp thư đến hoặc spam.')
+    } catch (error: any) {
+      setStatusType('error')
+      setStatusMessage(error.message || 'Không thể gửi lại email. Vui lòng thử lại sau.')
+    } finally {
+      setResendCount(prev => prev + 1)
+      setTimeout(() => {
+        setCanResend(true)
+      }, 60000)
+    }
   }
 
   return (
@@ -111,6 +128,12 @@ export function PendingEmailVerificationPage({ email: initialEmail }: PendingEma
                   {canResend && <RefreshCw size={18} />}
                 </button>
               </div>
+
+              {statusMessage && (
+                <p className={`pending-email__status pending-email__status--${statusType}`}>
+                  {statusMessage}
+                </p>
+              )}
 
               <div className="pending-email__divider"></div>
 

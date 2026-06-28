@@ -1,49 +1,70 @@
 import React from 'react';
 import styles from './Chat.module.css';
 import { Avatar } from '../common/Avatar';
-import type { Contact } from '../../types/Message.ts';
+import type { Contact } from '../../types/Message';
 
-const roleBadge = (type?: string): { badge: string; label: string; classSuffix: string } | null => {
-  if (type === 'ADMIN') return { badge: 'AD', label: 'Quản trị viên', classSuffix: 'admin' };
-  if (type === 'CUSTOMER') return { badge: 'KH', label: 'Khách hàng', classSuffix: 'customer' };
-  if (type === 'TECHNICIAN') return { badge: 'TV', label: 'Thợ', classSuffix: 'technician' };
-  return null;
+const roleConfig: Record<string, { label: string; icon: string }> = {
+    ADMIN: { label: 'Quản trị viên', icon: 'AD' },
+    CUSTOMER: { label: 'Khách hàng', icon: 'KH' },
+    TECHNICIAN: { label: 'Thợ', icon: 'TV' },
 };
 
 export const ContactItem: React.FC<{
-  contact: Contact;
-  isActive?: boolean;
-  onClick?: () => void;
+    contact: Contact;
+    isActive?: boolean;
+    onClick?: () => void;
 }> = ({ contact, isActive, onClick }) => {
-  const roleInfo = roleBadge(contact.partnerType);
+    const role = contact.partnerType ? roleConfig[contact.partnerType] : null;
+    const hasUnread = (contact.unreadCount ?? 0) > 0;
 
-  return (
-    <div
-      className={`${styles.contactItem} ${isActive ? styles.contactItemActive : ''} ${roleInfo ? styles[`contactItem${roleInfo.classSuffix.charAt(0).toUpperCase() + roleInfo.classSuffix.slice(1)}`] || '' : ''}`}
-      onClick={onClick}
-      onKeyDown={(e) => e.key === 'Enter' && onClick?.()}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-    >
-      <div className={styles.contactAvatarWrapper}>
-        <Avatar
-          src={contact.avatar}
-          alt={contact.name}
-          size={48}
-          isOnline={contact.isOnline}
-        />
-        {roleInfo && <span className={styles[`${roleInfo.classSuffix}Badge`] || ''}>{roleInfo.badge}</span>}
-      </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span className={styles.contactName}>
-            {contact.name}
-            {roleInfo && <span className={styles[`${roleInfo.classSuffix}Label`] || ''}>{roleInfo.label}</span>}
-          </span>
-          <span className={styles.contactTime}>{contact.time}</span>
+    return (
+        <div
+            className={`${styles.contactItem} ${isActive ? styles.contactItemActive : ''} ${hasUnread ? styles.contactItemUnread : ''}`}
+            onClick={onClick}
+            onKeyDown={(e) => e.key === 'Enter' && onClick?.()}
+            role={onClick ? 'button' : undefined}
+            tabIndex={onClick ? 0 : undefined}
+        >
+            <div className={styles.contactAvatarWrapper}>
+                <Avatar
+                    src={contact.avatar}
+                    alt={contact.name}
+                    size={48}
+                    isOnline={contact.isOnline}
+                />
+                {role && (
+                    <span className={`${styles.roleBadge} ${styles[`roleBadge${contact.partnerType}`] || ''}`}>
+                        {role.icon}
+                    </span>
+                )}
+            </div>
+
+            <div className={styles.contactInfo}>
+                <div className={styles.contactTopRow}>
+                    <span className={`${styles.contactName} ${hasUnread ? styles.contactNameUnread : ''}`}>
+                        {contact.name}
+                    </span>
+                    <span className={styles.contactTime}>{contact.time}</span>
+                </div>
+
+                <div className={styles.contactBottomRow}>
+                    <span className={`${styles.contactPreview} ${hasUnread ? styles.contactPreviewUnread : ''}`}>
+                        {contact.lastMessage}
+                    </span>
+                    <div className={styles.contactRight}>
+                        {role && (
+                            <span className={`${styles.rolePill} ${styles[`rolePill${contact.partnerType}`] || ''}`}>
+                                {role.label}
+                            </span>
+                        )}
+                        {hasUnread && (
+                            <span className={styles.unreadBadge}>
+                                {contact.unreadCount}
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
-        <div className={styles.lastMessageSnippet}>{contact.lastMessage}</div>
-      </div>
-    </div>
-  );
+    );
 };
