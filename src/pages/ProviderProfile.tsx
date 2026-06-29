@@ -71,15 +71,15 @@ export const ProviderProfile: React.FC = () => {
           <div className="pp-content-left">
             {activeTab === 'about' && <AboutTab providerId={providerId} onViewAllReviews={() => setActiveTab('reviews')} />}
             {activeTab === 'reviews' && <AboutTab providerId={providerId} onlyReviews={true} />}
-            {activeTab === 'schedule' && <ScheduleTab />}
+            {activeTab === 'schedule' && <ScheduleTab technicianId={providerId || undefined} />}
             {activeTab === 'projects' && <ProjectsTab />}
             {activeTab === 'security' && <ChangePasswordTab />}
           </div>
           {activeTab !== 'security' && (
             <div className="pp-sidebar-right">
-              <ScheduleSidebar />
+              <ScheduleSidebar technicianId={providerId || undefined} />
               <VerificationSidebar />
-              <MapSidebar />
+              <MapSidebar location={profileData.location} />
             </div>
           )}
         </div>

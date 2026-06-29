@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -21,6 +22,8 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     long countByDeletedFalse();
 
     long countByTechnician_IdAndStatusAndDeletedFalse(Long technicianId, OrderStatus status);
+
+    List<Order> findByTechnician_IdAndScheduledAtBetweenAndDeletedFalse(Long technicianId, LocalDateTime from, LocalDateTime to);
     long countByCompletedAtBetweenAndStatusAndDeletedFalse(LocalDateTime from, LocalDateTime to, OrderStatus status);
 
     // New: count completed orders in range (deleted=false)

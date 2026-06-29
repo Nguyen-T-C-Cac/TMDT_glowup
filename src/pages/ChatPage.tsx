@@ -683,106 +683,148 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                         )}
 
                         {!isLoading &&
-                            messages.map((message) => {
-                                const isMe = message.type === 'booking' && role === 'customer' ? true : message.senderId === currentUserCode;
-                                const isQuotation = message.type === 'quotation' && message.quotation;
-                                const isInvoice = message.type === 'invoice';
-                                const isBooking = message.type === 'booking';
-                                const isWarranty = message.type === 'warranty' && message.warranty;
-                                let invoiceParsed: Record<string, unknown> | null = null;
-                                if (isInvoice && message.content) {
-                                    try {
-                                        invoiceParsed = JSON.parse(message.content);
-                                    } catch {
-                                        invoiceParsed = null;
+                            (() => {
+                                const groups: Array<{ items: ChatMessage[]; isMe: boolean }> = [];
+                                for (const msg of messages) {
+                                    const isMe = msg.type === 'booking' ? true : msg.senderId === currentUserCode;
+                                    const last = groups[groups.length - 1];
+                                    if (last && last.isMe === isMe) {
+                                        last.items.push(msg);
+                                    } else {
+                                        groups.push({ items: [msg], isMe });
                                     }
                                 }
-
-                                return (
-                                    <div
-                                        key={message.id}
-                                        className={`${styles.messageRow} ${isMe ? styles.messageRowRight : ''}`}
-                                    >
-                                        {!isMe && (
-                                            <Avatar src={activeContact.avatar} size={32} isOnline={false} />
-                                        )}
-                                        <div className={styles.messageContent}>
-                                            {isBooking && message.booking ? (
-                                                <BookingCard
-                                                    booking={message.booking}
-                                                    role={role}
-                                                    onStatusChange={(bookingCode, newStatus) => {
-                                                        setMessages(prev => prev.map(msg => {
-                                                            if (msg.booking?.code === bookingCode) {
-                                                                return {
-                                                                    ...msg,
-                                                                    booking: { ...msg.booking, status: newStatus }
-                                                                };
-                                                            }
-                                                            return msg;
-                                                        }));
-                                                    }}
-                                                />
-                                            ) : isInvoice && invoiceParsed ? (
-                                                <InvoiceCard
-                                                    invoiceData={invoiceParsed as any}
-                                                    orderId={linkedOrder?.id ?? ''}
-                                                    isCustomer={role === 'customer'}
-                                                    isTechnician={role === 'technician'}
-                                                    onPayViaVNPay={
-                                                        role === 'customer' ? handlePayViaVNPay : undefined
-                                                    }
-                                                    onConfirmCash={
-                                                        role === 'technician' ? handleConfirmCash : undefined
-                                                    }
-                                                />
-                                            ) : isWarranty ? (
-                                                <WarrantyCard
-                                                    warranty={message.warranty!}
-                                                    role={role}
-                                                    onStatusChange={() => {
-                                                        if (activeConversationId) {
-                                                            loadMessages(activeConversationId);
-                                                        }
-                                                    }}
-                                                />
-                                            ) : isQuotation ? (
-                                                <QuotationCard
-                                                    serviceName={message.quotation!.serviceName}
-                                                    description={message.quotation!.description}
-                                                    price={message.quotation!.price}
-                                                    scheduledAt={message.quotation!.scheduledAt}
-                                                    status={message.quotation!.status}
-                                                    isCustomer={role === 'customer'}
-                                                    onAccept={() =>
-                                                        handleAcceptQuote(message.quotation!.id)
-                                                    }
-                                                    onReject={() =>
-                                                        handleRejectQuote(message.quotation!.id)
-                                                    }
-                                                />
-                                            ) : (
-                                                <div
-                                                    className={`${styles.bubble} ${
-                                                        isMe ? styles.bubbleRight : styles.bubbleLeft
-                                                    } ${message.senderRole === 'ADMIN' ? styles.bubbleAdmin : ''}`}
-                                                >
-                                                    {message.title && (
-                                                        <div className={styles.bubbleTitle} dangerouslySetInnerHTML={{ __html: message.title }} />
-                                                    )}
-                                                    {message.senderRole === 'ADMIN' && !isMe && (
-                                                        <span className={styles.adminTag}>Quản trị viên</span>
-                                                    )}
-                                                    <div dangerouslySetInnerHTML={{ __html: message.content ?? '' }} />
-                                                </div>
+                                return groups.map((group) => {
+                                    const { items, isMe } = group;
+                                    const lastItem = items[items.length - 1];
+                                    const allText = items.every(m => m.type === 'text');
+                                    return (
+                                        <div
+                                            key={items[0].id}
+                                            className={`${styles.messageRow} ${isMe ? styles.messageRowRight : ''}`}
+                                        >
+                                            {!isMe && (
+                                                <Avatar src={activeContact.avatar} size={32} isOnline={false} />
                                             )}
-                                            <span className={styles.messageTime}>
-                                                {formatMessageTime(message.sentAt)}
-                                            </span>
+                                            <div className={styles.messageContent}>
+                                                {allText ? (
+                                                    <>
+                                                        <div className={`${styles.bubble} ${isMe ? styles.bubbleRight : styles.bubbleLeft}`}>
+                                                            {items.map((msg, i) => (
+                                                                <React.Fragment key={msg.id}>
+                                                                    {msg.title && (
+                                                                        <div className={styles.bubbleTitle} dangerouslySetInnerHTML={{ __html: msg.title }} />
+                                                                    )}
+                                                                    {msg.senderRole === 'ADMIN' && !isMe && (
+                                                                        <span className={styles.adminTag}>Quản trị viên</span>
+                                                                    )}
+                                                                    <div dangerouslySetInnerHTML={{ __html: msg.content ?? '' }} />
+                                                                    {i < items.length - 1 && <div style={{ height: 6 }} />}
+                                                                </React.Fragment>
+                                                            ))}
+                                                        </div>
+                                                        <span className={styles.messageTime}>
+                                                            {formatMessageTime(lastItem.sentAt)}
+                                                        </span>
+                                                    </>
+                                                ) : items.map((msg, idx) => {
+                                                    const isQuotation = msg.type === 'quotation' && msg.quotation;
+                                                    const isInvoiceMsg = msg.type === 'invoice';
+                                                    const isBookingMsg = msg.type === 'booking';
+                                                    const isWarrantyMsg = msg.type === 'warranty' && msg.warranty;
+                                                    let invoiceParsed: Record<string, unknown> | null = null;
+                                                    if (isInvoiceMsg && msg.content) {
+                                                        try {
+                                                            invoiceParsed = JSON.parse(msg.content);
+                                                        } catch {
+                                                            invoiceParsed = null;
+                                                        }
+                                                    }
+                                                    const showTimestamp = idx === items.length - 1;
+                                                    return (
+                                                        <React.Fragment key={msg.id}>
+                                                            {isBookingMsg && msg.booking ? (
+                                                                <BookingCard
+                                                                    booking={msg.booking}
+                                                                    role={role}
+                                                                    onStatusChange={(bookingCode, newStatus) => {
+                                                                        setMessages(prev => prev.map(m => {
+                                                                            if (m.booking?.code === bookingCode) {
+                                                                                return {
+                                                                                    ...m,
+                                                                                    booking: { ...m.booking, status: newStatus }
+                                                                                };
+                                                                            }
+                                                                            return m;
+                                                                        }));
+                                                                    }}
+                                                                />
+                                                            ) : isInvoiceMsg && invoiceParsed ? (
+                                                                <InvoiceCard
+                                                                    invoiceData={invoiceParsed as any}
+                                                                    orderId={linkedOrder?.id ?? ''}
+                                                                    isCustomer={role === 'customer'}
+                                                                    isTechnician={role === 'technician'}
+                                                                    onPayViaVNPay={
+                                                                        role === 'customer' ? handlePayViaVNPay : undefined
+                                                                    }
+                                                                    onConfirmCash={
+                                                                        role === 'technician' ? handleConfirmCash : undefined
+                                                                    }
+                                                                />
+                                                            ) : isWarrantyMsg ? (
+                                                                <WarrantyCard
+                                                                    warranty={msg.warranty!}
+                                                                    role={role}
+                                                                    onStatusChange={() => {
+                                                                        if (activeConversationId) {
+                                                                            loadMessages(activeConversationId);
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            ) : isQuotation ? (
+                                                                <QuotationCard
+                                                                    serviceName={msg.quotation!.serviceName}
+                                                                    description={msg.quotation!.description}
+                                                                    price={msg.quotation!.price}
+                                                                    scheduledAt={msg.quotation!.scheduledAt}
+                                                                    status={msg.quotation!.status}
+                                                                    isCustomer={role === 'customer'}
+                                                                    onAccept={() =>
+                                                                        handleAcceptQuote(msg.quotation!.id)
+                                                                    }
+                                                                    onReject={() =>
+                                                                        handleRejectQuote(msg.quotation!.id)
+                                                                    }
+                                                                />
+                                                            ) : (
+                                                                <div
+                                                                    className={`${styles.bubble} ${
+                                                                        isMe ? styles.bubbleRight : styles.bubbleLeft
+                                                                    } ${msg.senderRole === 'ADMIN' ? styles.bubbleAdmin : ''}`}
+                                                                >
+                                                                    {msg.title && (
+                                                                        <div className={styles.bubbleTitle} dangerouslySetInnerHTML={{ __html: msg.title }} />
+                                                                    )}
+                                                                    {msg.senderRole === 'ADMIN' && !isMe && (
+                                                                        <span className={styles.adminTag}>Quản trị viên</span>
+                                                                    )}
+                                                                    <div dangerouslySetInnerHTML={{ __html: msg.content ?? '' }} />
+                                                                </div>
+                                                            )}
+                                                            {showTimestamp && (
+                                                                <span className={styles.messageTime}>
+                                                                    {formatMessageTime(lastItem.sentAt)}
+                                                                </span>
+                                                            )}
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                });
+                            })()}
 
                         {pendingAdjustment && role === 'customer' && (
                             <div className={styles.messageRow}>

@@ -8,7 +8,6 @@ import {
     CheckCircle2,
     Circle,
     Fan,
-    MapPin,
     Phone,
     Refrigerator,
     Shirt,
@@ -23,6 +22,10 @@ import { getCategories, type Category } from "../../services/categoryService";
 import { bookingService } from "../../services/bookingService";
 import { uploadService } from "../../services/uploadService";
 import type { Brand, DeviceType } from "../../types/booking";
+import HCMCAddressInput from "../common/HCMCAddressInput";
+import type { PlaceResult } from "../common/HCMCAddressInput";
+import InteractiveMap from "../common/InteractiveMap";
+import { useUserProfile } from "../../contexts/UserProfileContext";
 
 interface RepairRequestModalProps {
     open: boolean;
@@ -57,12 +60,6 @@ const timeSlotOptions = [
     { value: "Trưa (11:00-13:00)", label: "Trưa", sub: "11:00-13:00" },
     { value: "Chiều (13:00-17:00)", label: "Chiều", sub: "13:00-17:00" },
     { value: "Tối (17:00-21:00)", label: "Tối", sub: "17:00-21:00" },
-];
-
-const locationSuggestions = [
-    "123 Nguyễn Hữu Cảnh, Bình Thạnh",
-    "45 Lê Văn Sỹ, Phú Nhuận",
-    "12 Võ Văn Kiệt, Quận 1",
 ];
 
 const categoryIcons: Record<string, React.ReactNode> = {
@@ -173,9 +170,18 @@ const RepairRequestModal: React.FC<RepairRequestModalProps> = ({open, onClose, t
     const [urgency, setUrgency] = useState<UrgencyId>("NORMAL");
     const [timeSlot, setTimeSlot] = useState(timeSlotOptions[0].value);
     const [date, setDate] = useState(today);
-    const [address, setAddress] = useState("123 Nguyễn Hữu Cảnh, Bình Thạnh");
-    const [phone, setPhone] = useState("0901234567");
+    const { profile } = useUserProfile();
+    const [address, setAddress] = useState("");
+    const [placeLat, setPlaceLat] = useState<number | undefined>(undefined);
+    const [placeLng, setPlaceLng] = useState<number | undefined>(undefined);
+    const [phone, setPhone] = useState("");
     const [submitting, setSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (profile?.phone) {
+            setPhone(profile.phone);
+        }
+    }, [profile?.phone]);
 
     const OTHER_VALUE = "__other__";
 
@@ -572,33 +578,31 @@ const RepairRequestModal: React.FC<RepairRequestModalProps> = ({open, onClose, t
 
                         <section className="repair-section">
                             <h3>7. Địa chỉ</h3>
-                            <div className="input-icon-wrap">
-                                <MapPin size={16} />
-                                <input
-                                    type="text"
-                                    value={address}
-                                    onChange={(e) => setAddress(e.target.value)}
-                                    placeholder="Nhập khu vực cần sửa"
+                            <HCMCAddressInput
+                                onChange={setAddress}
+                                onPlaceChanged={(place: PlaceResult) => {
+                                    setAddress(place.address);
+                                    setPlaceLat(place.lat);
+                                    setPlaceLng(place.lng);
+                                }}
+                                initialDistrict={provider?.area}
+                            />
+                            <div className="mini-map" style={{ height: 180, marginTop: 8 }}>
+                                <InteractiveMap
+                                    lat={placeLat}
+                                    lng={placeLng}
+                                    height={180}
+                                    suggestedAddress={profile?.address || provider?.area}
+                                    onLocationSelect={(data) => {
+                                        setAddress(data.address);
+                                        setPlaceLat(data.lat);
+                                        setPlaceLng(data.lng);
+                                    }}
                                 />
                             </div>
-                            <div className="location-list">
-                                {locationSuggestions
-                                    .filter((item) => {
-                                        const keyword = address.trim().toLowerCase();
-                                        if (!keyword) return true;
-                                        return item.toLowerCase().includes(keyword);
-                                    })
-                                    .slice(0, 3)
-                                    .map((item) => (
-                                        <button key={item} type="button" onClick={() => setAddress(item)}>
-                                            {item}
-                                        </button>
-                                    ))}
-                            </div>
-                            <div className="mini-map">
-                                <MapPin size={16} />
-                                <span>{address || "Bản đồ khu vực"}</span>
-                            </div>
+                            <p style={{ fontSize: 12, color: '#64748b', margin: '6px 0 0 0' }}>
+                                Click lên bản đồ để chọn vị trí, hoặc kéo thả marker để điều chỉnh
+                            </p>
                         </section>
 
                         <section className="repair-section">

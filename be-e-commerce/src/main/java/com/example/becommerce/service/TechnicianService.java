@@ -8,6 +8,9 @@ import com.example.becommerce.dto.response.technician.TechnicianDetailResponse;
 import com.example.becommerce.dto.response.technician.TechnicianListItemResponse;
 import com.example.becommerce.dto.response.technician.TechnicianProfileUpdateResponse;
 import com.example.becommerce.dto.response.technician.TechnicianReviewListResponse;
+import com.example.becommerce.dto.response.technician.TechnicianScheduleResponse;
+
+import java.time.LocalDate;
 
 public interface TechnicianService {
 
@@ -22,4 +25,6 @@ public interface TechnicianService {
     AvailabilityResponse updateAvailability(String code, UpdateAvailabilityRequest request);
 
     TechnicianReviewListResponse listReviews(String code, int page, int limit);
+
+    TechnicianScheduleResponse getTechnicianSchedule(String code, LocalDate from, LocalDate to);
 }
