@@ -8,7 +8,6 @@ import { AboutTab } from '../components/provider-profile/AboutTab';
 import { ScheduleTab } from '../components/provider-profile/ScheduleTab';
 import { ProjectsTab } from '../components/provider-profile/ProjectsTab';
 import { ScheduleSidebar, VerificationSidebar, MapSidebar } from '../components/provider-profile/SidebarWidgets';
-import { ChangePasswordTab } from '../components/provider-profile/ChangePasswordTab';
 import { resolveTechnicianIdFromLocation } from '../utils/providerNavigation';
 import './ProviderProfile.css';
 

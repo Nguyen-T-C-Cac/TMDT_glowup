@@ -16,6 +16,7 @@ interface Props {
   totalPages?: number;
   setCurrentPage?: (page: number) => void;
   setTotalPages?: (total: number) => void;
+  selectedLocations?: string[];
 }
 
 export const ProviderList: React.FC<Props> = ({
@@ -25,6 +26,7 @@ export const ProviderList: React.FC<Props> = ({
   totalPages = 1,
   setCurrentPage,
   setTotalPages,
+  selectedLocations = [],
 }) => {
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [selectedSort, setSelectedSort] = useState('PHỔ BIẾN NHẤT');
@@ -54,10 +56,22 @@ export const ProviderList: React.FC<Props> = ({
         page: currentPage,
         limit: ITEMS_PER_PAGE,
         minRating,
+        //locations: selectedLocations,
       });
 
       let items = data.items.map(mapListItemToProviderEntry);
 
+      if (selectedLocations.length > 0) {
+          items = items.filter(item => {
+            if (item.kind !== 'normal') {
+              return false;
+            }
+
+            return selectedLocations.some(location =>
+              item.location.toLowerCase().includes(location.toLowerCase())
+            );
+          });
+        }
     
       if (selectedSort === 'GIÁ THẤP NHẤT') {
         items = [...items].sort((a, b) => {
@@ -85,23 +99,31 @@ export const ProviderList: React.FC<Props> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, selectedService, selectedSort, setTotalPages]);
+  }, [currentPage, selectedService, selectedSort, selectedLocations, setTotalPages]);
 
   useEffect(() => {
     loadProviders();
   }, [loadProviders]);
 
-useEffect(() => {
-    const timer = setTimeout(() => {
-      setCurrentPage?.(1);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [selectedService, setCurrentPage]);
+  useEffect(() => {
+    setCurrentPage?.(1);
+}, [selectedLocations, setCurrentPage]);
+  
+  useEffect(() => {
+      const timer = setTimeout(() => {
+        setCurrentPage?.(1);
+      }, 0);
+      return () => clearTimeout(timer);
+    }, [selectedService, setCurrentPage]);
 
-  const pageTitle = selectedService
-    ? `Thợ chuyên ${selectedService}`
-    : 'Thợ sửa chữa chuyên nghiệp';
+    const pageTitle = selectedService
+      ? `Thợ chuyên ${selectedService}`
+      : 'Thợ sửa chữa chuyên nghiệp';
 
+    const total =
+    selectedLocations.length > 0
+        ? providers.length
+        : resultTotal;
   /*const resultCount = useMemo(
     () => providers.filter((p) => p.kind !== 'premium').length,
     [providers]
@@ -113,7 +135,7 @@ useEffect(() => {
         <div className="pl-header-left">
           <h1 className="pl-title">{pageTitle}</h1>
           <p className="pl-subtitle">
-            Tìm thấy {resultTotal || providers.length} chuyên gia
+            Tìm thấy {total} chuyên gia
             {selectedService && <span className="pl-service-tag">{selectedService}</span>}{' '}
             tại khu vực TP.HCM
           </p>

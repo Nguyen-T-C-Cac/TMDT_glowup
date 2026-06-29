@@ -25,6 +25,7 @@ export const Provider: React.FC = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
 
   const onNavigate = (page: string, data?: unknown) => {
     const record = data && typeof data === 'object' ? (data as Record<string, unknown>) : null;
@@ -61,7 +62,8 @@ export const Provider: React.FC = () => {
         <div className="fp-layout">
           <ProviderList 
             onNavigate={onNavigate} 
-            selectedService={selectedService} 
+            selectedService={selectedService}
+            selectedLocations={selectedLocations} 
             currentPage={currentPage}
             totalPages={totalPages}
             setCurrentPage={setCurrentPage}
@@ -71,6 +73,8 @@ export const Provider: React.FC = () => {
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
+            selectedLocations={selectedLocations}
+            onLocationChange={setSelectedLocations}
           />
         </div>
       </main>
