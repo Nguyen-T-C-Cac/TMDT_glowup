@@ -34,6 +34,8 @@ export type TechnicianDetail = {
   titleBadge?: string | null;
   verificationStatus?: string | null;
   yearsExperience?: number | null;
+  rewardPoints?: number | null;   
+  certificates?: string[] | null;  
 };
 
 export type TechnicianListParams = {
@@ -54,4 +56,13 @@ export type PagedTechnicians = {
     total: number;
     totalPages: number;
   };
+};
+
+export type CompletedProject = {
+  id: number;
+  code: string;
+  serviceCategory: string; // Tương ứng với serviceCategory từ backend
+  serviceName: string;     // Tương ứng với serviceName từ backend
+  description: string;     // Mô tả dự án/đơn hàng
+  deviceName: string;      // Tên thiết bị sửa chữa (deviceName)
 };

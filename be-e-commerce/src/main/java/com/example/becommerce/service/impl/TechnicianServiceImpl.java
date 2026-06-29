@@ -8,6 +8,7 @@ import com.example.becommerce.dto.request.technician.UpdateTechnicianProfileRequ
 import com.example.becommerce.dto.response.PagedResponse;
 import com.example.becommerce.dto.response.review.ReviewResponse;
 import com.example.becommerce.dto.response.technician.AvailabilityResponse;
+import com.example.becommerce.dto.response.technician.CompletedProjectResponse;
 import com.example.becommerce.dto.response.technician.TechnicianDetailResponse;
 import com.example.becommerce.dto.response.technician.TechnicianListItemResponse;
 import com.example.becommerce.dto.response.technician.TechnicianProfileUpdateResponse;
@@ -38,7 +39,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-
+ 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -231,7 +232,29 @@ public class TechnicianServiceImpl implements TechnicianService {
                         .build())
                 .build();
     }
-
+    // ===============================================================
+    // COMPLETED PROJECTS
+    // ===============================================================
+ 
+    @Override
+    @Transactional(readOnly = true)
+    public List<CompletedProjectResponse> listCompletedProjects(String code) {
+        User technician = findTechnicianUser(code);
+ 
+        List<Order> orders = orderRepository.findCompletedByTechnicianId(
+                technician.getId(), OrderStatus.COMPLETED);
+ 
+        return orders.stream()
+                .map(order -> CompletedProjectResponse.builder()
+                        .id(order.getId())
+                        .code(order.getCode())
+                        .serviceCategory(order.getServiceCategory())
+                        .serviceName(order.getServiceName())
+                        .description(order.getDescription())
+                        .deviceName(order.getDeviceName())
+                        .build())
+                .toList();
+    }
     // ===============================================================
     // SCHEDULE
     // ===============================================================

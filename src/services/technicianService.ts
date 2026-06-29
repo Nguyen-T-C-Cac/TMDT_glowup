@@ -25,6 +25,7 @@ export const technicianService = {
     isAvailable?: boolean;
     page?: number;
     limit?: number;
+    locations?: string[];
   }): Promise<{ success: boolean; data: Technician[]; pagination?: any }> => {
     const response = await apiClient.get<{ success: boolean; data: Technician[]; pagination?: any }>(
       '/api/technicians',

@@ -1,15 +1,21 @@
 package com.example.becommerce.controller;
 
+import com.example.becommerce.dto.request.quotation.ReviseQuotationRequest;
 import com.example.becommerce.dto.response.ApiResponse;
 import com.example.becommerce.dto.response.quotation.AcceptQuotationResponse;
 import com.example.becommerce.dto.response.quotation.QuotationResponse;
 import com.example.becommerce.service.QuotationService;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
 
 /**
  * Standalone quote endpoints — the FE accepts the quote outside
@@ -32,5 +38,12 @@ public class QuotationController {
     public ResponseEntity<ApiResponse<QuotationResponse>> reject(
             @PathVariable("id") String quotationCode) {
         return ResponseEntity.ok(ApiResponse.success(quotationService.rejectQuotation(quotationCode)));
+    }
+    @PutMapping("/{id}/revise")
+    public ResponseEntity<ApiResponse<QuotationResponse>> revise(
+            @PathVariable("id") String quotationCode,
+            @RequestBody @Valid ReviseQuotationRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                quotationService.reviseQuotation(quotationCode, request)));
     }
 }

@@ -1,41 +1,102 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { technicianService } from '../../services/technician/technicianService';
+import type { CompletedProject } from '../../types/technician';
+import './ProjectsTab.css';
 
-export const ProjectsTab: React.FC = () => {
-  const projects = [
-    {
-      id: 1,
-      title: 'Bảo trì hệ thống lạnh Vinhomes',
-      img: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=400&q=80', // Ảnh cục lạnh điều hòa
-      desc: 'Sửa chữa và bảo dưỡng 15 máy lạnh.'
-    },
-    {
-      id: 2,
-      title: 'Lắp camera an ninh nhà phố',
-      img: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&q=80', // Ảnh camera an ninh ngoài trời
-      desc: 'Thi công 4 mắt camera ngoài trời.'
-    },
-    {
-      id: 3,
-      title: 'Bơm ga máy lạnh Dĩ An',
-      img: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=400&q=80', // Ảnh kỹ thuật viên đang cầm dụng cụ sửa chữa
-      desc: 'Khắc phục sự cố rò rỉ khí ga.'
-    },
-  ];
+interface ProjectsTabProps {
+  technicianId?: string; // Nhận từ ProviderProfile.tsx truyền sang
+}
+
+export const ProjectsTab: React.FC<ProjectsTabProps> = ({ technicianId }) => {
+  const [projects, setProjects] = useState<CompletedProject[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCompletedProjects = async () => {
+      if (!technicianId) {
+        setLoading(false);
+        return;
+      }
+      try {
+        setLoading(true);
+        setError(null);
+        // Gọi API thật từ backend thông qua service đã bổ sung phương thức
+        const data = await technicianService.getCompletedProjects(technicianId);
+        setProjects(data);
+      } catch (err) {
+        console.error('Lỗi khi tải danh sách dự án hoàn thành:', err);
+        setError('Không thể tải danh sách dự án đã làm. Vui lòng thử lại sau.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompletedProjects();
+  }, [technicianId]);
+
+  // Hiển thị trạng thái Loading
+  if (loading) {
+    return (
+      <div className="projects-status-loading">
+        Đang tải danh sách dự án...
+      </div>
+    );
+  }
+
+  // Hiển thị trạng thái Lỗi
+  if (error) {
+    return (
+      <div className="projects-status-error">
+        {error}
+      </div>
+    );
+  }
+
+  // Hiển thị trạng thái mảng rỗng (Chưa có đơn hàng COMPLETED)
+  if (projects.length === 0) {
+    return (
+      <div className="projects-status-empty">
+        Kỹ thuật viên chưa có dự án nào hoàn thành.
+      </div>
+    );
+  }
 
   return (
-    <div className="profile-card">
-      <h2 className="pc-title">Dự án tiêu biểu</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
-        {projects.map(p => (
-          <div key={p.id} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-            <img src={p.img} alt={p.title} style={{ width: '100%', height: '140px', objectFit: 'cover' }} />
-            <div style={{ padding: '16px' }}>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', color: '#000C33' }}>{p.title}</h4>
-              <p style={{ margin: 0, fontSize: '13px', color: '#4A5E8B' }}>{p.desc}</p>
+    <div className="projects-grid">
+      {projects.map((project) => (
+        <div key={project.id} className="project-card">
+          {/* Khối nội dung chi tiết đơn hàng */}
+          <div className="project-card-content">
+            <div>
+              {/* Hiển thị Danh mục dịch vụ */}
+              <div className="project-category">
+                {project.serviceCategory}
+              </div>
+
+              {/* Hiển thị Tên dịch vụ */}
+              <h4 className="project-title">
+                {project.serviceName}
+              </h4>
+              
+              {/* Hiển thị Tên thiết bị */}
+              <div className="project-device">
+                🛠️ Thiết bị: {project.deviceName}
+              </div>
+              
+              {/* Hiển thị Mô tả chi tiết công việc */}
+              <p className="project-description">
+                {project.description}
+              </p>
+            </div>
+            
+            {/* Thanh footer phụ của thẻ thông tin */}
+            <div className="project-footer">
+              <span>Mã đơn hàng: {project.code}</span>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   );
 };

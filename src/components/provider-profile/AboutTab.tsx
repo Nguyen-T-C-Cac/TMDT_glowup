@@ -30,7 +30,10 @@ interface Review {
   attachedImage?: string;
 }
 
-export const AboutTab: React.FC<{ providerId?: string; onlyReviews?: boolean; onViewAllReviews?: () => void }> = ({ providerId, onlyReviews, onViewAllReviews }) => {
+export const AboutTab: React.FC<{ 
+  providerId?: string; onlyReviews?: boolean; onViewAllReviews?: () => void; 
+  bio?: string;        
+  skills?: string[]; }> = ({ providerId, onlyReviews, onViewAllReviews, bio, skills}) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(false);
   const [visibleCount, setVisibleCount] = useState(5);
@@ -71,18 +74,19 @@ export const AboutTab: React.FC<{ providerId?: string; onlyReviews?: boolean; on
   return (
     <div className="about-tab-container">
       {/* Về tôi */}
-      {!onlyReviews && (
+       {!onlyReviews && (
         <div className="profile-card">
           <h2 className="pc-title">Về tôi</h2>
           <p className="pc-text">
-            Với hơn 10 năm kinh nghiệm trong lĩnh vực sửa chữa điện nước và điện lạnh tại TP. Hồ Chí Minh. Tôi cam kết mang đến dịch vụ chuyên nghiệp, minh bạch về giá cả và tận tâm trong từng chi tiết. Chuyên xử lý các ca khó cho căn hộ cao cấp và nhà phố.
+            {bio || 'Thợ chưa cập nhật thông tin giới thiệu.'}  
           </p>
-          <div className="pc-skills-wrapper">
-            <span className="pc-skill-pill">Sửa máy lạnh</span>
-            <span className="pc-skill-pill">Điện nước dân dụng</span>
-            <span className="pc-skill-pill">Lắp đặt camera</span>
-            <span className="pc-skill-pill">Vệ sinh máy giặt</span>
-          </div>
+          {skills && skills.length > 0 && (  
+            <div className="pc-skills-wrapper">
+              {skills.map((skill, i) => (
+                <span key={i} className="pc-skill-pill">{skill}</span>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

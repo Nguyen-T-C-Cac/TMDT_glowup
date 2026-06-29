@@ -4,6 +4,7 @@ import com.example.becommerce.constant.ErrorCode;
 import com.example.becommerce.dto.mapper.MessageMapper;
 import com.example.becommerce.dto.mapper.QuotationMapper;
 import com.example.becommerce.dto.request.quotation.CreateQuotationRequest;
+import com.example.becommerce.dto.request.quotation.ReviseQuotationRequest;
 import com.example.becommerce.dto.response.quotation.AcceptQuotationResponse;
 import com.example.becommerce.dto.response.quotation.QuotationResponse;
 import com.example.becommerce.entity.Conversation;
@@ -228,6 +229,70 @@ public class QuotationServiceImpl implements QuotationService {
         log.info("Quotation {} rejected by customer {}", savedQuote.getCode(), customer.getCode());
         return quotationMapper.toResponse(savedQuote);
     }
+
+        // ===============================================================
+        // REVISE QUOTE (thợ sửa báo giá bị từ chối, gửi lại cho khách)
+        // ===============================================================
+
+        @Override
+        @Transactional
+        public QuotationResponse reviseQuotation(String quotationCode, ReviseQuotationRequest req) {
+        Quotation old = quotationRepository.findByCode(quotationCode)
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy báo giá " + quotationCode));
+
+        User sender = getCurrentUser();
+
+        if (sender.getRole() != Role.TECHNICIAN) {
+                throw AppException.forbidden("Chỉ thợ mới có thể sửa báo giá");
+        }
+        if (!old.getTechnician().getId().equals(sender.getId())) {
+                throw AppException.forbidden("Bạn không phải thợ của báo giá này");
+        }
+        if (old.getStatus() != QuotationStatus.REJECTED) {
+                throw AppException.badRequest(ErrorCode.QUOTATION_NOT_REJECTED,
+                        "Chỉ có thể sửa báo giá đã bị từ chối");
+        }
+
+        Conversation conversation = old.getConversation();
+
+        // Tạo quotation mới PENDING thay thế cái cũ
+        Quotation revised = Quotation.builder()
+                .code(quotationCodeGenerator.generate())
+                .conversation(conversation)
+                .technician(sender)
+                .serviceName(req.getServiceName())
+                .description(req.getDescription())
+                .price(req.getPrice())
+                .scheduledAt(req.getScheduledAt())
+                .notes(req.getNotes())
+                .status(QuotationStatus.PENDING)
+                .build();
+        Quotation savedQuote = quotationRepository.save(revised);
+
+        // Gửi message type=QUOTATION vào conversation (y chang createQuotation)
+        Message message = Message.builder()
+                .code(messageCodeGenerator.generate())
+                .conversation(conversation)
+                .sender(sender)
+                .type(MessageType.QUOTATION)
+                .content(null)
+                .quotation(savedQuote)
+                .build();
+        Message savedMessage = messageRepository.save(message);
+
+        conversation.setLastMessageAt(savedMessage.getSentAt());
+        conversationRepository.save(conversation);
+
+        // Push realtime cho khách
+        eventPublisher.publishMessageNew(
+                conversation.getCode(),
+                messageMapper.toResponse(savedMessage, sender, savedMessage.getSentAt()));
+
+        log.info("Quotation {} revised by technician {} → new quotation {} in conversation {}",
+                quotationCode, sender.getCode(), savedQuote.getCode(), conversation.getCode());
+
+        return quotationMapper.toResponse(savedQuote);
+        }
 
     // ----------------------------------------------------------------
 

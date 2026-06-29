@@ -94,7 +94,8 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(JwtException.class)
     public ResponseEntity<ApiResponse<Void>> handleJwtException(JwtException ex) {
-        log.warn("Invalid/expired JWT: {}", ex.getMessage());
+        log.warn("JWT exception: {}", ex.getMessage());
+
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error(ErrorCode.UNAUTHORIZED,
                         "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại"));
@@ -104,13 +105,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(
-            DataIntegrityViolationException ex, HttpServletRequest request) {
+            DataIntegrityViolationException ex,
+            HttpServletRequest request) {
 
         log.error("Data integrity violation on {}: ", request.getRequestURI(), ex);
+
         String message = "Dữ liệu không hợp lệ hoặc bị trùng lặp";
+
         if (ex.getMostSpecificCause() != null) {
             message = ex.getMostSpecificCause().getMessage();
         }
+
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error(ErrorCode.CONFLICT, message));
     }

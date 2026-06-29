@@ -1,6 +1,7 @@
 package com.example.becommerce.service;
 
 import com.example.becommerce.dto.request.quotation.CreateQuotationRequest;
+import com.example.becommerce.dto.request.quotation.ReviseQuotationRequest;
 import com.example.becommerce.dto.response.quotation.AcceptQuotationResponse;
 import com.example.becommerce.dto.response.quotation.QuotationResponse;
 
@@ -14,4 +15,6 @@ public interface QuotationService {
 
     /** Customer rejects a pending quote. */
     QuotationResponse rejectQuotation(String quotationCode);
+
+    QuotationResponse reviseQuotation(String quotationCode, ReviseQuotationRequest request);
 }

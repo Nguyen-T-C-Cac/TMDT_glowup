@@ -1,4 +1,5 @@
 .quote-modal {
+    font-family: var(--font-family);
     width: min(1100px, calc(100vw - 40px));
     max-height: 90vh;
     display: grid;
@@ -8,10 +9,11 @@
     overflow: hidden;
     position: relative;
     box-shadow: 0 28px 64px rgba(15, 23, 42, 0.18);
+    
 }
 
 .modal-inner > .quote-modal {
-    overflow-y: hidden;
+    overflow-y: auto;
 }
 
 .quote-close {
@@ -104,6 +106,7 @@
         width: min(100%, calc(100vw - 24px));
         grid-template-columns: 1fr;
         max-height: 94vh;
+        overflow-y: auto;
     }
 
     .quote-right {
@@ -118,7 +121,7 @@
 
     .quote-shell-title,
     .preview-title {
-        font-size: 24px;
+        font-size: 20px;
     }
 }
 

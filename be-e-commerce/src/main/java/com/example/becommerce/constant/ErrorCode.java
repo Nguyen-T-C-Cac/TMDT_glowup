@@ -92,7 +92,7 @@ public final class ErrorCode {
     public static final String MESSAGE_NOT_FOUND                 = "MESSAGE_NOT_FOUND";
     public static final String QUOTATION_NOT_FOUND               = "QUOTATION_NOT_FOUND";
     public static final String QUOTATION_NOT_PENDING             = "QUOTATION_NOT_PENDING";
-
+    public static final String QUOTATION_NOT_REJECTED            = "QUOTATION_NOT_REJECTED";
     // Booking
     public static final String BOOKING_NOT_FOUND                 = "BOOKING_NOT_FOUND";
     public static final String DEVICE_TYPE_NOT_FOUND             = "DEVICE_TYPE_NOT_FOUND";
