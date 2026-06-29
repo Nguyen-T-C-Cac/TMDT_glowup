@@ -10,11 +10,13 @@ import com.example.becommerce.dto.response.technician.TechnicianDetailResponse;
 import com.example.becommerce.dto.response.technician.TechnicianListItemResponse;
 import com.example.becommerce.dto.response.technician.TechnicianProfileUpdateResponse;
 import com.example.becommerce.dto.response.technician.TechnicianReviewListResponse;
+import com.example.becommerce.dto.response.technician.TechnicianScheduleResponse;
 import com.example.becommerce.service.TechnicianService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/technicians")
@@ -63,6 +66,15 @@ public class TechnicianController {
             @PathVariable("id") String code,
             @Valid @RequestBody UpdateAvailabilityRequest request) {
         return ResponseEntity.ok(ApiResponse.success(technicianService.updateAvailability(code, request)));
+    }
+
+    @GetMapping("/{id}/schedule")
+    public ResponseEntity<ApiResponse<TechnicianScheduleResponse>> getSchedule(
+            @PathVariable("id") String code,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(ApiResponse.success(
+                technicianService.getTechnicianSchedule(code, from, to)));
     }
 
     @GetMapping("/{id}/reviews")

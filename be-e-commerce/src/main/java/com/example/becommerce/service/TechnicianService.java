@@ -9,6 +9,9 @@ import com.example.becommerce.dto.response.technician.TechnicianDetailResponse;
 import com.example.becommerce.dto.response.technician.TechnicianListItemResponse;
 import com.example.becommerce.dto.response.technician.TechnicianProfileUpdateResponse;
 import com.example.becommerce.dto.response.technician.TechnicianReviewListResponse;
+import com.example.becommerce.dto.response.technician.TechnicianScheduleResponse;
+
+import java.time.LocalDate;
 
 import java.util.List;
 
@@ -31,4 +34,5 @@ public interface TechnicianService {
      * by {@code code}. Only orders with status COMPLETED are included.
      */
     List<CompletedProjectResponse> listCompletedProjects(String code);
+    TechnicianScheduleResponse getTechnicianSchedule(String code, LocalDate from, LocalDate to);
 }

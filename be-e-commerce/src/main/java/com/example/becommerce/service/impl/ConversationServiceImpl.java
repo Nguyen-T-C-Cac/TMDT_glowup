@@ -13,6 +13,7 @@ import com.example.becommerce.entity.Conversation;
 import com.example.becommerce.entity.Message;
 import com.example.becommerce.entity.Order;
 import com.example.becommerce.entity.User;
+import com.example.becommerce.entity.enums.ConversationStatus;
 import com.example.becommerce.entity.enums.MessageType;
 import com.example.becommerce.entity.enums.NotificationType;
 import com.example.becommerce.entity.enums.Role;
@@ -154,6 +155,21 @@ public class ConversationServiceImpl implements ConversationService {
         }
 
         return conversationMapper.toCreatedResponse(saved, currentUser);
+    }
+
+    // ===============================================================
+    // DELETE CONVERSATION
+    // ===============================================================
+
+    @Override
+    @Transactional
+    public void deleteConversation(String conversationCode) {
+        Conversation conversation = findConversation(conversationCode);
+        User viewer = getCurrentUser();
+        ensureParticipant(conversation, viewer);
+        conversation.setStatus(ConversationStatus.CLOSED);
+        conversationRepository.save(conversation);
+        log.info("Conversation {} closed by user={}", conversation.getCode(), viewer.getCode());
     }
 
     // ===============================================================

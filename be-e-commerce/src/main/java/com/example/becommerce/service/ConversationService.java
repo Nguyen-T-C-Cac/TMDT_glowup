@@ -16,4 +16,6 @@ public interface ConversationService {
     PagedResponse<MessageResponse> listMessages(String conversationCode, int page, int limit);
 
     MessageResponse sendMessage(String conversationCode, SendMessageRequest request);
+
+    void deleteConversation(String conversationCode);
 }

@@ -97,12 +97,10 @@ public class GlobalExceptionHandler {
         log.warn("JWT exception: {}", ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.error(
-                        ErrorCode.UNAUTHORIZED,
-                        "Phiên đăng nhập đã hết hạn hoặc không hợp lệ"));
+                .body(ApiResponse.error(ErrorCode.UNAUTHORIZED,
+                        "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại"));
     }
 
-                
     // ---- Data integrity ---------------------------------------------
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -119,9 +117,7 @@ public class GlobalExceptionHandler {
         }
 
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error(
-                        ErrorCode.CONFLICT,
-                        message));
+                .body(ApiResponse.error(ErrorCode.CONFLICT, message));
     }
 
     // ---- Catch-all --------------------------------------------------

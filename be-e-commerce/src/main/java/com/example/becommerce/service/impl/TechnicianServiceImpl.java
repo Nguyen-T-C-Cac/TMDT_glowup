@@ -13,6 +13,7 @@ import com.example.becommerce.dto.response.technician.TechnicianDetailResponse;
 import com.example.becommerce.dto.response.technician.TechnicianListItemResponse;
 import com.example.becommerce.dto.response.technician.TechnicianProfileUpdateResponse;
 import com.example.becommerce.dto.response.technician.TechnicianReviewListResponse;
+import com.example.becommerce.dto.response.technician.TechnicianScheduleResponse;
 import com.example.becommerce.entity.Order;
 import com.example.becommerce.entity.Review;
 import com.example.becommerce.entity.TechnicianProfile;
@@ -41,6 +42,9 @@ import org.springframework.util.StringUtils;
  
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -251,6 +255,43 @@ public class TechnicianServiceImpl implements TechnicianService {
                         .build())
                 .toList();
     }
+    // ===============================================================
+    // SCHEDULE
+    // ===============================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public TechnicianScheduleResponse getTechnicianSchedule(String code, LocalDate from, LocalDate to) {
+        User technician = findTechnicianUser(code);
+        TechnicianProfile profile = findOrCreateProfile(technician);
+
+        LocalDateTime fromDt = from.atStartOfDay();
+        LocalDateTime toDt = to.atTime(LocalTime.MAX);
+
+        List<Order> orders = orderRepository
+                .findByTechnician_IdAndScheduledAtBetweenAndDeletedFalse(
+                        technician.getId(), fromDt, toDt);
+
+        List<TechnicianScheduleResponse.BookedSlot> bookedSlots = orders.stream()
+                .filter(o -> o.getScheduledAt() != null)
+                .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
+                .map(o -> TechnicianScheduleResponse.BookedSlot.builder()
+                        .date(o.getScheduledAt().toLocalDate())
+                        .startTime(o.getScheduledAt().toLocalTime())
+                        .endTime(o.getExpectedTime() != null
+                                ? o.getExpectedTime().toLocalTime()
+                                : o.getScheduledAt().toLocalTime().plusHours(2))
+                        .orderCode(o.getCode())
+                        .status(o.getStatus().apiValue())
+                        .build())
+                .toList();
+
+        return TechnicianScheduleResponse.builder()
+                .weeklySchedule(profile.getSchedule())
+                .bookedSlots(bookedSlots)
+                .build();
+    }
+
     // ===============================================================
     // Helpers
     // ===============================================================

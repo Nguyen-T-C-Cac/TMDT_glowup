@@ -114,4 +114,8 @@ export const chatService = {
     const response = await apiClient.put(`/api/quotes/${quotationId}/revise`, payload);
     return unwrap<EmbeddedQuotation & { id: string }>(response.data);
   },
+  
+  deleteConversation: async (conversationId: string): Promise<void> => {
+    await apiClient.delete(`/api/conversations/${conversationId}`);
+  },
 };

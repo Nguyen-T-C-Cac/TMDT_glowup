@@ -27,6 +27,7 @@ import { BookingCard } from '../components/chat/BookingCard';
 import { WarrantyCard } from '../components/chat/WarrantyCard';
 import QuoteEditModal from '../components/modal/QuoteEditModal';
 import type { EmbeddedQuotation } from '../types/chat';
+
 const pageMap: Record<string, string> = {
     home: '/',
     provider: '/provider',
@@ -104,6 +105,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
     const [isSidebarOpen, setIsSidebarOpen] = useState(role === 'customer');
     const [conversations, setConversations] = useState<ConversationItem[]>([]);
     const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+    const [activeConversationIds, setActiveConversationIds] = useState<string[]>([]);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [linkedOrder, setLinkedOrder] = useState<OrderResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -112,7 +114,19 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
     const [isPriceConfirmOpen, setIsPriceConfirmOpen] = useState(false);
     const [invoiceInfo, setInvoiceInfo] = useState<{ invoiceCode: string; totalPrice: number } | null>(null);
     const messageListRef = useRef<HTMLElement | null>(null);
+    // ── FROM HEAD: state for revise quotation feature ──
     const [reviseQuotation, setReviseQuotation] = useState<EmbeddedQuotation | null>(null);
+    const conversationsRef = useRef(conversations);
+    conversationsRef.current = conversations;
+
+    const getPartnerConversationIds = useCallback((conversationId: string, items?: ConversationItem[]) => {
+        const source = items ?? conversationsRef.current;
+        const target = source.find((c) => c.id === conversationId);
+        if (!target?.partner?.id) return [conversationId];
+        const ids = source.filter((c) => c.partner?.id === target.partner?.id).map((c) => c.id);
+        return ids.length > 1 ? ids : [conversationId];
+    }, []);
+
     const currentUser = getStoredUser();
     const currentUserCode = currentUser?.code ?? '';
 
@@ -121,11 +135,25 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
         [conversations, activeConversationId]
     );
 
-    const filteredConversations = useMemo(() => {
-        const keyword = searchQuery.trim().toLowerCase();
-        if (!keyword) return conversations;
-        return conversations.filter((c) => c.partner.fullName.toLowerCase().includes(keyword));
-    }, [conversations, searchQuery]);
+    const groupedConversations = useMemo(() => {
+        const map = new Map<string, ConversationItem[]>();
+        for (const c of conversations) {
+            const pid = c.partner?.id;
+            if (!pid) continue;
+            if (!map.has(pid)) map.set(pid, []);
+            map.get(pid)!.push(c);
+        }
+        return Array.from(map.entries())
+            .map(([partnerId, convs]) => {
+                convs.sort((a, b) => new Date(b.lastMessage?.sentAt || 0).getTime() - new Date(a.lastMessage?.sentAt || 0).getTime());
+                return { partnerId, items: convs, primary: convs[0], partner: convs[0].partner };
+            })
+            .sort((a, b) => {
+                const aTime = a.primary.lastMessage?.sentAt || '';
+                const bTime = b.primary.lastMessage?.sentAt || '';
+                return new Date(bTime).getTime() - new Date(aTime).getTime();
+            });
+    }, [conversations]);
 
     const loadLinkedOrder = useCallback(async (orderId?: string | null) => {
         if (!orderId) {
@@ -145,6 +173,22 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
         setMessages(items);
     }, []);
 
+    const loadMergedMessages = useCallback(async (ids: string[]) => {
+        const results = await Promise.all(ids.map((id) => chatService.listMessages(id)));
+        const merged = results.flat().sort(
+            (a, b) => new Date(a.sentAt || 0).getTime() - new Date(b.sentAt || 0).getTime()
+        );
+        setMessages(merged);
+    }, []);
+
+    const reloadActiveMessages = useCallback(async () => {
+        if (activeConversationIds.length > 1) {
+            await loadMergedMessages(activeConversationIds);
+        } else if (activeConversationIds.length === 1) {
+            await loadMessages(activeConversationIds[0]);
+        }
+    }, [activeConversationIds, loadMergedMessages, loadMessages]);
+
     const refreshConversations = useCallback(async () => {
         const items = await chatService.listConversations();
         setConversations(items);
@@ -160,7 +204,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
         (payload: Parameters<typeof mapWsMessageToChatMessage>[0]) => {
             const incoming = mapWsMessageToChatMessage(payload);
             const conversationId = incoming.conversationId;
-            const isActive = conversationId === activeConversationId;
+            const isActive = activeConversationIds.includes(conversationId);
             const isFromMe = incoming.senderId === currentUserCode;
 
             if (isActive) {
@@ -204,7 +248,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                 })
             );
         },
-        [activeConversationId, currentUserCode]
+        [activeConversationIds, currentUserCode]
     );
 
     useChatRealtime({
@@ -212,37 +256,54 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
         enabled: !isLoading && conversationIds.length > 0,
         onMessage: handleRealtimeMessage,
     });
-    const handleReviseQuote = async (quote: Quote) => {
-    if (!reviseQuotation || !activeConversationId) return;
-    const scheduledAt =
-        quote.scheduledAt ??
-        (quote.date && quote.time
-            ? new Date(`${quote.date}T${quote.time}`).toISOString()
-            : new Date().toISOString());
 
-    await chatService.reviseQuotation(reviseQuotation.id, {
-        serviceName: quote.serviceName,
-        description: quote.description,
-        price: quote.price,
-        scheduledAt,
-        notes: quote.notes,
-    });
-    setReviseQuotation(null);
-    await loadMessages(activeConversationId);
-    await refreshConversations();
-};
+    // ── FROM HEAD: handler for revising a quotation ──
+    const handleReviseQuote = async (quote: Quote) => {
+        if (!reviseQuotation || !activeConversationId) return;
+        const scheduledAt =
+            quote.scheduledAt ??
+            (quote.date && quote.time
+                ? new Date(`${quote.date}T${quote.time}`).toISOString()
+                : new Date().toISOString());
+
+        await chatService.reviseQuotation(reviseQuotation.id, {
+            serviceName: quote.serviceName,
+            description: quote.description,
+            price: quote.price,
+            scheduledAt,
+            notes: quote.notes,
+        });
+        setReviseQuotation(null);
+        await loadMessages(activeConversationId);
+        await refreshConversations();
+    };
+
     const openConversation = useCallback(
-        async (conversationId: string, orderId?: string | null) => {
+        async (conversationId: string, orderId?: string | null, convItems?: ConversationItem[]) => {
+            const ids = getPartnerConversationIds(conversationId, convItems);
             setActiveConversationId(conversationId);
-            setConversations((prev) =>
-                prev.map((c) =>
-                    c.id === conversationId ? { ...c, unreadCount: 0 } : c
-                )
-            );
-            await loadLinkedOrder(orderId ?? null);
-            await loadMessages(conversationId);
+            setActiveConversationIds(ids);
+
+            if (ids.length > 1) {
+                const partnerId = (convItems ?? conversationsRef.current).find((c) => c.id === conversationId)?.partner?.id;
+                setConversations((prev) =>
+                    prev.map((c) =>
+                        c.partner?.id === partnerId ? { ...c, unreadCount: 0 } : c
+                    )
+                );
+                await loadLinkedOrder(orderId ?? null);
+                await loadMergedMessages(ids);
+            } else {
+                setConversations((prev) =>
+                    prev.map((c) =>
+                        c.id === conversationId ? { ...c, unreadCount: 0 } : c
+                    )
+                );
+                await loadLinkedOrder(orderId ?? null);
+                await loadMessages(conversationId);
+            }
         },
-        [loadLinkedOrder, loadMessages]
+        [loadLinkedOrder, loadMessages, loadMergedMessages, getPartnerConversationIds]
     );
 
     useEffect(() => {
@@ -278,7 +339,8 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                     const found = items.find((c) => c.id === routeConversationId);
                     await openConversation(
                         routeConversationId,
-                        found?.orderId ?? orderId ?? null
+                        found?.orderId ?? orderId ?? null,
+                        items
                     );
                     return;
                 }
@@ -286,7 +348,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                 if (orderId) {
                     const byOrder = items.find((c) => c.orderId === orderId);
                     if (byOrder) {
-                        await openConversation(byOrder.id, byOrder.orderId ?? orderId);
+                        await openConversation(byOrder.id, byOrder.orderId ?? orderId, items);
                         return;
                     }
 
@@ -303,7 +365,8 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                                 if (byPartner) {
                                     await openConversation(
                                         byPartner.id,
-                                        byPartner.orderId ?? orderId
+                                        byPartner.orderId ?? orderId,
+                                        items
                                     );
                                     return;
                                 }
@@ -316,7 +379,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                                     (c) => c.partner?.id === order.customer?.id
                                 );
                                 if (byCustomer) {
-                                    await openConversation(byCustomer.id, orderId);
+                                    await openConversation(byCustomer.id, orderId, items);
                                     return;
                                 }
                             }
@@ -331,7 +394,8 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                     if (byCustomer) {
                         await openConversation(
                             byCustomer.id,
-                            byCustomer.orderId ?? orderId ?? null
+                            byCustomer.orderId ?? orderId ?? null,
+                            items
                         );
                         return;
                     }
@@ -342,7 +406,8 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                     if (existing && (!orderId || existing.orderId === orderId)) {
                         await openConversation(
                             existing.id,
-                            existing.orderId ?? orderId ?? null
+                            existing.orderId ?? orderId ?? null,
+                            items
                         );
                         return;
                     }
@@ -357,12 +422,12 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                         const withoutDup = prev.filter((c) => c.id !== created.id);
                         return [created, ...withoutDup];
                     });
-                    await openConversation(created.id, created.orderId ?? orderId ?? null);
+                    await openConversation(created.id, created.orderId ?? orderId ?? null, [created, ...items]);
                     return;
                 }
 
                 if (items.length > 0 && !orderId && !routeCustomerId && !technicianId) {
-                    await openConversation(items[0].id, items[0].orderId);
+                    await openConversation(items[0].id, items[0].orderId, items);
                     return;
                 }
 
@@ -420,19 +485,6 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
         return () => window.cancelAnimationFrame(frameId);
     }, [activeConversationId, isLoading, messages]);
 
-    const handleSelectConversation = async (conversationId: string) => {
-        setActiveConversationId(conversationId);
-        setConversations((prev) =>
-            prev.map((c) =>
-                c.id === conversationId ? { ...c, unreadCount: 0 } : c
-            )
-        );
-        const selected = conversations.find((c) => c.id === conversationId);
-        await loadLinkedOrder(selected?.orderId);
-        await loadMessages(conversationId);
-        if (window.innerWidth < 900) setIsSidebarOpen(false);
-    };
-
     const handleSendMessage = async (text: string, title?: string) => {
         if (!activeConversationId) return;
         const sent = await chatService.sendMessage(activeConversationId, text, title);
@@ -481,7 +533,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
 
         const result = await chatService.acceptQuotation(quotationId);
         if (activeConversationId) {
-            await loadMessages(activeConversationId);
+            await reloadActiveMessages();
         }
         await loadLinkedOrder(result.orderId);
         const items = await refreshConversations();
@@ -494,7 +546,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
     const handleRejectQuote = async (quotationId: string) => {
         await chatService.rejectQuotation(quotationId);
         if (activeConversationId) {
-            await loadMessages(activeConversationId);
+            await reloadActiveMessages();
         }
     };
 
@@ -503,7 +555,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
         const updated = await orderService.requestPriceAdjustment(linkedOrder.id, payload);
         setLinkedOrder(updated);
         if (activeConversationId) {
-            await loadMessages(activeConversationId);
+            await reloadActiveMessages();
         }
     };
 
@@ -530,7 +582,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
             const updated = await orderService.acceptOrder(linkedOrder.id);
             setLinkedOrder(updated);
             if (activeConversationId) {
-                await loadMessages(activeConversationId);
+                await reloadActiveMessages();
             }
             await refreshConversations();
         } catch (err) {
@@ -545,7 +597,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
             const updated = await orderService.cancelOrder(linkedOrder.id, reason);
             setLinkedOrder(updated);
             if (activeConversationId) {
-                await loadMessages(activeConversationId);
+                await reloadActiveMessages();
             }
             await refreshConversations();
         } catch (err) {
@@ -559,7 +611,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
             await orderService.createInvoice(linkedOrder.id);
             setInvoiceInfo(null);
             if (activeConversationId) {
-                await loadMessages(activeConversationId);
+                await reloadActiveMessages();
             }
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Không thể xuất hoá đơn');
@@ -583,10 +635,24 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                 setLinkedOrder(updated);
             }
             if (activeConversationId) {
-                await loadMessages(activeConversationId);
+                await reloadActiveMessages();
             }
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Xác nhận tiền mặt thất bại');
+        }
+    };
+
+    const handleDeleteConversation = async (partnerId: string) => {
+        const confirmed = window.confirm('Xóa cuộc trò chuyện này?');
+        if (!confirmed) return;
+        const convIds = conversations.filter((c) => c.partner?.id === partnerId).map((c) => c.id);
+        await Promise.all(convIds.map((id) => chatService.deleteConversation(id)));
+        setConversations((prev) => prev.filter((c) => c.partner?.id !== partnerId));
+        if (activeConversation && activeConversation.partner?.id === partnerId) {
+            setActiveConversationId(null);
+            setActiveConversationIds([]);
+            setMessages([]);
+            setLinkedOrder(null);
         }
     };
 
@@ -639,15 +705,65 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                         />
                     </div>
                     <div className={styles.conversationList}>
-                        {filteredConversations.map((conversation) => (
-                            <ContactItem
-                                key={conversation.id}
-                                contact={toContact(conversation)}
-                                isActive={conversation.id === activeConversationId}
-                                onClick={() => handleSelectConversation(conversation.id)}
-                            />
-                        ))}
-                        {!isLoading && filteredConversations.length === 0 && (
+                        {(() => {
+                            const keyword = searchQuery.trim().toLowerCase();
+                            const groups = keyword
+                                ? groupedConversations.filter((g) =>
+                                      g.partner.fullName.toLowerCase().includes(keyword)
+                                  )
+                                : groupedConversations;
+                            return groups.map((group) => {
+                                const aggregated: Contact = {
+                                    id: group.partnerId,
+                                    name: group.partner.fullName ?? 'Đối tác',
+                                    lastMessage: friendlyPreview(group.primary.lastMessage),
+                                    time: group.primary.lastMessage?.sentAt
+                                        ? formatMessageDate(group.primary.lastMessage.sentAt)
+                                        : '',
+                                    avatar: group.partner.avatar ?? 'https://placehold.co/48x48',
+                                    isOnline: group.partner.isOnline ?? false,
+                                    unread: group.items.some((c) => c.unreadCount > 0),
+                                    unreadCount: group.items.reduce((s, c) => s + c.unreadCount, 0),
+                                    partnerType: group.partner.role ?? undefined,
+                                    msgType: group.primary.lastMessage?.type ?? undefined,
+                                };
+                                return (
+                                    <div key={group.partnerId} className={styles.conversationGroup}>
+                                        <ContactItem
+                                            contact={aggregated}
+                                            isActive={group.items.some((c) => c.id === activeConversationId)}
+                                            onClick={() => {
+                                                const ids = group.items.map((c) => c.id);
+                                                setActiveConversationId(group.primary.id);
+                                                setActiveConversationIds(ids);
+                                                setConversations((prev) =>
+                                                    prev.map((c) =>
+                                                        c.partner?.id === group.partnerId
+                                                            ? { ...c, unreadCount: 0 }
+                                                            : c
+                                                    )
+                                                );
+                                                loadLinkedOrder(group.primary.orderId ?? null);
+                                                loadMergedMessages(ids);
+                                                if (window.innerWidth < 900) setIsSidebarOpen(false);
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            className={styles.deleteBtn}
+                                            title="Xóa cuộc trò chuyện"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteConversation(group.partnerId);
+                                            }}
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                );
+                            });
+                        })()}
+                        {!isLoading && groupedConversations.length === 0 && (
                             <p className={styles.emptySidebar}>Chưa có hội thoại</p>
                         )}
                     </div>
@@ -691,8 +807,8 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                         {!isLoading && activeConversationId && linkedOrder && showRepairCard && (
                             <div className={styles.messageRow}>
                                 <div className={styles.messageContent}>
-                                    <RepairRequestCard 
-                                        order={linkedOrder} 
+                                    <RepairRequestCard
+                                        order={linkedOrder}
                                         role={role}
                                         onAccept={handleAcceptOrder}
                                         onReject={handleRejectOrder}
@@ -701,112 +817,165 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                             </div>
                         )}
 
+                        {/* ── FROM 21e32b...: grouped message rendering logic ── */}
                         {!isLoading &&
-                            messages.map((message) => {
-                                const isMe = message.type === 'booking' && role === 'customer' ? true : message.senderId === currentUserCode;
-                                const isQuotation = message.type === 'quotation' && message.quotation;
-                                const isInvoice = message.type === 'invoice';
-                                const isBooking = message.type === 'booking';
-                                const isWarranty = message.type === 'warranty' && message.warranty;
-                                let invoiceParsed: Record<string, unknown> | null = null;
-                                if (isInvoice && message.content) {
-                                    try {
-                                        invoiceParsed = JSON.parse(message.content);
-                                    } catch {
-                                        invoiceParsed = null;
+                            (() => {
+                                const groups: Array<{ items: ChatMessage[]; isMe: boolean }> = [];
+                                for (const msg of messages) {
+                                    const roleMatch = msg.senderRole && role && msg.senderRole.toLowerCase() === role.toLowerCase();
+                                    const isMe = msg.type === 'booking' ? true : roleMatch || msg.senderId === currentUserCode;
+                                    const isAdmin = msg.senderRole === 'ADMIN';
+                                    const last = groups[groups.length - 1];
+                                    const lastHasAdmin = last ? last.items.some(m => m.senderRole === 'ADMIN') : false;
+                                    if (last && last.isMe === isMe && !isAdmin && !lastHasAdmin) {
+                                        last.items.push(msg);
+                                    } else {
+                                        groups.push({ items: [msg], isMe });
                                     }
                                 }
 
-                                return (
-                                    <div
-                                        key={message.id}
-                                        className={`${styles.messageRow} ${isMe ? styles.messageRowRight : ''}`}
-                                    >
-                                        {!isMe && (
-                                            <Avatar src={activeContact.avatar} size={32} isOnline={false} />
-                                        )}
-                                        <div className={styles.messageContent}>
-                                            {isBooking && message.booking ? (
-                                                <BookingCard
-                                                    booking={message.booking}
-                                                    role={role}
-                                                    onStatusChange={(bookingCode, newStatus) => {
-                                                        setMessages(prev => prev.map(msg => {
-                                                            if (msg.booking?.code === bookingCode) {
-                                                                return {
-                                                                    ...msg,
-                                                                    booking: { ...msg.booking, status: newStatus }
-                                                                };
-                                                            }
-                                                            return msg;
-                                                        }));
-                                                    }}
-                                                />
-                                            ) : isInvoice && invoiceParsed ? (
-                                                <InvoiceCard
-                                                    invoiceData={invoiceParsed as any}
-                                                    orderId={linkedOrder?.id ?? ''}
-                                                    isCustomer={role === 'customer'}
-                                                    isTechnician={role === 'technician'}
-                                                    onPayViaVNPay={
-                                                        role === 'customer' ? handlePayViaVNPay : undefined
-                                                    }
-                                                    onConfirmCash={
-                                                        role === 'technician' ? handleConfirmCash : undefined
-                                                    }
-                                                />
-                                            ) : isWarranty ? (
-                                                <WarrantyCard
-                                                    warranty={message.warranty!}
-                                                    role={role}
-                                                    onStatusChange={() => {
-                                                        if (activeConversationId) {
-                                                            loadMessages(activeConversationId);
-                                                        }
-                                                    }}
-                                                />
-                                            ) : isQuotation ? (
-                                                <QuotationCard
-                                                    serviceName={message.quotation!.serviceName}
-                                                    description={message.quotation!.description}
-                                                    price={message.quotation!.price}
-                                                    scheduledAt={message.quotation!.scheduledAt}
-                                                    status={message.quotation!.status}
-                                                    isCustomer={role === 'customer'}
-                                                    onAccept={() =>
-                                                        handleAcceptQuote(message.quotation!.id)
-                                                    }
-                                                    onReject={() =>
-                                                        handleRejectQuote(message.quotation!.id)
-                                                    }
-                                                    onRevise={                              // ← THÊM
-                                                        role === 'technician'
-                                                            ? () => setReviseQuotation(message.quotation!)
-                                                            : undefined
-                                                    }
-                                                />
-                                            ) : (
-                                                <div
-                                                    className={`${styles.bubble} ${
-                                                        isMe ? styles.bubbleRight : styles.bubbleLeft
-                                                    } ${message.senderRole === 'ADMIN' ? styles.bubbleAdmin : ''}`}
-                                                >
-                                                    {message.title && (
-                                                        <div className={styles.bubbleTitle} dangerouslySetInnerHTML={{ __html: message.title }} />
-                                                    )}
-                                                    {message.senderRole === 'ADMIN' && !isMe && (
-                                                        <span className={styles.adminTag}>Quản trị viên</span>
-                                                    )}
-                                                    <div dangerouslySetInnerHTML={{ __html: message.content ?? '' }} />
-                                                </div>
+                                return groups.map((group) => {
+                                    const { items, isMe } = group;
+                                    const lastItem = items[items.length - 1];
+                                    const allText = items.every(m => m.type === 'text');
+                                    return (
+                                        <div
+                                            key={items[0].id}
+                                            className={`${styles.messageRow} ${isMe ? styles.messageRowRight : ''}`}
+                                        >
+                                            {!isMe && (
+                                                <Avatar src={activeContact.avatar} size={32} isOnline={false} />
                                             )}
-                                            <span className={styles.messageTime}>
-                                                {formatMessageTime(message.sentAt)}
-                                            </span>
+                                            <div className={styles.messageContent}>
+                                                {allText ? (
+                                                    // All-text group: single bubble with stacked messages
+                                                    <>
+                                                        <div className={`${styles.bubble} ${isMe ? styles.bubbleRight : styles.bubbleLeft}`}>
+                                                            {items.map((msg, i) => (
+                                                                <React.Fragment key={msg.id}>
+                                                                    {msg.title && (
+                                                                        <div className={styles.bubbleTitle} dangerouslySetInnerHTML={{ __html: msg.title }} />
+                                                                    )}
+                                                                    {msg.senderRole === 'ADMIN' && !isMe && (
+                                                                        <span className={styles.adminTag}>Quản trị viên</span>
+                                                                    )}
+                                                                    <div dangerouslySetInnerHTML={{ __html: msg.content ?? '' }} />
+                                                                    {i < items.length - 1 && <div style={{ height: 6 }} />}
+                                                                </React.Fragment>
+                                                            ))}
+                                                        </div>
+                                                        <span className={styles.messageTime}>
+                                                            {formatMessageTime(lastItem.sentAt)}
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    // Mixed group: render each message individually
+                                                    items.map((msg, idx) => {
+                                                        const isQuotation = msg.type === 'quotation' && msg.quotation;
+                                                        const isInvoiceMsg = msg.type === 'invoice';
+                                                        const isBookingMsg = msg.type === 'booking';
+                                                        const isWarrantyMsg = msg.type === 'warranty' && msg.warranty;
+                                                        let invoiceParsed: Record<string, unknown> | null = null;
+                                                        if (isInvoiceMsg && msg.content) {
+                                                            try {
+                                                                invoiceParsed = JSON.parse(msg.content);
+                                                            } catch {
+                                                                invoiceParsed = null;
+                                                            }
+                                                        }
+                                                        const showTimestamp = idx === items.length - 1;
+                                                        return (
+                                                            <React.Fragment key={msg.id}>
+                                                                {isBookingMsg && msg.booking ? (
+                                                                    // FROM 21e32b...: booking status update logic
+                                                                    <BookingCard
+                                                                        booking={msg.booking}
+                                                                        role={role}
+                                                                        onStatusChange={(bookingCode, newStatus) => {
+                                                                            setMessages(prev => prev.map(m => {
+                                                                                if (m.booking?.code === bookingCode) {
+                                                                                    return {
+                                                                                        ...m,
+                                                                                        booking: { ...m.booking, status: newStatus }
+                                                                                    };
+                                                                                }
+                                                                                return m;
+                                                                            }));
+                                                                        }}
+                                                                    />
+                                                                ) : isInvoiceMsg && invoiceParsed ? (
+                                                                    // FROM 21e32b...: invoice card logic
+                                                                    <InvoiceCard
+                                                                        invoiceData={invoiceParsed as any}
+                                                                        orderId={linkedOrder?.id ?? ''}
+                                                                        isCustomer={role === 'customer'}
+                                                                        isTechnician={role === 'technician'}
+                                                                        onPayViaVNPay={
+                                                                            role === 'customer' ? handlePayViaVNPay : undefined
+                                                                        }
+                                                                        onConfirmCash={
+                                                                            role === 'technician' ? handleConfirmCash : undefined
+                                                                        }
+                                                                    />
+                                                                ) : isWarrantyMsg ? (
+                                                                    // FROM 21e32b...: reloadActiveMessages (not loadMessages)
+                                                                    <WarrantyCard
+                                                                        warranty={msg.warranty!}
+                                                                        role={role}
+                                                                        onStatusChange={() => {
+                                                                            reloadActiveMessages();
+                                                                        }}
+                                                                    />
+                                                                ) : isQuotation ? (
+                                                                    // MERGED: QuotationCard with onRevise from HEAD
+                                                                    <QuotationCard
+                                                                        serviceName={msg.quotation!.serviceName}
+                                                                        description={msg.quotation!.description}
+                                                                        price={msg.quotation!.price}
+                                                                        scheduledAt={msg.quotation!.scheduledAt}
+                                                                        status={msg.quotation!.status}
+                                                                        isCustomer={role === 'customer'}
+                                                                        onAccept={() =>
+                                                                            handleAcceptQuote(msg.quotation!.id)
+                                                                        }
+                                                                        onReject={() =>
+                                                                            handleRejectQuote(msg.quotation!.id)
+                                                                        }
+                                                                        onRevise={
+                                                                            role === 'technician'
+                                                                                ? () => setReviseQuotation(msg.quotation!)
+                                                                                : undefined
+                                                                        }
+                                                                    />
+                                                                ) : (
+                                                                    <div
+                                                                        className={`${styles.bubble} ${
+                                                                            isMe ? styles.bubbleRight : styles.bubbleLeft
+                                                                        } ${msg.senderRole === 'ADMIN' ? styles.bubbleAdmin : ''}`}
+                                                                    >
+                                                                        {msg.title && (
+                                                                            <div className={styles.bubbleTitle} dangerouslySetInnerHTML={{ __html: msg.title }} />
+                                                                        )}
+                                                                        {msg.senderRole === 'ADMIN' && !isMe && (
+                                                                            <span className={styles.adminTag}>Quản trị viên</span>
+                                                                        )}
+                                                                        <div dangerouslySetInnerHTML={{ __html: msg.content ?? '' }} />
+                                                                    </div>
+                                                                )}
+                                                                {showTimestamp && (
+                                                                    <span className={styles.messageTime}>
+                                                                        {formatMessageTime(lastItem.sentAt)}
+                                                                    </span>
+                                                                )}
+                                                            </React.Fragment>
+                                                        );
+                                                    })
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                });
+                            })()}
 
                         {pendingAdjustment && role === 'customer' && (
                             <div className={styles.messageRow}>
@@ -854,6 +1023,8 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                     onReject={handleRejectPrice}
                 />
             )}
+
+            {/* ── FROM HEAD: QuoteEditModal for revise quotation feature ── */}
             {reviseQuotation && (
                 <QuoteEditModal
                     open={true}
