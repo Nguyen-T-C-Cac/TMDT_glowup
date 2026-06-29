@@ -33,11 +33,13 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
             LEFT JOIN FETCH c.customer
             LEFT JOIN FETCH c.technician
             LEFT JOIN FETCH c.order
-            WHERE c.customer.id = :userId OR c.technician.id = :userId
+            WHERE (c.customer.id = :userId OR c.technician.id = :userId)
+            AND c.status <> 'CLOSED'
             """,
             countQuery = """
             SELECT COUNT(c) FROM Conversation c
-            WHERE c.customer.id = :userId OR c.technician.id = :userId
+            WHERE (c.customer.id = :userId OR c.technician.id = :userId)
+            AND c.status <> 'CLOSED'
             """)
     Page<Conversation> findAllForUser(@Param("userId") Long userId, Pageable pageable);
 }

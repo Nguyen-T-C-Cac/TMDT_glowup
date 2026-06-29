@@ -124,7 +124,7 @@ const HCMCAddressInput: React.FC<HCMCAddressInputProps> = ({
         <span style={{ fontSize: 11, color: '#94a3b8' }}>(mặc định)</span>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+      <div className="address-row" style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
         <select
           value={district}
           onChange={(e) => { setDistrict(e.target.value); setWard(''); }}

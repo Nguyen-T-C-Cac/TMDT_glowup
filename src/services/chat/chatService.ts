@@ -105,4 +105,8 @@ export const chatService = {
   rejectQuotation: async (quotationId: string): Promise<void> => {
     await apiClient.patch(`/api/quotes/${quotationId}/reject`);
   },
+
+  deleteConversation: async (conversationId: string): Promise<void> => {
+    await apiClient.delete(`/api/conversations/${conversationId}`);
+  },
 };
