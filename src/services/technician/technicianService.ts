@@ -14,6 +14,7 @@ type PagedData<T> = {
     limit: number;
     total: number;
     totalPages: number;
+    
   };
 };
 
