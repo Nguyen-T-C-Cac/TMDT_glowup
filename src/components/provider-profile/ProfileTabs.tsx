@@ -14,7 +14,6 @@ export const ProfileTabs: React.FC<ProfileTabsProps> = ({ activeTab, onTabChange
     { id: 'reviews', label: `Đánh giá (${formatCount(reviewCount)})` },
     { id: 'schedule', label: 'Lịch làm việc' },
     { id: 'projects', label: 'Dự án đã làm' },
-    { id: 'security', label: 'Bảo mật' },
   ];
 
   return (

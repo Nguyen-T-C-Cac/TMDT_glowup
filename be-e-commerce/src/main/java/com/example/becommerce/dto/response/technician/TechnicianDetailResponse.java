@@ -40,6 +40,8 @@ public class TechnicianDetailResponse {
     private String titleBadge;
     private Long rewardPoints;
     private String verificationStatus;
+   
+    private List<String> certificates;
     private Integer yearsExperience;
 
     private Map<String, String> schedule;

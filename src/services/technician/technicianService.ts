@@ -4,6 +4,7 @@ import type {
   TechnicianDetail,
   TechnicianListItem,
   TechnicianListParams,
+  CompletedProject,
 } from '../../types/technician';
 
 type PagedData<T> = {
@@ -75,5 +76,13 @@ export const technicianService = {
       throw new Error('Không thể tải hồ sơ thợ');
     }
     return unwrap<TechnicianDetail>(response.data);
+  },
+
+  /**
+   * Lấy danh sách đơn hàng đã hoàn thành (COMPLETED) của kỹ thuật viên dựa theo mã (id/code)
+   */
+  getCompletedProjects: async (technicianId: string): Promise<CompletedProject[]> => {
+    const response = await apiClient.get(`/api/technicians/${encodeURIComponent(technicianId)}/completed-projects`);
+    return unwrap<CompletedProject[]>(response.data);
   },
 };

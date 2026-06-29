@@ -66,3 +66,11 @@ export type ChatLocationState = {
   customerId?: string;
   orderId?: string;
 };
+
+export type ReviseQuotationPayload = {
+  serviceName: string;
+  description?: string;
+  price: number;
+  scheduledAt: string;
+  notes?: string;
+};

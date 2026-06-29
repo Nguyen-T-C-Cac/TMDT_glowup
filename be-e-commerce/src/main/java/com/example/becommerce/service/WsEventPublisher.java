@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -72,6 +73,13 @@ public class WsEventPublisher {
                         .conversationId(conversationCode)
                         .userId(userCode)
                         .build());
+    }
+    public void publishWalletUpdated(String userCode, BigDecimal newPersonalBalance) {
+        messagingTemplate.convertAndSendToUser(
+            userCode,
+            "/queue/wallet-updated",
+            Map.of("personalBalance", newPersonalBalance)
+        );
     }
 
     // ===============================================================

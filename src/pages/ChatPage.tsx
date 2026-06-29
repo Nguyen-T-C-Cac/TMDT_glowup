@@ -25,7 +25,8 @@ import type { OrderResponse } from '../types/order/order';
 import type { Quote } from '../types/Quote';
 import { BookingCard } from '../components/chat/BookingCard';
 import { WarrantyCard } from '../components/chat/WarrantyCard';
-
+import QuoteEditModal from '../components/modal/QuoteEditModal';
+import type { EmbeddedQuotation } from '../types/chat';
 const pageMap: Record<string, string> = {
     home: '/',
     provider: '/provider',
@@ -111,7 +112,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
     const [isPriceConfirmOpen, setIsPriceConfirmOpen] = useState(false);
     const [invoiceInfo, setInvoiceInfo] = useState<{ invoiceCode: string; totalPrice: number } | null>(null);
     const messageListRef = useRef<HTMLElement | null>(null);
-
+    const [reviseQuotation, setReviseQuotation] = useState<EmbeddedQuotation | null>(null);
     const currentUser = getStoredUser();
     const currentUserCode = currentUser?.code ?? '';
 
@@ -211,7 +212,25 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
         enabled: !isLoading && conversationIds.length > 0,
         onMessage: handleRealtimeMessage,
     });
+    const handleReviseQuote = async (quote: Quote) => {
+    if (!reviseQuotation || !activeConversationId) return;
+    const scheduledAt =
+        quote.scheduledAt ??
+        (quote.date && quote.time
+            ? new Date(`${quote.date}T${quote.time}`).toISOString()
+            : new Date().toISOString());
 
+    await chatService.reviseQuotation(reviseQuotation.id, {
+        serviceName: quote.serviceName,
+        description: quote.description,
+        price: quote.price,
+        scheduledAt,
+        notes: quote.notes,
+    });
+    setReviseQuotation(null);
+    await loadMessages(activeConversationId);
+    await refreshConversations();
+};
     const openConversation = useCallback(
         async (conversationId: string, orderId?: string | null) => {
             setActiveConversationId(conversationId);
@@ -760,6 +779,11 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                                                     onReject={() =>
                                                         handleRejectQuote(message.quotation!.id)
                                                     }
+                                                    onRevise={                              // ← THÊM
+                                                        role === 'technician'
+                                                            ? () => setReviseQuotation(message.quotation!)
+                                                            : undefined
+                                                    }
                                                 />
                                             ) : (
                                                 <div
@@ -828,6 +852,19 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                     adjustment={pendingAdjustment}
                     onConfirm={handleApprovePrice}
                     onReject={handleRejectPrice}
+                />
+            )}
+            {reviseQuotation && (
+                <QuoteEditModal
+                    open={true}
+                    onClose={() => setReviseQuotation(null)}
+                    onSubmit={handleReviseQuote}
+                    initialData={{
+                        serviceName: reviseQuotation.serviceName,
+                        description: reviseQuotation.description,
+                        price: reviseQuotation.price,
+                        scheduledAt: reviseQuotation.scheduledAt,
+                    }}
                 />
             )}
         </div>

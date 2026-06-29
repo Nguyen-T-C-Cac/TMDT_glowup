@@ -5,6 +5,7 @@ import com.example.becommerce.dto.request.technician.UpdateTechnicianProfileRequ
 import com.example.becommerce.dto.response.ApiResponse;
 import com.example.becommerce.dto.response.PagedResponse;
 import com.example.becommerce.dto.response.technician.AvailabilityResponse;
+import com.example.becommerce.dto.response.technician.CompletedProjectResponse;
 import com.example.becommerce.dto.response.technician.TechnicianDetailResponse;
 import com.example.becommerce.dto.response.technician.TechnicianListItemResponse;
 import com.example.becommerce.dto.response.technician.TechnicianProfileUpdateResponse;
@@ -21,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/technicians")
@@ -68,5 +71,17 @@ public class TechnicianController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "5") int limit) {
         return ResponseEntity.ok(ApiResponse.success(technicianService.listReviews(code, page, limit)));
+    }
+    /**
+     * GET /api/technicians/{id}/completed-projects
+     *
+     * Returns all orders with status COMPLETED for the given technician.
+     * This endpoint is public (read-only profile data) — no authentication required,
+     * consistent with the existing GET /api/technicians/** permit-all rule in SecurityConfig.
+     */
+    @GetMapping("/{id}/completed-projects")
+    public ResponseEntity<ApiResponse<List<CompletedProjectResponse>>> listCompletedProjects(
+            @PathVariable("id") String code) {
+        return ResponseEntity.ok(ApiResponse.success(technicianService.listCompletedProjects(code)));
     }
 }

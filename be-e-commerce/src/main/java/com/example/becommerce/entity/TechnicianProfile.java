@@ -106,6 +106,14 @@ public class TechnicianProfile {
     @Builder.Default
     private List<String> skills = new ArrayList<>();
 
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
+        name = "technician_certificates",
+        joinColumns = @JoinColumn(name = "profile_id"),
+        indexes = @Index(name = "idx_tech_certificates_profile", columnList = "profile_id"))
+    @Column(name = "certificate_url", length = 500)
+    @Builder.Default
+    private List<String> certificates = new ArrayList<>();
     // ---- Service areas (district names) ----------------------------
 
     @ElementCollection(fetch = FetchType.LAZY)
