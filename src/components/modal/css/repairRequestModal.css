@@ -346,17 +346,12 @@
 .input-icon-wrap input { border: none; box-shadow: none; padding-left: 0; }
 .input-icon-wrap input:focus { box-shadow: none; }
 
-.location-list { display: grid; gap: 6px; }
-.location-list button { text-align: left; padding: 7px 10px; font-size: 0.85rem; }
-
 .mini-map {
     min-height: 56px;
     border-radius: 12px;
     border: 1px solid var(--rm-line);
-    background: rgba(104,168,119,0.04);
-    display: flex; align-items: center; gap: 7px;
-    color: var(--rm-primary); padding: 8px 12px;
-    font-size: 0.84rem;
+    overflow: hidden;
+    position: relative;
 }
 
 .privacy-badge {
