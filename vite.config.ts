@@ -8,6 +8,7 @@ export default defineConfig({
     include: ['@stomp/stompjs'],
   },
   server: {
+    host: '0.0.0.0',
     proxy: {
       '/uploads': {
         target: 'http://localhost:8080',

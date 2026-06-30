@@ -18,6 +18,7 @@ import com.example.becommerce.entity.enums.OrderStatus;
 import com.example.becommerce.entity.enums.QuotationStatus;
 import com.example.becommerce.entity.enums.Role;
 import com.example.becommerce.exception.AppException;
+import com.example.becommerce.repository.BookingRepository;
 import com.example.becommerce.repository.ConversationRepository;
 import com.example.becommerce.repository.MessageRepository;
 import com.example.becommerce.repository.OrderRepository;
@@ -43,7 +44,7 @@ import java.time.LocalDateTime;
  *  - Only the technician of a conversation can post a quote.
  *  - Posting a quote also writes a "quotation" message into the conversation.
  *  - Only the customer of the conversation can accept it.
- *  - On accept, a new Order is spawned in SCHEDULED status, linking back to the quote.
+ *  - On accept, the accepted quote is converted into an Order in SCHEDULED status.
  */
 @Service
 @RequiredArgsConstructor
@@ -53,6 +54,7 @@ public class QuotationServiceImpl implements QuotationService {
     private final QuotationRepository      quotationRepository;
     private final ConversationRepository   conversationRepository;
     private final MessageRepository        messageRepository;
+    private final BookingRepository        bookingRepository;
     private final OrderRepository          orderRepository;
     private final UserRepository           userRepository;
     private final QuotationMapper          quotationMapper;
@@ -147,36 +149,53 @@ public class QuotationServiceImpl implements QuotationService {
                 ? linkedOrder.getAddress()
                 : customer.getAddress();
 
-        Order order = Order.builder()
-                .code(orderCodeGenerator.generate())
-                .customer(customer)
-                .technician(quotation.getTechnician())
-                .serviceName(quotation.getServiceName())
-                .subService(linkedOrder != null ? linkedOrder.getSubService() : null)
-                .serviceCategory(linkedOrder != null ? linkedOrder.getServiceCategory() : null)
-                .deviceName(linkedOrder != null ? linkedOrder.getDeviceName() : null)
-                .description(quotation.getDescription())
-                .address(resolvedAddress)
-                .estimatedPrice(quotation.getPrice())
-                .scheduledAt(quotation.getScheduledAt())
-                .expectedTime(quotation.getScheduledAt())
-                .status(OrderStatus.SCHEDULED)
-                .build();
-        if (conversation.getOrder() == null) {
-            // First time the conversation gets an order — link it.
-            conversation.setOrder(order);
+        Order order = linkedOrder;
+        OrderStatus previousStatus = order != null ? order.getStatus() : null;
+        if (order == null) {
+            order = Order.builder()
+                    .code(orderCodeGenerator.generate())
+                    .customer(customer)
+                    .technician(quotation.getTechnician())
+                    .status(OrderStatus.NEW)
+                    .build();
         }
+
+        order.setCustomer(customer);
+        order.setTechnician(quotation.getTechnician());
+        order.setServiceName(quotation.getServiceName());
+        order.setSubService(linkedOrder != null ? linkedOrder.getSubService() : null);
+        order.setServiceCategory(linkedOrder != null && linkedOrder.getServiceCategory() != null
+                ? linkedOrder.getServiceCategory()
+                : "booking");
+        order.setDeviceName(linkedOrder != null ? linkedOrder.getDeviceName() : null);
+        order.setDescription(quotation.getDescription());
+        order.setAddress(resolvedAddress);
+        order.setEstimatedPrice(quotation.getPrice());
+        order.setScheduledAt(quotation.getScheduledAt());
+        order.setExpectedTime(quotation.getScheduledAt());
+        order.setStatus(OrderStatus.SCHEDULED);
+
         Order savedOrder = orderRepository.save(order);
+        conversation.setOrder(savedOrder);
 
         quotation.setStatus(QuotationStatus.ACCEPTED);
         quotation.setAcceptedAt(LocalDateTime.now());
         quotation.setOrder(savedOrder);
         Quotation savedQuote = quotationRepository.save(quotation);
+
+        bookingRepository.findFirstByConversation_IdOrderByCreatedAtDesc(conversation.getId())
+                .ifPresent(booking -> {
+                    booking.setOrder(savedOrder);
+                    bookingRepository.save(booking);
+                });
+
         conversationRepository.save(conversation);
 
-        // New order is born SCHEDULED — emit so both parties can react.
+        // The accepted quote now appears in the scheduled orders flow.
         eventPublisher.publishOrderStatusChanged(
-                savedOrder.getCode(), null, OrderStatus.SCHEDULED.apiValue());
+                savedOrder.getCode(),
+                previousStatus == null ? null : previousStatus.apiValue(),
+                OrderStatus.SCHEDULED.apiValue());
 
         // Notify the technician their quote was accepted.
         try {

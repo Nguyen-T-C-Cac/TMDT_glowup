@@ -13,6 +13,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     Optional<Booking> findByOrder_Code(String orderCode);
 
+    Optional<Booking> findFirstByConversation_IdOrderByCreatedAtDesc(Long conversationId);
+
     boolean existsByCode(String code);
 
     long count();
