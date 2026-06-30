@@ -261,6 +261,19 @@
     color: inherit;
 }
 
+.bubbleText {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.bubbleText p {
+    margin: 0;
+}
+
+.bubbleText p + p {
+    margin-top: 6px;
+}
+
 .adminTag {
     display: inline-block;
     font-size: 10px;

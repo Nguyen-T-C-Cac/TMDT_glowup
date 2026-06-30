@@ -194,42 +194,9 @@ public class BookingServiceImpl implements BookingService {
                 }
             }
 
-            // 8b. Create linked Order with status NEW so it appears in "Yêu cầu mới"
             List<String> imageUrls = request.getImageUrls() != null
                     ? request.getImageUrls()
                     : List.of();
-
-            String orderCode = orderCodeGenerator.generate();
-            Order order = Order.builder()
-                    .code(orderCode)
-                    .customer(customer)
-                    .technician(technician)
-                    .deviceName(category.getTitle())
-                    .description(request.getDescription())
-                    .address(request.getAddress())
-                    .serviceCategory("booking")
-                    .status(OrderStatus.NEW)
-                    .build();
-            if (request.getScheduledDate() != null) {
-                order.setScheduledAt(request.getScheduledDate().atStartOfDay());
-            }
-            if (imageUrls != null) {
-                for (String url : imageUrls) {
-                    if (url != null && !url.isBlank()) {
-                        order.getImages().add(OrderImage.builder()
-                                .order(order)
-                                .url(url.trim())
-                                .role("booking")
-                                .build());
-                    }
-                }
-            }
-            order = orderRepository.save(order);
-            booking.setOrder(order);
-            booking = bookingRepository.save(booking);
-            conversation.setOrder(order);
-            conversationRepository.save(conversation);
-            log.debug("Linked order {} to booking {} and conversation {}", orderCode, bookingCode, conversation.getCode());
 
             // 9. Build booking summary and create BOOKING message
             String summaryJson = buildBookingSummary(booking, imageUrls);
@@ -240,7 +207,7 @@ public class BookingServiceImpl implements BookingService {
             Message message = Message.builder()
                     .code(msgCode)
                     .conversation(conversation)
-                    .sender(null)
+                    .sender(customer)
                     .type(MessageType.BOOKING)
                     .content(summaryJson)
                     .title("Yêu cầu sửa chữa mới")
@@ -285,7 +252,6 @@ public class BookingServiceImpl implements BookingService {
             return BookingSubmitResponse.builder()
                     .booking(bookingResponse)
                     .conversationId(conversation.getCode())
-                    .orderId(orderCode)
                     .build();
 
         } catch (AppException ex) {
@@ -328,20 +294,6 @@ public class BookingServiceImpl implements BookingService {
             booking.setStatus(BookingStatus.CONFIRMED);
             Booking savedBooking = bookingRepository.save(booking);
 
-            // Update linked order status
-            Order order = savedBooking.getOrder();
-            if (order != null && order.getStatus() == OrderStatus.NEW) {
-                OrderStatus from = order.getStatus();
-                order.setTechnician(technician);
-                order.setStatus(OrderStatus.SCHEDULED);
-                if (order.getScheduledAt() == null && savedBooking.getScheduledDate() != null) {
-                    order.setScheduledAt(savedBooking.getScheduledDate().atStartOfDay());
-                }
-                orderRepository.save(order);
-                eventPublisher.publishOrderStatusChanged(
-                        order.getCode(), from.apiValue(), OrderStatus.SCHEDULED.apiValue());
-            }
-
             // Update booking message content with new status
             Conversation conversation = savedBooking.getConversation();
             if (conversation != null) {
@@ -373,7 +325,7 @@ public class BookingServiceImpl implements BookingService {
                 Message systemMsg = Message.builder()
                         .code(sysCode)
                         .conversation(conversation)
-                        .sender(null)
+                        .sender(technician)
                         .type(MessageType.SYSTEM)
                         .content("Đã chấp nhận yêu cầu sửa chữa")
                         .title("Yêu cầu sửa chữa")
@@ -447,16 +399,6 @@ public class BookingServiceImpl implements BookingService {
             booking.setStatus(BookingStatus.CANCELLED);
             Booking savedBooking = bookingRepository.save(booking);
 
-            // Update linked order status
-            Order order = savedBooking.getOrder();
-            if (order != null && order.getStatus() == OrderStatus.NEW) {
-                OrderStatus from = order.getStatus();
-                order.setStatus(OrderStatus.CANCELLED);
-                orderRepository.save(order);
-                eventPublisher.publishOrderStatusChanged(
-                        order.getCode(), from.apiValue(), OrderStatus.CANCELLED.apiValue());
-            }
-
             // Update booking message content with new status
             Conversation conversation = savedBooking.getConversation();
             if (conversation != null) {
@@ -486,7 +428,7 @@ public class BookingServiceImpl implements BookingService {
                 Message systemMsg = Message.builder()
                         .code(sysCode)
                         .conversation(conversation)
-                        .sender(null)
+                        .sender(technician)
                         .type(MessageType.SYSTEM)
                         .content("Đã từ chối yêu cầu sửa chữa")
                         .title("Yêu cầu sửa chữa")

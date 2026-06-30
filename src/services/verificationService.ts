@@ -1,13 +1,14 @@
 import type { VerificationRequest, VerificationStatus } from '../types/VerificationRequest'
 import apiClient from '../api/config'
 
+const API_BASE_URL = import.meta.env.VITE_API_URL?.toString() || 'http://localhost:8080'
 const REQUESTS_KEY = 'glowup_verification_requests_v1'
 const TECH_STATUS_KEY = 'glowup_technician_verification_status_v1'
 
 export const getImageUrl = (path: string | undefined | null) => {
   if (!path) return '';
   if (path.startsWith('http') || path.startsWith('data:')) return path;
-  return `http://localhost:8080${path.startsWith('/') ? path : '/' + path}`;
+  return `${API_BASE_URL}${path.startsWith('/') ? path : '/' + path}`;
 }
 
 const seedRequests: VerificationRequest[] = [

@@ -1,11 +1,10 @@
 import axios from 'axios';
 import { loadTokenFromStorage } from '../utils/token';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL?.toString() || 'http://localhost:8080';
+
 const apiClient = axios.create({
-    // baseURL: 'http://192.168.88.251:8080/api/',
-    // baseURL: 'http://10.0.2.2:8080/',
-    baseURL: 'http://localhost:8080',
-    // baseURL: 'http://192.168.1.191:8080/',
+    baseURL: API_BASE_URL,
     timeout: 60000, // 60s để xử lý upload ảnh lớn
 });
 
