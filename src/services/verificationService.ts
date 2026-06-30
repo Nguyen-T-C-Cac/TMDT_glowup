@@ -4,6 +4,12 @@ import apiClient from '../api/config'
 const REQUESTS_KEY = 'glowup_verification_requests_v1'
 const TECH_STATUS_KEY = 'glowup_technician_verification_status_v1'
 
+export const getImageUrl = (path: string | undefined | null) => {
+  if (!path) return '';
+  if (path.startsWith('http') || path.startsWith('data:')) return path;
+  return `http://localhost:8080${path.startsWith('/') ? path : '/' + path}`;
+}
+
 const seedRequests: VerificationRequest[] = [
   {
     id: 'VR-2401',
@@ -111,7 +117,7 @@ const seedRequests: VerificationRequest[] = [
     serviceCategory: 'Tủ lạnh',
     yearsExperience: 2,
     submittedAt: '2026-04-23T15:10:00.000Z',
-    status: 'needs_resubmit',
+    status: 'rejected',
     note: 'Thiếu ảnh chân dung rõ mặt, cần tải lại.',
     reviewedAt: '2026-04-24T11:30:00.000Z',
     reviewedBy: 'Admin AD-9902',
@@ -281,18 +287,47 @@ export const getTechnicianVerificationStatus = (technicianId: string): Verificat
   return techMap[technicianId] || null
 }
 
+export const submitMockVerification = (payload: { technicianId: string, fullName: string, phone: string, email: string }) => {
+  const requests = getVerificationRequests()
+  const newRequest: VerificationRequest = {
+    id: `VR-${Math.floor(Math.random() * 10000)}`,
+    technicianId: payload.technicianId,
+    fullName: payload.fullName,
+    phone: payload.phone,
+    email: payload.email,
+    district: 'Chưa cập nhật',
+    serviceCategory: 'Chưa cập nhật',
+    yearsExperience: 0,
+    submittedAt: new Date().toISOString(),
+    status: 'pending',
+    documents: {
+      idFront: 'https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=800&q=80',
+      idBack: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&q=80',
+      portrait: 'https://i.pravatar.cc/600?img=33',
+      certificate: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&q=80',
+    },
+  }
+  
+  requests.push(newRequest)
+  localStorage.setItem(REQUESTS_KEY, JSON.stringify(requests))
+  
+  const techMap = parse<Record<string, VerificationStatus>>(localStorage.getItem(TECH_STATUS_KEY), {})
+  techMap[payload.technicianId] = 'pending'
+  localStorage.setItem(TECH_STATUS_KEY, JSON.stringify(techMap))
+  
+  return newRequest
+}
+
 export const verificationStatusLabel: Record<VerificationStatus, string> = {
   pending: 'Chờ duyệt',
   approved: 'Đã phê duyệt',
   rejected: 'Từ chối',
-  needs_resubmit: 'Yêu cầu bổ sung',
 }
 
 export const verificationStatusColor: Record<VerificationStatus, { color: string; bg: string }> = {
   pending: { color: '#a16207', bg: '#fff7e8' },
   approved: { color: '#15803d', bg: '#ecfdf3' },
   rejected: { color: '#b91c1c', bg: '#fee2e2' },
-  needs_resubmit: { color: '#334155', bg: '#e2e8f0' },
 }
 
 export { formatDate }
@@ -323,5 +358,45 @@ export const getVerificationStatus = async (
   const response = await apiClient.get<{ success: boolean; data: VerificationRequest }>(
     `/api/verifications/${id}`
   );
+  return response.data;
+};
+
+export interface ReviewVerificationPayload {
+  status: VerificationStatus
+  note?: string
+  reviewedBy: string
+  notifyTechnician?: boolean
+}
+
+export interface ReviewVerificationResponse {
+  success: boolean
+  data: {
+    id: string
+    status: VerificationStatus
+    note?: string
+    reviewedBy?: string
+    reviewedAt?: string
+    technicianStatus?: VerificationStatus
+  }
+}
+
+export const reviewVerification = async (
+  id: string,
+  payload: ReviewVerificationPayload
+): Promise<ReviewVerificationResponse> => {
+  const response = await apiClient.patch<ReviewVerificationResponse>(
+    `/api/verifications/${id}`,
+    payload
+  );
+  return response.data;
+};
+
+export const getAllVerifications = async (): Promise<{ success: boolean; data: VerificationRequest[] }> => {
+  const response = await apiClient.get<{ success: boolean; data: VerificationRequest[] }>('/api/verifications');
+  return response.data;
+};
+
+export const getVerificationByTechnician = async (technicianId: string): Promise<{ success: boolean; data: VerificationRequest }> => {
+  const response = await apiClient.get<{ success: boolean; data: VerificationRequest }>(`/api/verifications/technician/${technicianId}`);
   return response.data;
 };

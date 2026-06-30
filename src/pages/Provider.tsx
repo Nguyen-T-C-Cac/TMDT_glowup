@@ -46,24 +46,35 @@ export const Provider: React.FC = () => {
   };
 
   return (
-    <div style={{ backgroundColor: '#f4f3ec', minHeight: '100vh' }}>
+    <div className="provider-page-wrapper" style={{ flex: 1, minWidth: 0 }}>
       <Header onNavigate={onNavigate} />
+
       <main className="fp-main-container">
+        {/* Hàng trên cùng: Hero Card full width */}
+        <div className="fp-hero-card">
+          <h2 className="fp-hero-title">Kết nối thợ chuyên nghiệp hàng đầu</h2>
+          <p className="fp-hero-subtitle">
+            Tìm kiếm, so sánh và đặt lịch hẹn dễ dàng với các chuyên gia có tay nghề cao trong khu vực của bạn.
+          </p>
+        </div>
+
+        {/* Hàng dưới: Danh sách thợ (trái) + Lọc theo khu vực (phải) */}
         <div className="fp-layout">
+          <ProviderList
+            onNavigate={onNavigate}
+            selectedService={selectedService}
+            filters={filters}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            setCurrentPage={setCurrentPage}
+            setTotalPages={setTotalPages}
+          />
           <FilterSidebar
             filters={filters}
             onFiltersChange={setFilters}
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
-          />
-          <ProviderList
-            onNavigate={onNavigate}
-            selectedService={selectedService}
-            filters={filters}
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-            setTotalPages={setTotalPages}
           />
         </div>
       </main>

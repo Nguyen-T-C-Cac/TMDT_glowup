@@ -1,4 +1,4 @@
-export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'needs_resubmit'
+export type VerificationStatus = 'pending' | 'approved' | 'rejected'
 
 export interface VerificationDocuments {
   idFront: string

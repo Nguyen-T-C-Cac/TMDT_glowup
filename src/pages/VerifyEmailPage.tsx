@@ -9,6 +9,7 @@ export function VerifyEmailPage() {
   const navigate = useNavigate()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [errorMessage, setErrorMessage] = useState('')
+  const [pendingTechnician, setPendingTechnician] = useState(false)
   const token = searchParams.get('token')
 
   useEffect(() => {
@@ -20,8 +21,21 @@ export function VerifyEmailPage() {
       }
 
       try {
-        await verifyEmail({ token })
+        const result = await verifyEmail({ token })
         setStatus('success')
+
+        const accountType = result.data.toLowerCase()
+        if (accountType === 'technician') {
+          setPendingTechnician(true)
+          window.setTimeout(() => {
+            // Thợ cần đăng nhập lại để lấy token mới trước khi gửi hồ sơ xác minh
+            navigate('/auth/login?redirect=/technician/verification&verified=true')
+          }, 1200)
+        } else {
+          window.setTimeout(() => {
+            navigate('/auth/login?verified=true')
+          }, 1200)
+        }
       } catch (error: any) {
         setStatus('error')
         setErrorMessage(
@@ -31,7 +45,7 @@ export function VerifyEmailPage() {
     }
 
     handleVerification()
-  }, [token])
+  }, [navigate, token])
 
   return (
     <main className="auth-page">
@@ -93,15 +107,27 @@ export function VerifyEmailPage() {
                 </div>
                 <h1 className="verify-email__title">Xác thực email thành công!</h1>
                 <p className="verify-email__description">
-                  Tài khoản của bạn đã được xác thực thành công. Bây giờ bạn có thể đăng nhập và bắt đầu sử dụng nền tảng.
+                  {pendingTechnician
+                    ? 'Tài khoản kỹ thuật đã được xác nhận. Chuyển sang bước gửi yêu cầu xác minh danh tính.'
+                    : 'Tài khoản của bạn đã được xác thực thành công. Bây giờ bạn có thể đăng nhập và bắt đầu sử dụng nền tảng.'}
                 </p>
-                <button
-                  className="verify-email__button"
-                  onClick={() => navigate('/auth/login')}
-                >
-                  <span>Đăng nhập tài khoản</span>
-                  <ArrowRight size={18} />
-                </button>
+                {pendingTechnician ? (
+                  <button
+                    className="verify-email__button"
+                    onClick={() => navigate('/technician/verification')}
+                  >
+                    <span>Tiếp tục xác minh danh tính</span>
+                    <ArrowRight size={18} />
+                  </button>
+                ) : (
+                  <button
+                    className="verify-email__button"
+                    onClick={() => navigate('/')}
+                  >
+                    <span>Về trang chủ</span>
+                    <ArrowRight size={18} />
+                  </button>
+                )}
               </div>
             )}
 

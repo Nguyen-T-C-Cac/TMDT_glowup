@@ -7,4 +7,12 @@ export default defineConfig({
   optimizeDeps: {
     include: ['@stomp/stompjs'],
   },
+  server: {
+    proxy: {
+      '/uploads': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
+  },
 })

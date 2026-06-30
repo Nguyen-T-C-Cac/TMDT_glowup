@@ -1,3 +1,7 @@
+-- Drop legacy CHECK constraint that only allows uppercase enum values.
+-- The MessageTypeConverter now writes lowercase values (e.g. 'booking', 'invoice').
+ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_type_check;
+
 -- =====================================================================
 -- GlowUp Concierge — demo seed data
 -- =====================================================================
@@ -249,6 +253,249 @@ ON CONFLICT (setting_key) DO UPDATE SET
   setting_value = EXCLUDED.setting_value,
   updated_at = NOW();
 
+
+-- =====================================================================
+-- 9. DEVICE TYPES — loại thiết bị theo từng danh mục dịch vụ
+-- =====================================================================
+
+INSERT INTO device_types (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'DT-ML-TT', 'Treo tường', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-001'
+  AND NOT EXISTS (SELECT 1 FROM device_types WHERE code = 'DT-ML-TT');
+
+INSERT INTO device_types (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'DT-ML-AT', 'Âm tường', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-001'
+  AND NOT EXISTS (SELECT 1 FROM device_types WHERE code = 'DT-ML-AT');
+
+INSERT INTO device_types (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'DT-ML-INV', 'Inverter', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-001'
+  AND NOT EXISTS (SELECT 1 FROM device_types WHERE code = 'DT-ML-INV');
+
+INSERT INTO device_types (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'DT-ML-CS', 'Cây / tủ đứng', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-001'
+  AND NOT EXISTS (SELECT 1 FROM device_types WHERE code = 'DT-ML-CS');
+
+INSERT INTO device_types (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'DT-MG-CN', 'Cửa ngang', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-002'
+  AND NOT EXISTS (SELECT 1 FROM device_types WHERE code = 'DT-MG-CN');
+
+INSERT INTO device_types (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'DT-MG-CT', 'Cửa trên', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-002'
+  AND NOT EXISTS (SELECT 1 FROM device_types WHERE code = 'DT-MG-CT');
+
+INSERT INTO device_types (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'DT-MG-LG', 'Lồng đứng', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-002'
+  AND NOT EXISTS (SELECT 1 FROM device_types WHERE code = 'DT-MG-LG');
+
+INSERT INTO device_types (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'DT-TL-2C', 'Tủ lạnh 2 cánh', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-003'
+  AND NOT EXISTS (SELECT 1 FROM device_types WHERE code = 'DT-TL-2C');
+
+INSERT INTO device_types (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'DT-TL-SBS', 'Side by Side', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-003'
+  AND NOT EXISTS (SELECT 1 FROM device_types WHERE code = 'DT-TL-SBS');
+
+INSERT INTO device_types (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'DT-TL-MN', 'Mini / tủ lạnh nhỏ', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-003'
+  AND NOT EXISTS (SELECT 1 FROM device_types WHERE code = 'DT-TL-MN');
+
+INSERT INTO device_types (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'DT-MNN-TT', 'Trực tiếp (tắm)', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-004'
+  AND NOT EXISTS (SELECT 1 FROM device_types WHERE code = 'DT-MNN-TT');
+
+INSERT INTO device_types (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'DT-MNN-GT', 'Gián tiếp (bình chứa)', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-004'
+  AND NOT EXISTS (SELECT 1 FROM device_types WHERE code = 'DT-MNN-GT');
+
+INSERT INTO device_types (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'DT-MNN-NLMT', 'Năng lượng mặt trời', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-004'
+  AND NOT EXISTS (SELECT 1 FROM device_types WHERE code = 'DT-MNN-NLMT');
+
+-- =====================================================================
+-- 10. BRANDS — hãng thiết bị theo từng danh mục
+-- =====================================================================
+
+-- Hãng cho Máy lạnh (CAT-001)
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-ML-DAIKIN', 'Daikin', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-001'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-ML-DAIKIN');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-ML-PANA', 'Panasonic', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-001'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-ML-PANA');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-ML-LG', 'LG', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-001'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-ML-LG');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-ML-TOSHIBA', 'Toshiba', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-001'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-ML-TOSHIBA');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-ML-SAMSUNG', 'Samsung', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-001'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-ML-SAMSUNG');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-ML-MITSUBISHI', 'Mitsubishi Electric', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-001'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-ML-MITSUBISHI');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-ML-SHARP', 'Sharp', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-001'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-ML-SHARP');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-ML-GREE', 'Gree', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-001'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-ML-GREE');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-ML-KHAC', 'Hãng khác', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-001'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-ML-KHAC');
+
+-- Hãng cho Máy giặt (CAT-002)
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-MG-LG', 'LG', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-002'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-MG-LG');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-MG-SAMSUNG', 'Samsung', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-002'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-MG-SAMSUNG');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-MG-PANA', 'Panasonic', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-002'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-MG-PANA');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-MG-ELECTROLUX', 'Electrolux', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-002'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-MG-ELECTROLUX');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-MG-TOSHIBA', 'Toshiba', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-002'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-MG-TOSHIBA');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-MG-HITACHI', 'Hitachi', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-002'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-MG-HITACHI');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-MG-AQUA', 'Aqua', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-002'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-MG-AQUA');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-MG-KHAC', 'Hãng khác', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-002'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-MG-KHAC');
+
+-- Hãng cho Tủ lạnh (CAT-003)
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-TL-LG', 'LG', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-003'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-TL-LG');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-TL-SAMSUNG', 'Samsung', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-003'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-TL-SAMSUNG');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-TL-PANA', 'Panasonic', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-003'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-TL-PANA');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-TL-HITACHI', 'Hitachi', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-003'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-TL-HITACHI');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-TL-TOSHIBA', 'Toshiba', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-003'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-TL-TOSHIBA');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-TL-AQUA', 'Aqua', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-003'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-TL-AQUA');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-TL-KHAC', 'Hãng khác', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-003'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-TL-KHAC');
+
+-- Hãng cho Máy nước nóng (CAT-004)
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-MNN-ARISTON', 'Ariston', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-004'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-MNN-ARISTON');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-MNN-FERROLI', 'Ferroli', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-004'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-MNN-FERROLI');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-MNN-PANA', 'Panasonic', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-004'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-MNN-PANA');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-MNN-STIEBEL', 'Stiebel Eltron', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-004'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-MNN-STIEBEL');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-MNN-KHAC', 'Hãng khác', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-004'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-MNN-KHAC');
+
+-- Hãng cho Khác (CAT-005)
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-KHAC-PANA', 'Panasonic', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-005'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-KHAC-PANA');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-KHAC-SHARP', 'Sharp', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-005'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-KHAC-SHARP');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-KHAC-SAMSUNG', 'Samsung', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-005'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-KHAC-SAMSUNG');
+
+INSERT INTO brands (code, name, category_id, status, deleted, created_at, updated_at)
+SELECT 'BR-KHAC-KHAC', 'Hãng khác', c.id, 'ACTIVE', FALSE, NOW(), NOW()
+FROM categories c WHERE c.code = 'CAT-005'
+  AND NOT EXISTS (SELECT 1 FROM brands WHERE code = 'BR-KHAC-KHAC');
 
 -- =====================================================================
 -- DONE. Verify với:

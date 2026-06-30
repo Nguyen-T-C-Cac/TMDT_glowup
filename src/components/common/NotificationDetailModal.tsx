@@ -7,6 +7,7 @@ import './NotificationDetailModal.css';
 interface Props {
   notificationId: string;
   onClose: () => void;
+  onRead?: (id: string) => void;
 }
 
 const typeLabel: Record<string, string> = {
@@ -28,7 +29,7 @@ const formatFullDate = (value: string) => {
   });
 };
 
-const NotificationDetailModal: React.FC<Props> = ({ notificationId, onClose }) => {
+const NotificationDetailModal: React.FC<Props> = ({ notificationId, onClose, onRead }) => {
   const [notification, setNotification] = useState<NotificationItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -36,12 +37,20 @@ const NotificationDetailModal: React.FC<Props> = ({ notificationId, onClose }) =
   useEffect(() => {
     let cancelled = false;
 
-    getNotificationById(notificationId)
+   getNotificationById(notificationId)
       .then((data) => {
         if (cancelled) return;
         setNotification(data);
+        
+        // Nếu chi tiết lấy về báo chưa đọc, tiến hành đọc và báo lại cho cha
         if (!data.isRead) {
-          markNotificationAsRead(data.id).catch(() => {});
+          markNotificationAsRead(data.id)
+            .then(() => {
+              if (!cancelled && onRead) {
+                onRead(data.id); // Kích hoạt callback giúp icon cập nhật lại số lượng badge
+              }
+            })
+            .catch(() => {});
         }
       })
       .catch(() => {
@@ -52,7 +61,7 @@ const NotificationDetailModal: React.FC<Props> = ({ notificationId, onClose }) =
       });
 
     return () => { cancelled = true; };
-  }, [notificationId]);
+  }, [notificationId, onRead]);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';

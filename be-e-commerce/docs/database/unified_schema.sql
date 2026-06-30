@@ -411,14 +411,18 @@ CREATE TABLE IF NOT EXISTS order_report_evidence (
 CREATE INDEX IF NOT EXISTS idx_order_report_evidence_report ON order_report_evidence (report_id);
 
 CREATE TABLE IF NOT EXISTS conversations (
-  id              BIGSERIAL PRIMARY KEY,
-  code            VARCHAR(32) NOT NULL UNIQUE,
-  order_id        BIGINT REFERENCES orders(id) ON DELETE SET NULL,
-  status          VARCHAR(20) NOT NULL DEFAULT 'active',
-  last_message_at TIMESTAMPTZ,
-  last_message_id BIGINT,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  id                      BIGSERIAL PRIMARY KEY,
+  code                    VARCHAR(30) NOT NULL UNIQUE,
+  customer_id             BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  technician_id           BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  order_id                BIGINT REFERENCES orders(id) ON DELETE SET NULL,
+  status                  VARCHAR(20) NOT NULL DEFAULT 'active',
+  customer_last_read_at   TIMESTAMPTZ,
+  technician_last_read_at TIMESTAMPTZ,
+  last_message_at         TIMESTAMPTZ,
+  created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT uq_conversations_customer_technician UNIQUE (customer_id, technician_id),
   CONSTRAINT ck_conversations_status CHECK (status IN ('active', 'archived', 'closed'))
 );
 
@@ -478,7 +482,8 @@ CREATE TABLE IF NOT EXISTS messages (
   sent_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
   edited_at       TIMESTAMPTZ,
   deleted_at      TIMESTAMPTZ,
-  CONSTRAINT ck_messages_type CHECK (type IN ('text', 'image', 'quotation', 'system')),
+  -- Validation handled at app level by MessageType enum + JPA converter; NO check constraint.
+  -- See Flyway V6 and V9 which drop the legacy messages_type_check constraint.
   CONSTRAINT ck_messages_body CHECK (content IS NOT NULL OR attachment_url IS NOT NULL OR quotation_id IS NOT NULL OR type = 'system')
 );
 

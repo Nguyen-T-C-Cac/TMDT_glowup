@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { userService } from '../services/userService';
 import { uploadService } from '../services/uploadService';
@@ -39,42 +39,42 @@ export default function CustomerAccountSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  const loadAccountData = useCallback(async () => {
-    setLoading(true);
-    try {
-      await refreshProfile();
-      const res = await userService.getMe();
-      const u = res.data;
-
-      setUserId(u.id != null ? String(u.id) : '');
-      const resolvedAvatar = resolveMediaUrl(u.avatar);
-      setAvatarUrl(resolvedAvatar);
-      setForm({
-        fullName: u.fullName || '',
-        phone: u.phone || '',
-        email: u.email || '',
-        address: u.address || '',
-      });
-
-      updateProfile({
-        id: u.id != null ? String(u.id) : '',
-        fullName: u.fullName || '',
-        phone: u.phone || '',
-        email: u.email || '',
-        code: u.code || '',
-        avatar: resolvedAvatar,
-        address: u.address || '',
-      });
-    } catch (err) {
-      console.error('Lỗi khi tải thông tin user:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [refreshProfile, updateProfile]);
-
   useEffect(() => {
+    const loadAccountData = async () => {
+      setLoading(true);
+      try {
+        await refreshProfile();
+        const res = await userService.getMe();
+        const u = res.data;
+
+        setUserId(u.id != null ? String(u.id) : '');
+        const resolvedAvatar = resolveMediaUrl(u.avatar);
+        setAvatarUrl(resolvedAvatar);
+        setForm({
+          fullName: u.fullName || '',
+          phone: u.phone || '',
+          email: u.email || '',
+          address: u.address || '',
+        });
+
+        updateProfile({
+          id: u.id != null ? String(u.id) : '',
+          fullName: u.fullName || '',
+          phone: u.phone || '',
+          email: u.email || '',
+          code: u.code || '',
+          avatar: resolvedAvatar,
+          address: u.address || '',
+        });
+      } catch (err) {
+        console.error('Lỗi khi tải thông tin user:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     void loadAccountData();
-  }, [location.key, loadAccountData]);
+  }, [location.key, refreshProfile, updateProfile]);
 
   const updateField = (field: keyof CustomerAccountFormData, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));

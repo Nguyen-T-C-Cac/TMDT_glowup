@@ -1,14 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AdminHeader } from '../components/admin/AdminHeader'
 import { AdminSidebar } from '../components/admin/AdminSidebar'
 import {
-  getTechnicianVerificationStatus,
-  getVerificationRequestById,
-  updateVerificationRequestStatus,
+  getVerificationStatus,
+  reviewVerification,
   verificationStatusLabel,
+  getImageUrl,
 } from '../services/verificationService'
-import type { VerificationStatus } from '../types/VerificationRequest'
+import type { VerificationRequest, VerificationStatus } from '../types/VerificationRequest'
 import './AdminVerificationUpdate.css'
 
 type ReviewPreset = { value: string; label: string; description: string }
@@ -23,21 +23,10 @@ const REJECT_PRESETS: ReviewPreset[] = [
   { value: 'other', label: 'Khác', description: '' },
 ]
 
-/** Gợi ý nội dung yêu cầu bổ sung (status = needs_resubmit). */
-const RESUBMIT_PRESETS: ReviewPreset[] = [
-  { value: 'missing-back', label: 'Thiếu ảnh CCCD mặt sau', description: 'Hồ sơ còn thiếu ảnh CCCD mặt sau. Vui lòng bổ sung để chúng tôi hoàn tất việc xác minh.' },
-  { value: 'missing-portrait', label: 'Thiếu ảnh chân dung', description: 'Hồ sơ còn thiếu ảnh chân dung rõ mặt. Vui lòng tải lên ảnh chân dung trực diện để tiếp tục.' },
-  { value: 'missing-cert', label: 'Bổ sung chứng chỉ nghề', description: 'Vui lòng bổ sung chứng chỉ nghề phù hợp với lĩnh vực dịch vụ bạn đăng ký để tăng độ tin cậy hồ sơ.' },
-  { value: 'retake-clearer', label: 'Chụp lại ảnh rõ hơn', description: 'Một số ảnh chưa đủ rõ. Vui lòng chụp lại trong điều kiện đủ sáng, lấy nét và gửi lại hồ sơ.' },
-  { value: 'other', label: 'Khác', description: '' },
-]
-
 export default function AdminVerificationUpdate() {
   const navigate = useNavigate()
   const { requestId } = useParams()
   const [params] = useSearchParams()
-
-  const request = useMemo(() => (requestId ? getVerificationRequestById(requestId) : undefined), [requestId])
 
   const initialDecision = (params.get('decision') as VerificationStatus | null) || 'approved'
   const [status, setStatus] = useState<VerificationStatus>(initialDecision)
@@ -45,7 +34,32 @@ export default function AdminVerificationUpdate() {
   const [notePreset, setNotePreset] = useState('')
   const [notifyTechnician, setNotifyTechnician] = useState(true)
   const [isDone, setIsDone] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [savedStatus, setSavedStatus] = useState<VerificationStatus | null>(null)
+
+  const [request, setRequest] = useState<VerificationRequest | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (requestId) {
+      getVerificationStatus(requestId)
+        .then(res => {
+          if (res.success) setRequest(res.data)
+          setLoading(false)
+        })
+        .catch(err => {
+          console.error('Error fetching verification status', err)
+          setLoading(false)
+        })
+    } else {
+      setLoading(false)
+    }
+  }, [requestId])
+
+  if (loading) {
+    return <div className="avu-empty-page"><h2>Đang tải...</h2></div>
+  }
 
   if (!request) {
     return (
@@ -56,17 +70,26 @@ export default function AdminVerificationUpdate() {
     )
   }
 
-  const handleSubmit = () => {
-    const updated = updateVerificationRequestStatus(request.id, {
-      status,
-      note,
-      reviewedBy: 'Admin AD-9902',
-    })
+  const handleSubmit = async () => {
+    setError(null)
+    setIsSaving(true)
 
-    if (!updated) return
+    try {
+      const response = await reviewVerification(request.id, {
+        status,
+        note,
+        reviewedBy: 'Admin AD-9902',
+        notifyTechnician,
+      })
 
-    setSavedStatus(getTechnicianVerificationStatus(request.technicianId))
-    setIsDone(true)
+      setSavedStatus(response.data.technicianStatus ?? response.data.status)
+      setIsDone(true)
+    } catch (err) {
+      console.error(err)
+      setError('Không thể cập nhật trạng thái xác minh. Vui lòng thử lại.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -93,7 +116,7 @@ export default function AdminVerificationUpdate() {
         {!isDone ? (
           <section className="avu-card">
             <div className="avu-target">
-              <img src={request.documents.portrait} alt={request.fullName} />
+              <img src={getImageUrl(request.documents.portrait)} alt={request.fullName} />
               <div>
                 <h3>{request.fullName}</h3>
                 <p>{request.technicianId} · {request.phone}</p>
@@ -105,27 +128,25 @@ export default function AdminVerificationUpdate() {
               <div className="avu-options">
                 <label><input type="radio" checked={status === 'approved'} onChange={() => { setStatus('approved'); setNotePreset('') }} /> Đã phê duyệt</label>
                 <label><input type="radio" checked={status === 'rejected'} onChange={() => { setStatus('rejected'); setNotePreset('') }} /> Từ chối</label>
-                <label><input type="radio" checked={status === 'needs_resubmit'} onChange={() => { setStatus('needs_resubmit'); setNotePreset('') }} /> Yêu cầu bổ sung</label>
               </div>
             </div>
 
-            {status !== 'approved' && (
+            {status === 'rejected' && (
               <div className="avu-group">
-                <label>{status === 'rejected' ? 'Gợi ý lý do từ chối' : 'Gợi ý nội dung yêu cầu bổ sung'}</label>
+                <label>Gợi ý lý do từ chối</label>
                 <select
                   className="avu-select"
                   value={notePreset}
                   onChange={(e) => {
                     const value = e.target.value
-                    const presets = status === 'rejected' ? REJECT_PRESETS : RESUBMIT_PRESETS
-                    const found = presets.find((p) => p.value === value)
+                    const found = REJECT_PRESETS.find((p) => p.value === value)
                     setNotePreset(value)
                     if (found && found.value !== 'other') setNote(found.description)
                     else if (found?.value === 'other') setNote('')
                   }}
                 >
                   <option value="">-- Chọn nội dung gợi ý --</option>
-                  {(status === 'rejected' ? REJECT_PRESETS : RESUBMIT_PRESETS).map((p) => (
+                  {REJECT_PRESETS.map((p) => (
                     <option key={p.value} value={p.value}>{p.label}</option>
                   ))}
                 </select>
@@ -147,12 +168,13 @@ export default function AdminVerificationUpdate() {
               Gửi thông báo cập nhật trạng thái về tài khoản kỹ thuật viên
             </label>
 
+            {error && <div className="avu-error">{error}</div>}
             <div className="avu-actions">
               <button type="button" className="avu-btn avu-btn-secondary" onClick={() => navigate(`/admin/verification/${request.id}`)}>
                 Quay lại chi tiết
               </button>
-              <button type="button" className="avu-btn avu-btn-primary" onClick={handleSubmit}>
-                Xác nhận cập nhật
+              <button type="button" className="avu-btn avu-btn-primary" onClick={handleSubmit} disabled={isSaving}>
+                {isSaving ? 'Đang lưu...' : 'Xác nhận cập nhật'}
               </button>
             </div>
           </section>

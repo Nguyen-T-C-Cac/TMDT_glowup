@@ -271,6 +271,14 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
 
     const visibleOrders = useMemo(() => filterOrdersBySearch(orders, search), [orders, search]);
 
+    const handleBookingAccept = useCallback((bookingCode: string) => {
+        setOrders(prev => prev.filter(o => o.id !== bookingCode));
+    }, []);
+
+    const handleBookingReject = useCallback((bookingCode: string) => {
+        setOrders(prev => prev.filter(o => o.id !== bookingCode));
+    }, []);
+
     const renderedCards = useMemo(() => {
         if (activeTab === 'new') {
             return visibleOrders.map((order) => (
@@ -280,6 +288,8 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                     role={role}
                     onViewDetail={handleSelectOrder}
                     onCancel={handleOpenCancelModal}
+                    onBookingAccept={handleBookingAccept}
+                    onBookingReject={handleBookingReject}
                 />
             ));
         }

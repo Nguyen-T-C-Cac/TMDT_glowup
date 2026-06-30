@@ -56,6 +56,11 @@ public class VerificationController {
         return ResponseEntity.ok(ApiResponse.success(verificationService.get(code)));
     }
 
+    @GetMapping("/technician/{technicianId}")
+    public ResponseEntity<ApiResponse<VerificationDetailResponse>> getByTechnician(@PathVariable("technicianId") String technicianId) {
+        return ResponseEntity.ok(ApiResponse.success(verificationService.getByTechnician(technicianId)));
+    }
+
     @PatchMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<VerificationReviewResponse>> review(

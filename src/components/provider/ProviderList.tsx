@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import './ProviderList.css';
 import { ProviderCard } from './ProviderCard';
-import { PremiumProviderCard } from './PremiumProviderCard';
 import { ChevronDownIcon } from '../common/Icons';
 import RepairRequestModal from '../modal/RepairRequestModal.tsx';
 import { technicianService } from '../../services/technician/technicianService';
@@ -16,6 +15,7 @@ interface Props {
   selectedService?: string;
   filters?: ProviderFilters;
   currentPage?: number;
+  totalPages?: number;
   setCurrentPage?: (page: number) => void;
   setTotalPages?: (total: number) => void;
 }
@@ -68,6 +68,7 @@ export const ProviderList: React.FC<Props> = ({
 
       let items = data.items.map(mapListItemToProviderEntry);
 
+    
       if (selectedSort === 'GIÁ THẤP NHẤT') {
         items = [...items].sort((a, b) => {
           const priceA =
@@ -81,7 +82,6 @@ export const ProviderList: React.FC<Props> = ({
           return priceA - priceB;
         });
       }
-
       setProviders(items);
       setResultTotal(data.pagination.total);
       setTotalPages?.(Math.max(1, data.pagination.totalPages));
@@ -102,25 +102,28 @@ export const ProviderList: React.FC<Props> = ({
   }, [loadProviders]);
 
   useEffect(() => {
-    setCurrentPage?.(1);
+    const timer = setTimeout(() => {
+      setCurrentPage?.(1);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [selectedService, selectedSort, filterDistrict, filterMinRating, filterAvailable, setCurrentPage]);
 
   const pageTitle = selectedService
     ? `Thợ chuyên ${selectedService}`
     : 'Thợ sửa chữa chuyên nghiệp';
 
-  const resultCount = useMemo(
+  /*const resultCount = useMemo(
     () => providers.filter((p) => p.kind !== 'premium').length,
     [providers]
-  );
+  );*/
 
   return (
-    <div className="provider-list-container">
-      <div className="pl-header">
+  <div className="provider-list-container" style={{ flex: 1, minWidth: 0 }}>
+      <div className="pl-header" style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px' }}>
         <div className="pl-header-left">
           <h1 className="pl-title">{pageTitle}</h1>
           <p className="pl-subtitle">
-            Tìm thấy {resultTotal || resultCount} chuyên gia
+            Tìm thấy {resultTotal || providers.length} chuyên gia
             {selectedService && <span className="pl-service-tag">{selectedService}</span>}{' '}
             tại khu vực TP.HCM
           </p>
@@ -139,6 +142,7 @@ export const ProviderList: React.FC<Props> = ({
                   className={`sort-option ${selectedSort === option ? 'active' : ''}`}
                   onClick={() => {
                     setSelectedSort(option);
+                    setCurrentPage?.(1);
                     setIsSortOpen(false);
                   }}
                 >
@@ -155,19 +159,25 @@ export const ProviderList: React.FC<Props> = ({
         {!isLoading && loadError && <p className="pl-empty">{loadError}</p>}
         {!isLoading &&
           !loadError &&
-          providers.map((p) =>
-            p.kind === 'premium' ? (
-              <PremiumProviderCard
-                key={p.id}
-                provider={p}
-                onNavigate={(page, data) =>
-                  onNavigate?.(page, data ?? { id: p.id, name: p.name, avatar: p.avatar })
-                }
-              />
-            ) : (
-              <ProviderCard key={p.id} provider={p} onNavigate={handleNavigate} />
-            )
-          )}
+          providers.map((p) => {
+            // fallback data an toàn để khớp hoàn toàn với cấu trúc 'ProviderProps' của ProviderCard
+            const safeProviderProps = {
+              id: p.id,
+              name: p.name,
+              avatar: p.avatar,
+              rating: (p as any).rating ?? 5.0,
+              reviewCount: (p as any).reviewCount ?? 0,
+              location: (p as any).location ?? 'TP.HCM',
+              skills: (p as any).skills ?? [],
+              price: (p as any).price ?? 'Liên hệ',
+              isAvailable: (p as any).isAvailable ?? true,
+              timeAvailable: (p as any).timeAvailable,
+            };
+
+            return (
+              <ProviderCard key={p.id} provider={safeProviderProps} onNavigate={handleNavigate} />
+            );
+          })}
       </div>
 
       {!isLoading && !loadError && providers.length === 0 && (
@@ -177,11 +187,17 @@ export const ProviderList: React.FC<Props> = ({
         </div>
       )}
 
+
       <RepairRequestModal
         open={!!selectedProvider}
         onClose={() => setSelectedProvider(null)}
         technicianId={selectedProvider?.id}
-        provider={selectedProvider ?? undefined}
+        provider={selectedProvider ? {
+            id: selectedProvider.id,
+            name: (selectedProvider as any).name || selectedProvider.id,
+            avatar: (selectedProvider as any).avatar || 'https://placehold.co/80x80',
+            rating: (selectedProvider as any).rating || 0,
+        } : undefined}
       />
     </div>
   );

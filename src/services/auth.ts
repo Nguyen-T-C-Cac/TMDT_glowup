@@ -31,6 +31,30 @@ export const registerUser = async (userData: RegisterUserData): Promise<void> =>
   if (!response.ok) {
     throw new Error(data.message || 'Đăng ký thất bại')
   }
+
+  // Lưu token sau khi đăng ký thành công (backend có trả về)
+  if (data.data) {
+    const { user, accessToken, refreshToken } = data.data
+    localStorage.setItem('user', JSON.stringify({ user }))
+    localStorage.setItem('accessToken', accessToken)
+    localStorage.setItem('refreshToken', refreshToken)
+  }
+}
+
+export const resendConfirmationEmail = async (email: string): Promise<void> => {
+  const response = await fetch(`${API_URL}/auth/resend-verification`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Không thể gửi lại email xác nhận')
+  }
 }
 
 export interface LoginUserData {
@@ -178,10 +202,8 @@ export const fetchWithAuth = async (
 ): Promise<Response> => {
   const { skipAuth, headers, ...rest } = init
   const nextHeaders = new Headers(headers || undefined)
-  const isFormDataBody = rest.body instanceof FormData
 
   if (!nextHeaders.has('Content-Type') && !(rest.body instanceof FormData)) {
-    /* if (!nextHeaders.has('Content-Type') && !isFormDataBody) {*/
     nextHeaders.set('Content-Type', 'application/json')
   }
 
@@ -257,7 +279,7 @@ export const getRefreshToken = (): string | null => {
 }
 
 
-export const verifyEmail = async (data: { token: string }): Promise<void> => {
+export const verifyEmail = async (data: { token: string }): Promise<{ data: string }> => {
   const response = await fetch(`${API_URL}/auth/verify-email`, {
     method: 'POST',
     headers: {
@@ -271,6 +293,8 @@ export const verifyEmail = async (data: { token: string }): Promise<void> => {
   if (!response.ok) {
     throw new Error(responseData.message || 'Xác nhận email thất bại')
   }
+
+  return responseData
 }
 
 /*

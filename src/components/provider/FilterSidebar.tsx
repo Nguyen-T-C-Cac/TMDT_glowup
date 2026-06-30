@@ -43,6 +43,8 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     <aside className="filter-sidebar">
       <div className="filter-section">
         <h3 className="filter-title">Lọc theo khu vực</h3>
+        <p className="filter-subtitle">TP.HCM</p>
+        
         <div className="filter-options">
           <label className="filter-checkbox">
             <input
@@ -121,8 +123,9 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
         </div>
       </div>
 
+      {/* Phân trang nằm dưới lọc khu vực */}
       {totalPages > 1 && onPageChange && (
-        <div className="pl-pagination" style={{ marginTop: '24px' }}>
+        <div className="sidebar-pagination">
           <button
             className="page-btn"
             disabled={currentPage === 1}
