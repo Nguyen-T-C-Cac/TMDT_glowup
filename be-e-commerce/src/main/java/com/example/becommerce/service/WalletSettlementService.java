@@ -40,4 +40,13 @@ public interface WalletSettlementService {
      * is responsible for persisting the wallet afterwards.
      */
     void syncWalletLock(Wallet wallet, User owner);
+
+    /**
+     * Reverse a proportional slice of the reward points previously awarded for an
+     * order when that order is (partially) refunded (TN4 ↔ TN2). The amount reversed
+     * is {@code floor(awardedPoints * refundAmount / orderTotal)}, capped so a
+     * technician's balance never goes negative and never reverses more than what was
+     * actually awarded for the order. No-op when nothing was awarded.
+     */
+    void reversePointsForRefund(User technician, Order order, java.math.BigDecimal refundAmount);
 }

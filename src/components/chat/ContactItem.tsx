@@ -14,7 +14,8 @@ export const ContactItem: React.FC<{
   contact: Contact;
   isActive?: boolean;
   onClick?: () => void;
-}> = ({ contact, isActive, onClick }) => {
+  onDelete?: () => void;
+}> = ({ contact, isActive, onClick, onDelete }) => {
   const roleInfo = roleBadge(contact.partnerType);
 
   return (
@@ -25,6 +26,20 @@ export const ContactItem: React.FC<{
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
     >
+      {onDelete && (
+        <button
+          type="button"
+          className={styles.contactDeleteBtn}
+          title="Xóa hộp thoại"
+          aria-label="Xóa hộp thoại"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+        >
+          ×
+        </button>
+      )}
       <div className={styles.contactAvatarWrapper}>
         <Avatar
           src={contact.avatar}

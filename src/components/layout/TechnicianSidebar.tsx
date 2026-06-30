@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useUserProfile } from '../../contexts/UserProfileContext';
 import React, { useEffect, useRef, useState } from 'react';
 import { authService } from '../../services/authService';
+import { useToast } from '../common/Toast';
 import './technicianSidebar.css';
 //import { fetchCurrentUser, getStoredUser, type User } from '../../services/auth';
 
@@ -16,6 +17,7 @@ interface SidebarProps {
 
 export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashboard', onNavigate }) => {
     const navigate = useNavigate();
+    const { showToast } = useToast();
     const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
     const accountMenuRef = useRef<HTMLDivElement | null>(null);
 
@@ -140,6 +142,7 @@ export const TechnicianSidebar: React.FC<SidebarProps> = ({ activeItem = 'dashbo
     const handleLogout = () => {
         authService.logout();
         setIsAccountMenuOpen(false);
+        showToast('Đã đăng xuất thành công', 'success');
         navigate('/auth/login');
     };
 

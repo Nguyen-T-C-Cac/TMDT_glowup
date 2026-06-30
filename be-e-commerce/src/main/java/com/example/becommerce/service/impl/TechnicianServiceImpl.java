@@ -8,10 +8,12 @@ import com.example.becommerce.dto.request.technician.UpdateTechnicianProfileRequ
 import com.example.becommerce.dto.response.PagedResponse;
 import com.example.becommerce.dto.response.review.ReviewResponse;
 import com.example.becommerce.dto.response.technician.AvailabilityResponse;
+import com.example.becommerce.dto.response.technician.TechnicianDashboardResponse;
 import com.example.becommerce.dto.response.technician.TechnicianDetailResponse;
 import com.example.becommerce.dto.response.technician.TechnicianListItemResponse;
 import com.example.becommerce.dto.response.technician.TechnicianProfileUpdateResponse;
 import com.example.becommerce.dto.response.technician.TechnicianReviewListResponse;
+import com.example.becommerce.entity.Order;
 import com.example.becommerce.entity.Review;
 import com.example.becommerce.entity.TechnicianProfile;
 import com.example.becommerce.entity.User;
@@ -39,6 +41,11 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -225,6 +232,108 @@ public class TechnicianServiceImpl implements TechnicianService {
                         .totalPages((int) Math.ceil((double) reviews.getTotalElements() / limit))
                         .build())
                 .build();
+    }
+
+    // ===============================================================
+    // DASHBOARD (TN5)
+    // ===============================================================
+
+    private static final DateTimeFormatter DAY_LABEL = DateTimeFormatter.ofPattern("dd/MM");
+
+    @Override
+    @Transactional(readOnly = true)
+    public TechnicianDashboardResponse getDashboard(String code) {
+        User technician = findTechnicianUser(code);
+        ensureSelfOrAdmin(technician);
+        Long techId = technician.getId();
+
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfToday = today.atStartOfDay();
+        LocalDateTime endOfToday = today.atTime(LocalTime.MAX);
+        LocalDateTime startOfMonth = today.withDayOfMonth(1).atStartOfDay();
+
+        long newOrders = orderRepository.countByTechnician_IdAndStatusInAndDeletedFalse(
+                techId, List.of(OrderStatus.ASSIGNED, OrderStatus.SCHEDULED, OrderStatus.IN_PROGRESS));
+        long completedOrders = orderRepository.countByTechnician_IdAndStatusAndDeletedFalse(
+                techId, OrderStatus.COMPLETED);
+        long completedToday = orderRepository.countByTechnician_IdAndStatusAndCompletedAtBetweenAndDeletedFalse(
+                techId, OrderStatus.COMPLETED, startOfToday, endOfToday);
+        long todayEarnings = orderRepository.sumTechnicianEarningsBetween(techId, startOfToday, endOfToday);
+        long monthEarnings = orderRepository.sumTechnicianEarningsBetween(techId, startOfMonth, endOfToday);
+
+        // Today's schedule (orders scheduled for today, earliest first).
+        List<TechnicianDashboardResponse.ScheduleItem> schedule =
+                orderRepository.findByTechnician_IdAndScheduledAtBetweenAndDeletedFalseOrderByScheduledAtAsc(
+                                techId, startOfToday, endOfToday)
+                        .stream()
+                        .map(this::toScheduleItem)
+                        .toList();
+
+        // Earnings — last 7 days (daily).
+        Map<String, Long> daily7 = toDailyMap(orderRepository.sumTechnicianEarningsGroupByDay(
+                techId, today.minusDays(6).atStartOfDay(), endOfToday));
+        List<TechnicianDashboardResponse.EarningPoint> earnings7d = new ArrayList<>();
+        for (int i = 6; i >= 0; i--) {
+            LocalDate d = today.minusDays(i);
+            earnings7d.add(TechnicianDashboardResponse.EarningPoint.builder()
+                    .label(d.format(DAY_LABEL))
+                    .amount(daily7.getOrDefault(d.toString(), 0L))
+                    .build());
+        }
+
+        // Earnings — last 4 weeks (weekly buckets of 7 days).
+        LocalDate fourWeeksAgo = today.minusDays(27);
+        Map<String, Long> daily30 = toDailyMap(orderRepository.sumTechnicianEarningsGroupByDay(
+                techId, fourWeeksAgo.atStartOfDay(), endOfToday));
+        List<TechnicianDashboardResponse.EarningPoint> earnings30d = new ArrayList<>();
+        for (int w = 0; w < 4; w++) {
+            LocalDate bucketStart = fourWeeksAgo.plusDays(w * 7L);
+            long sum = 0;
+            for (int d = 0; d < 7; d++) {
+                sum += daily30.getOrDefault(bucketStart.plusDays(d).toString(), 0L);
+            }
+            earnings30d.add(TechnicianDashboardResponse.EarningPoint.builder()
+                    .label("Tuần " + (w + 1))
+                    .amount(sum)
+                    .build());
+        }
+
+        return TechnicianDashboardResponse.builder()
+                .newOrders(newOrders)
+                .completedOrders(completedOrders)
+                .completedToday(completedToday)
+                .todayEarnings(todayEarnings)
+                .monthEarnings(monthEarnings)
+                .todaySchedule(schedule)
+                .earnings7d(earnings7d)
+                .earnings30d(earnings30d)
+                .build();
+    }
+
+    private TechnicianDashboardResponse.ScheduleItem toScheduleItem(Order order) {
+        return TechnicianDashboardResponse.ScheduleItem.builder()
+                .code(order.getCode())
+                .serviceName(order.getServiceName())
+                .deviceName(order.getDeviceName())
+                .customerName(order.getCustomer() != null ? order.getCustomer().getFullName() : null)
+                .address(order.getAddress())
+                .scheduledAt(order.getScheduledAt())
+                .expectedTime(order.getExpectedTime())
+                .status(order.getStatus() != null ? order.getStatus().apiValue() : null)
+                .build();
+    }
+
+    /** Turn the (yyyy-MM-dd, total) rows of a native group-by query into a date→amount map. */
+    private Map<String, Long> toDailyMap(List<Object[]> rows) {
+        Map<String, Long> map = new HashMap<>();
+        for (Object[] row : rows) {
+            if (row.length < 2 || row[0] == null) {
+                continue;
+            }
+            long total = row[1] instanceof Number n ? n.longValue() : 0L;
+            map.put(String.valueOf(row[0]), total);
+        }
+        return map;
     }
 
     // ===============================================================

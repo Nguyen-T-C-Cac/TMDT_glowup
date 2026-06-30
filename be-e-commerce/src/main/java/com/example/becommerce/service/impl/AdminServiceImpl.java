@@ -541,7 +541,7 @@ public class AdminServiceImpl implements AdminService {
                 .amount(request.getAmount())
                 .fee(BigDecimal.ZERO)
                 .netAmount(request.getAmount())
-                .afterBalance(newBalance.longValueExact())
+                .afterBalance(newBalance.setScale(0, java.math.RoundingMode.DOWN).longValue())
                 .note(request.getReason())
                 .actor(currentAdminLabel())
                 .status(TransactionStatus.SUCCESS)

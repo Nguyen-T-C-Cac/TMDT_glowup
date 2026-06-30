@@ -6,6 +6,7 @@ import { SettingsTextareaField } from '../fields/SettingsTextareaField';
 import type { CustomerAccountFormData } from './types';
 import { useRef, useState, useEffect } from 'react';
 import { resolveMediaUrl } from '../../../utils/mediaUrl';
+import { useToast } from '../../common/Toast';
 
 const DEFAULT_AVATAR = 'https://segayanime.com/wp-content/uploads/2026/01/avatar-fb-mac-dinh-1.jpg';
 
@@ -26,6 +27,7 @@ export function CustomerAccountProfileCard({
   avatarUrl,
   isSaving = false,
 }: CustomerAccountProfileCardProps) {
+  const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -56,12 +58,12 @@ export function CustomerAccountProfileCard({
 
     // Kiểm tra định dạng
     if (!file.type.startsWith('image/')) {
-      alert('Vui lòng chọn file ảnh hợp lệ.');
+      showToast('Vui lòng chọn file ảnh hợp lệ.', 'warning');
       return;
     }
     // Kiểm tra kích thước (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      alert('Ảnh không được vượt quá 10MB.');
+      showToast('Ảnh không được vượt quá 10MB.', 'warning');
       return;
     }
 
@@ -76,7 +78,7 @@ export function CustomerAccountProfileCard({
         await onUploadAvatar(file);
       } catch {
         setPreviewUrl(null); // Hoàn tác preview nếu upload lỗi
-        alert('Tải ảnh lên thất bại. Vui lòng thử lại.');
+        showToast('Tải ảnh lên thất bại. Vui lòng thử lại.', 'error');
       } finally {
         setIsUploading(false);
         // Reset input để có thể chọn lại cùng file

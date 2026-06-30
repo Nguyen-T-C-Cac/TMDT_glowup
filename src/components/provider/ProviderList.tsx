@@ -5,6 +5,7 @@ import { PremiumProviderCard } from './PremiumProviderCard';
 import { ChevronDownIcon } from '../common/Icons';
 import RepairRequestModal from '../modal/RepairRequestModal.tsx';
 import { technicianService } from '../../services/technician/technicianService';
+import type { ProviderFilters } from './FilterSidebar';
 import {
   mapListItemToProviderEntry,
   type ProviderListEntry,
@@ -13,6 +14,7 @@ import {
 interface Props {
   onNavigate?: (page: string, data?: unknown) => void;
   selectedService?: string;
+  filters?: ProviderFilters;
   currentPage?: number;
   setCurrentPage?: (page: number) => void;
   setTotalPages?: (total: number) => void;
@@ -21,6 +23,7 @@ interface Props {
 export const ProviderList: React.FC<Props> = ({
   onNavigate,
   selectedService,
+  filters,
   currentPage = 1,
   setCurrentPage,
   setTotalPages,
@@ -28,6 +31,10 @@ export const ProviderList: React.FC<Props> = ({
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [selectedSort, setSelectedSort] = useState('PHỔ BIẾN NHẤT');
   const ITEMS_PER_PAGE = 7;
+  // Tách giá trị nguyên thủy để dùng làm dependency ổn định (tránh re-fetch vô hạn do object filters đổi tham chiếu).
+  const filterDistrict = filters?.district;
+  const filterMinRating = filters?.minRating;
+  const filterAvailable = filters?.isAvailable;
   const [selectedProvider, setSelectedProvider] = useState<ProviderListEntry | null>(null);
   const [providers, setProviders] = useState<ProviderListEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,9 +54,13 @@ export const ProviderList: React.FC<Props> = ({
     setLoadError(null);
 
     try {
-      const minRating = selectedSort === 'ĐÁNH GIÁ CAO NHẤT' ? 4.5 : undefined;
+      const sortMinRating = selectedSort === 'ĐÁNH GIÁ CAO NHẤT' ? 4.5 : undefined;
+      // Bộ lọc người dùng chọn được ưu tiên hơn rating suy ra từ sắp xếp.
+      const minRating = filterMinRating ?? sortMinRating;
       const data = await technicianService.listTechnicians({
         service: selectedService,
+        district: filterDistrict,
+        isAvailable: filterAvailable,
         page: currentPage,
         limit: ITEMS_PER_PAGE,
         minRating,
@@ -84,7 +95,7 @@ export const ProviderList: React.FC<Props> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, selectedService, selectedSort, setTotalPages]);
+  }, [currentPage, selectedService, selectedSort, filterDistrict, filterMinRating, filterAvailable, setTotalPages]);
 
   useEffect(() => {
     loadProviders();
@@ -92,7 +103,7 @@ export const ProviderList: React.FC<Props> = ({
 
   useEffect(() => {
     setCurrentPage?.(1);
-  }, [selectedService, selectedSort, setCurrentPage]);
+  }, [selectedService, selectedSort, filterDistrict, filterMinRating, filterAvailable, setCurrentPage]);
 
   const pageTitle = selectedService
     ? `Thợ chuyên ${selectedService}`

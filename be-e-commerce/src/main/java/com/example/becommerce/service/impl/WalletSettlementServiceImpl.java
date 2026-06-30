@@ -189,6 +189,57 @@ public class WalletSettlementServiceImpl implements WalletSettlementService {
         log.info("Awarded {} points to technician {} (balance={})", earned, technician.getCode(), balanceAfter);
     }
 
+    @Override
+    @Transactional
+    public void reversePointsForRefund(User technician, Order order, BigDecimal refundAmount) {
+        if (technician == null || order == null || refundAmount == null
+                || refundAmount.signum() <= 0 || order.getFinalPrice() == null || order.getFinalPrice() <= 0) {
+            return;
+        }
+
+        long awarded = pointTransactionRepository.sumPointsByOrderAndType(order.getId(), PointTxType.ORDER_COMPLETED);
+        if (awarded <= 0) {
+            return;
+        }
+        // Còn lại có thể trừ = điểm gốc − các lần đã trừ trước đó cho đơn này.
+        long remaining = pointTransactionRepository.sumPointsByOrder(order.getId());
+        if (remaining <= 0) {
+            return;
+        }
+
+        BigDecimal orderTotal = BigDecimal.valueOf(order.getFinalPrice());
+        long proportional = BigDecimal.valueOf(awarded)
+                .multiply(refundAmount)
+                .divide(orderTotal, 0, java.math.RoundingMode.DOWN)
+                .longValue();
+
+        TechnicianProfile profile = technicianProfileRepository.findByUser_Id(technician.getId()).orElse(null);
+        if (profile == null) {
+            return;
+        }
+
+        // Không trừ quá phần còn lại của đơn, cũng không đẩy số dư điểm xuống âm.
+        long reverse = Math.min(proportional, Math.min(remaining, profile.getRewardPoints()));
+        if (reverse <= 0) {
+            return;
+        }
+
+        long balanceAfter = profile.getRewardPoints() - reverse;
+        profile.setRewardPoints(balanceAfter);
+        technicianProfileRepository.save(profile);
+
+        pointTransactionRepository.save(PointTransaction.builder()
+                .technician(technician)
+                .order(order)
+                .points(-reverse)
+                .balanceAfter(balanceAfter)
+                .type(PointTxType.REFUND_REVERSAL)
+                .note("Hoàn tiền đơn " + order.getCode())
+                .build());
+        log.info("Reversed {} points from technician {} for refund on order {} (balance={})",
+                reverse, technician.getCode(), order.getCode(), balanceAfter);
+    }
+
     private void recordTransaction(Wallet wallet, Order order, WalletType walletType, String category,
                                    String title, BigDecimal amount, BigDecimal afterBalance, String note) {
         walletTransactionRepository.save(WalletTransaction.builder()
@@ -202,7 +253,7 @@ public class WalletSettlementServiceImpl implements WalletSettlementService {
                 .amount(amount)
                 .fee(BigDecimal.ZERO)
                 .netAmount(amount)
-                .afterBalance(afterBalance.longValueExact())
+                .afterBalance(afterBalance.setScale(0, java.math.RoundingMode.DOWN).longValue())
                 .relatedOrderCode(order.getCode())
                 .note(note)
                 .actor("SYSTEM")

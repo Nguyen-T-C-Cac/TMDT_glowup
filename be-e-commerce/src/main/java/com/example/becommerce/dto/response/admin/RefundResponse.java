@@ -17,6 +17,10 @@ public class RefundResponse {
     private final String technicianName;
     private final BigDecimal amount;
     private final String reason;
+    private final String method;
+    private final String customerBankName;
+    private final String customerBankAccountNumber;
+    private final String customerBankAccountOwner;
     private final String status;
     private final boolean technicianDebt;
     private final BigDecimal technicianBalanceAfter;
@@ -37,6 +41,10 @@ public class RefundResponse {
                 .technicianName(refund.getTechnician() != null ? refund.getTechnician().getFullName() : null)
                 .amount(refund.getAmount())
                 .reason(refund.getReason())
+                .method(refund.getMethod() != null ? refund.getMethod().apiValue() : null)
+                .customerBankName(refund.getCustomerBankName())
+                .customerBankAccountNumber(refund.getCustomerBankAccountNumber())
+                .customerBankAccountOwner(refund.getCustomerBankAccountOwner())
                 .status(refund.getStatus().apiValue())
                 .technicianDebt(refund.isTechnicianDebt())
                 .technicianBalanceAfter(technicianBalanceAfter)

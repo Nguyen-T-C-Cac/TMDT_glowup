@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import './Provider.css';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
-import { FilterSidebar } from '../components/provider/FilterSidebar';
+import { FilterSidebar, type ProviderFilters } from '../components/provider/FilterSidebar';
 import { ProviderList } from '../components/provider/ProviderList';
 import { buildProviderProfilePath } from '../utils/providerNavigation';
 
@@ -25,6 +25,7 @@ export const Provider: React.FC = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [filters, setFilters] = useState<ProviderFilters>({});
 
   const onNavigate = (page: string, data?: unknown) => {
     const record = data && typeof data === 'object' ? (data as Record<string, unknown>) : null;
@@ -49,14 +50,17 @@ export const Provider: React.FC = () => {
       <Header onNavigate={onNavigate} />
       <main className="fp-main-container">
         <div className="fp-layout">
-          <FilterSidebar 
+          <FilterSidebar
+            filters={filters}
+            onFiltersChange={setFilters}
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
           />
-          <ProviderList 
-            onNavigate={onNavigate} 
-            selectedService={selectedService} 
+          <ProviderList
+            onNavigate={onNavigate}
+            selectedService={selectedService}
+            filters={filters}
             currentPage={currentPage}
             setCurrentPage={setCurrentPage}
             setTotalPages={setTotalPages}

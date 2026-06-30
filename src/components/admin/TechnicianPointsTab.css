@@ -92,7 +92,9 @@
 
 /* ===== Modal ===== */
 .tpt-modal {
-  width: min(420px, 86vw);
+  width: min(420px, 90vw);
+  box-sizing: border-box;
+  padding: 26px 28px;
 }
 
 .tpt-modal-title {

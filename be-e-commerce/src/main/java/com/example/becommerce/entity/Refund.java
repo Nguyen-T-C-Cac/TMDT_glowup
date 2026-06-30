@@ -1,5 +1,6 @@
 package com.example.becommerce.entity;
 
+import com.example.becommerce.entity.enums.RefundMethod;
 import com.example.becommerce.entity.enums.RefundStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -7,6 +8,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
@@ -53,6 +55,23 @@ public class Refund {
 
     @Column(length = 500)
     private String reason;
+
+    /** How the money is returned to the customer. Defaults to in-system wallet credit. */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @ColumnDefault("'WALLET'")
+    @Builder.Default
+    private RefundMethod method = RefundMethod.WALLET;
+
+    /** Customer bank details — only captured for BANK_TRANSFER refunds (admin enters them manually). */
+    @Column(name = "customer_bank_name", length = 120)
+    private String customerBankName;
+
+    @Column(name = "customer_bank_account_number", length = 40)
+    private String customerBankAccountNumber;
+
+    @Column(name = "customer_bank_account_owner", length = 120)
+    private String customerBankAccountOwner;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

@@ -18,6 +18,7 @@ import { orderService } from '../services/order/orderService';
 import { getStoredUser } from '../services/auth';
 import { userService } from '../services/userService';
 import { useChatRealtime } from '../hooks/useChatRealtime';
+import { useToast } from '../components/common/Toast';
 import type { Contact } from '../types/Message';
 import type { UserRole } from '../types/UserRole';
 import type { ChatLocationState, ChatMessage, ConversationItem } from '../types/chat';
@@ -59,6 +60,7 @@ const toContact = (conversation: ConversationItem): Contact => ({
 
 export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) => {
     const navigate = useNavigate();
+    const { showToast } = useToast();
     const location = useLocation();
     const locationState = location.state as ChatLocationState | null;
 
@@ -377,6 +379,24 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
         await loadMessages(conversationId);
     };
 
+    const handleDeleteConversation = async (conversationId: string) => {
+        if (!window.confirm('Xóa hộp thoại này khỏi danh sách của bạn? Hộp thoại sẽ hiện lại nếu có tin nhắn mới.')) {
+            return;
+        }
+        try {
+            await chatService.deleteConversation(conversationId);
+            setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+            if (activeConversationId === conversationId) {
+                setActiveConversationId(null);
+                setMessages([]);
+                setLinkedOrder(null);
+            }
+            showToast('Đã xóa hộp thoại', 'success');
+        } catch (err) {
+            showToast(err instanceof Error ? err.message : 'Không thể xóa hộp thoại', 'error');
+        }
+    };
+
     const handleSendMessage = async (text: string, title?: string) => {
         if (!activeConversationId) return;
         const sent = await chatService.sendMessage(activeConversationId, text, title);
@@ -413,12 +433,12 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                 const me = await userService.getMe();
                 const address = me.data?.address?.trim();
                 if (!address) {
-                    alert('Bạn cần cập nhật địa chỉ trong tài khoản trước khi chấp nhận báo giá.');
+                    showToast('Bạn cần cập nhật địa chỉ trong tài khoản trước khi chấp nhận báo giá.', 'warning');
                     navigate('/customer/account-settings');
                     return;
                 }
             } catch {
-                alert('Không thể kiểm tra địa chỉ tài khoản lúc này. Vui lòng thử lại.');
+                showToast('Không thể kiểm tra địa chỉ tài khoản lúc này. Vui lòng thử lại.', 'error');
                 return;
             }
         }
@@ -478,7 +498,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
             }
             await refreshConversations();
         } catch (err) {
-            alert(err instanceof Error ? err.message : "Không thể chấp nhận đơn hàng");
+            showToast(err instanceof Error ? err.message : 'Không thể chấp nhận đơn hàng', 'error');
         }
     };
 
@@ -493,7 +513,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
             }
             await refreshConversations();
         } catch (err) {
-            alert(err instanceof Error ? err.message : "Không thể từ chối đơn hàng");
+            showToast(err instanceof Error ? err.message : 'Không thể từ chối đơn hàng', 'error');
         }
     };
 
@@ -505,8 +525,9 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
             if (activeConversationId) {
                 await loadMessages(activeConversationId);
             }
+            showToast('Đã gửi hoá đơn cho khách hàng', 'success');
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Không thể xuất hoá đơn');
+            showToast(err instanceof Error ? err.message : 'Không thể xuất hoá đơn', 'error');
         }
     };
 
@@ -515,7 +536,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
             const checkoutUrl = await orderService.createVnpayCheckout(orderId);
             window.open(checkoutUrl, '_blank');
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Không thể tạo thanh toán VNPay');
+            showToast(err instanceof Error ? err.message : 'Không thể tạo thanh toán VNPay', 'error');
         }
     };
 
@@ -529,8 +550,9 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
             if (activeConversationId) {
                 await loadMessages(activeConversationId);
             }
+            showToast('Đã xác nhận thanh toán tiền mặt', 'success');
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Xác nhận tiền mặt thất bại');
+            showToast(err instanceof Error ? err.message : 'Xác nhận tiền mặt thất bại', 'error');
         }
     };
 
@@ -589,6 +611,7 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                                 contact={toContact(conversation)}
                                 isActive={conversation.id === activeConversationId}
                                 onClick={() => handleSelectConversation(conversation.id)}
+                                onDelete={() => handleDeleteConversation(conversation.id)}
                             />
                         ))}
                         {!isLoading && filteredConversations.length === 0 && (

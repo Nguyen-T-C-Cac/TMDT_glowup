@@ -1,6 +1,7 @@
 import apiClient from '../../api/config';
 import type {
   PagedTechnicians,
+  TechnicianDashboard,
   TechnicianDetail,
   TechnicianListItem,
   TechnicianListParams,
@@ -75,5 +76,13 @@ export const technicianService = {
       throw new Error('Không thể tải hồ sơ thợ');
     }
     return unwrap<TechnicianDetail>(response.data);
+  },
+
+  getDashboard: async (technicianId: string): Promise<TechnicianDashboard> => {
+    const response = await apiClient.get(`/api/technicians/${encodeURIComponent(technicianId)}/dashboard`);
+    if (!response.data || (response.data as { success?: boolean }).success === false) {
+      throw new Error('Không thể tải tổng quan công việc');
+    }
+    return unwrap<TechnicianDashboard>(response.data);
   },
 };

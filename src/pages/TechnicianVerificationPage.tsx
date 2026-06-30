@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { ArrowLeft, Check, Camera, Upload, Phone, Mail, MapPin, Grid, Image, X } from 'lucide-react'
 import { getCategories, type Category } from '../services/categoryService'
+import { useToast } from '../components/common/Toast'
 import './TechnicianVerificationPage.css'
 
 type VerificationStep = 'identity' | 'face' | 'description' | 'complete'
@@ -412,6 +413,7 @@ const FaceVerificationStep: React.FC<FaceVerificationStepProps> = ({
   onNext,
   onPrev,
 }) => {
+  const { showToast } = useToast()
   const [preview, setPreview] = useState<string>('')
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const canvasRef = React.useRef<HTMLCanvasElement>(null)
@@ -428,7 +430,7 @@ const FaceVerificationStep: React.FC<FaceVerificationStepProps> = ({
       }
     } catch (error) {
       console.error('Error accessing camera:', error)
-      alert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.')
+      showToast('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.', 'error')
     }
   }
 

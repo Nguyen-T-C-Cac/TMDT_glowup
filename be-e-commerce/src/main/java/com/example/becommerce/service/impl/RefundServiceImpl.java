@@ -10,6 +10,7 @@ import com.example.becommerce.entity.User;
 import com.example.becommerce.entity.Wallet;
 import com.example.becommerce.entity.WalletTransaction;
 import com.example.becommerce.entity.enums.OrderStatus;
+import com.example.becommerce.entity.enums.RefundMethod;
 import com.example.becommerce.entity.enums.RefundStatus;
 import com.example.becommerce.entity.enums.TransactionStatus;
 import com.example.becommerce.entity.enums.TransactionType;
@@ -76,6 +77,14 @@ public class RefundServiceImpl implements RefundService {
         }
         User technician = order.getTechnician();
 
+        RefundMethod method = RefundMethod.from(request.getMethod());
+        if (method == RefundMethod.BANK_TRANSFER
+                && (request.getCustomerBankAccountNumber() == null
+                    || request.getCustomerBankAccountNumber().isBlank())) {
+            throw AppException.badRequest(ErrorCode.BAD_REQUEST,
+                    "Hoàn tiền qua chuyển khoản cần số tài khoản ngân hàng của khách");
+        }
+
         Refund refund = refundRepository.save(Refund.builder()
                 .code(txCodeGenerator.generateTransactionCode(TransactionType.REFUND))
                 .order(order)
@@ -83,22 +92,30 @@ public class RefundServiceImpl implements RefundService {
                 .technician(technician)
                 .amount(amount)
                 .reason(request.getReason())
+                .method(method)
+                .customerBankName(method == RefundMethod.BANK_TRANSFER ? request.getCustomerBankName() : null)
+                .customerBankAccountNumber(method == RefundMethod.BANK_TRANSFER ? request.getCustomerBankAccountNumber() : null)
+                .customerBankAccountOwner(method == RefundMethod.BANK_TRANSFER ? request.getCustomerBankAccountOwner() : null)
                 .status(RefundStatus.PENDING)
                 .createdBy(admin)
                 .build());
 
-        // 1) Advance the refund to the customer's personal wallet.
-        Wallet customerWallet = walletRepository.findWithLockByUser_Id(customer.getId())
-                .orElseGet(() -> walletRepository.save(Wallet.builder()
-                        .user(customer).balance(BigDecimal.ZERO)
-                        .personalBalance(BigDecimal.ZERO).currency("VND").build()));
-        customerWallet.normalizeForPersistence();
-        BigDecimal customerAfter = customerWallet.getPersonalBalance().add(amount);
-        saveRefundTx(customerWallet, order, WalletType.PERSONAL, "ORDER_REFUND",
-                "Hoàn tiền đơn " + order.getCode(), amount, customerAfter, "ADMIN",
-                "Admin hoàn tiền cho khách: " + safeReason(request));
-        customerWallet.setPersonalBalance(customerAfter);
-        walletRepository.save(customerWallet);
+        // 1) For WALLET refunds, advance the money to the customer's personal wallet.
+        //    For BANK_TRANSFER the admin pays out-of-band, so the wallet is left untouched
+        //    and we only keep the bank details on the refund record for reconciliation.
+        if (method == RefundMethod.WALLET) {
+            Wallet customerWallet = walletRepository.findWithLockByUser_Id(customer.getId())
+                    .orElseGet(() -> walletRepository.save(Wallet.builder()
+                            .user(customer).balance(BigDecimal.ZERO)
+                            .personalBalance(BigDecimal.ZERO).currency("VND").build()));
+            customerWallet.normalizeForPersistence();
+            BigDecimal customerAfter = customerWallet.getPersonalBalance().add(amount);
+            saveRefundTx(customerWallet, order, WalletType.PERSONAL, "ORDER_REFUND",
+                    "Hoàn tiền đơn " + order.getCode(), amount, customerAfter, "ADMIN",
+                    "Admin hoàn tiền cho khách: " + safeReason(request));
+            customerWallet.setPersonalBalance(customerAfter);
+            walletRepository.save(customerWallet);
+        }
 
         // 2) Deduct from the technician's credit wallet (negative allowed).
         BigDecimal technicianAfter = BigDecimal.ZERO;
@@ -119,6 +136,9 @@ public class RefundServiceImpl implements RefundService {
             settlementService.syncWalletLock(techWallet, technician);
             walletRepository.save(techWallet);
             technicianDebt = technicianAfter.signum() < 0;
+
+            // 4) Reverse a proportional slice of the reward points awarded for this order (TN4 ↔ TN2).
+            settlementService.reversePointsForRefund(technician, order, amount);
         }
 
         refund.setStatus(RefundStatus.COMPLETED);
@@ -159,7 +179,7 @@ public class RefundServiceImpl implements RefundService {
                 .amount(amount)
                 .fee(BigDecimal.ZERO)
                 .netAmount(amount)
-                .afterBalance(afterBalance.longValueExact())
+                .afterBalance(afterBalance.setScale(0, java.math.RoundingMode.DOWN).longValue())
                 .relatedOrderCode(order.getCode())
                 .note(note)
                 .actor(actor)

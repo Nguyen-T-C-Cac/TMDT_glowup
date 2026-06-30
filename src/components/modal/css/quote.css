@@ -3,6 +3,8 @@
     max-height: 90vh;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 340px;
+    /* Ràng buộc chiều cao hàng = chiều cao modal để 2 cột cuộn nội bộ (min-height:0 cho phép thu nhỏ). */
+    grid-template-rows: minmax(0, 1fr);
     background: linear-gradient(180deg, #fbfdff 0%, #f4f8ff 100%);
     border-radius: 28px;
     overflow: hidden;
@@ -84,6 +86,8 @@
 
 .quote-right {
     box-sizing: border-box;
+    min-height: 0;
+    overflow-y: auto;
     background:
         radial-gradient(circle at top, rgba(111, 191, 132, 0.12), transparent 26%),
         linear-gradient(180deg, #f6fbf7 0%, #eef6f2 100%);
@@ -103,7 +107,16 @@
     .quote-modal {
         width: min(100%, calc(100vw - 24px));
         grid-template-columns: 1fr;
+        /* Xếp dọc 2 cột: bỏ ràng buộc 1 hàng, cho cuộn toàn modal. */
+        grid-template-rows: auto;
         max-height: 94vh;
+        overflow-y: auto;
+    }
+
+    .quote-left,
+    .quote-right {
+        overflow-y: visible;
+        min-height: 0;
     }
 
     .quote-right {

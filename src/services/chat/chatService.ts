@@ -62,6 +62,14 @@ export const chatService = {
     };
   },
 
+  /** Xóa hộp thoại (soft-delete chỉ cho người dùng hiện tại). */
+  deleteConversation: async (conversationId: string): Promise<void> => {
+    const response = await apiClient.delete(`/api/conversations/${conversationId}`);
+    if (response.data && (response.data as { success?: boolean }).success === false) {
+      throw new Error('Không thể xóa hộp thoại');
+    }
+  },
+
   listMessages: async (conversationId: string, page = 1, limit = 50): Promise<ChatMessage[]> => {
     const response = await apiClient.get(`/api/conversations/${conversationId}/messages`, {
       params: { page, limit },

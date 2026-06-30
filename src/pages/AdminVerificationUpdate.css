@@ -118,6 +118,22 @@
   outline: none;
 }
 
+.avu-select {
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  padding: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+  color: #334155;
+  outline: none;
+  cursor: pointer;
+}
+
+.avu-select:focus {
+  border-color: #2563eb;
+}
+
 .avu-check {
   display: inline-flex;
   align-items: center;

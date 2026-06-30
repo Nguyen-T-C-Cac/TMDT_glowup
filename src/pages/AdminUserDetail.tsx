@@ -6,6 +6,7 @@ import { UserProfileCard } from '../components/admin/UserProfileCard';
 import { UserPersonalInfo } from '../components/admin/UserPersonalInfo';
 import { InternalNotes, SystemStatus, SupportWidget } from '../components/admin/AdminSidebarWidgets';
 import { TechnicianPointsTab } from '../components/admin/TechnicianPointsTab';
+import { CreditWalletTab } from '../components/admin/CreditWalletTab';
 import './AdminUserDetail.css';
 
 const AdminUserDetail: React.FC = () => {
@@ -63,10 +64,14 @@ const AdminUserDetail: React.FC = () => {
               </div>
             )}
             {activeTab === 'wallet' && (
-              <div className="aud-placeholder-card">
-                <h3>Ví tiền & Giao dịch</h3>
-                <p>Chi tiết giao dịch và số dư ví sẽ hiển thị tại đây.</p>
-              </div>
+              isTechnician ? (
+                <CreditWalletTab technicianCode={user?.code} />
+              ) : (
+                <div className="aud-placeholder-card">
+                  <h3>Ví tiền & Giao dịch</h3>
+                  <p>Chỉ kỹ thuật viên mới có ví tín dụng (hoa hồng).</p>
+                </div>
+              )
             )}
             {activeTab === 'points' && isTechnician && (
               <TechnicianPointsTab technicianCode={user?.code} />

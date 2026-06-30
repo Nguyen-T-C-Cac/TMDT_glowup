@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useToast } from '../common/Toast';
 import './UserPersonalInfo.css';
 
 interface User {
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export const UserPersonalInfo: React.FC<Props> = ({ user, isPending = false }) => {
+  const { showToast } = useToast();
   const [showIdModal, setShowIdModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState('');
   const [verifyAction, setVerifyAction] = useState<'approve' | 'reject' | null>(null);
@@ -91,7 +93,7 @@ export const UserPersonalInfo: React.FC<Props> = ({ user, isPending = false }) =
           </div>
           {isPending && (
             <div className="upi-verify-actions">
-              <button className="upi-btn-approve" onClick={() => { setVerifyAction('approve'); alert('Đã phê duyệt xác minh!'); }}>
+              <button className="upi-btn-approve" onClick={() => { setVerifyAction('approve'); showToast('Đã phê duyệt xác minh!', 'success'); }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
                 Phê duyệt
               </button>
@@ -112,7 +114,7 @@ export const UserPersonalInfo: React.FC<Props> = ({ user, isPending = false }) =
               />
               <div className="upi-reject-btns">
                 <button className="upi-reject-cancel" onClick={() => setVerifyAction(null)}>Hủy</button>
-                <button className="upi-reject-confirm" onClick={() => { alert('Đã từ chối xác minh!'); setVerifyAction(null); }}>Gửi từ chối</button>
+                <button className="upi-reject-confirm" onClick={() => { showToast('Đã từ chối xác minh!', 'info'); setVerifyAction(null); }}>Gửi từ chối</button>
               </div>
             </div>
           )}

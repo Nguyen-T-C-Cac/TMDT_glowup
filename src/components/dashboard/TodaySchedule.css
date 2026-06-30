@@ -89,3 +89,10 @@
   height: 100%; background: linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 100%);
   border-radius: var(--radius-pill); transition: width 0.6s ease;
 }
+
+.schedule-empty {
+  padding: 24px 8px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 14px;
+}

@@ -4,6 +4,7 @@ import "./css/repairRequestModal.css";
 import { Clock3, ImagePlus, MapPin, Phone, Send, ShieldCheck, Trash2, Wrench, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { navigateToChat } from "../../utils/chatNavigation";
+import { useToast } from "../common/Toast";
 import { orderService } from "../../services/order/orderService";
 import { chatService } from "../../services/chat/chatService";
 import { uploadService } from "../../services/uploadService";
@@ -18,6 +19,7 @@ interface RepairRequestModalProps {
 
 const RepairRequestModal: React.FC<RepairRequestModalProps> = ({ open, onClose, technicianId, provider }) => {
     const navigate = useNavigate();
+    const { showToast } = useToast();
     const [deviceName, setDeviceName] = useState("");
     const [description, setDescription] = useState("");
     const [address, setAddress] = useState("123 Nguyễn Hữu Cảnh, Bình Thạnh");
@@ -232,7 +234,7 @@ const RepairRequestModal: React.FC<RepairRequestModalProps> = ({ open, onClose, 
                                         technicianId
                                     });
                                 } catch (err) {
-                                    alert(err instanceof Error ? err.message : "Có lỗi xảy ra khi gửi yêu cầu");
+                                    showToast(err instanceof Error ? err.message : "Có lỗi xảy ra khi gửi yêu cầu", "error");
                                 } finally {
                                     setIsSubmitting(false);
                                 }

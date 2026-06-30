@@ -16,4 +16,7 @@ public interface ConversationService {
     PagedResponse<MessageResponse> listMessages(String conversationCode, int page, int limit);
 
     MessageResponse sendMessage(String conversationCode, SendMessageRequest request);
+
+    /** Soft-delete the conversation for the current user only (the other side keeps it). */
+    void deleteConversation(String conversationCode);
 }
