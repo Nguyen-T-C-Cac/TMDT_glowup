@@ -1,5 +1,5 @@
 .schedule-card {
-  background: var(--bg-subtle);
+  background: var(--white);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-xl);
   padding: 28px 24px;
@@ -220,16 +220,32 @@
   margin: 0 0 14px 0;
 }
 
-.master-progress-bar {
-  height: 6px;
-  background: #e5e7eb;
-  border-radius: var(--radius-pill);
-  overflow: hidden;
+.master-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
-.master-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 100%);
-  border-radius: var(--radius-pill);
-  transition: width 0.6s ease;
+.master-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.master-stat-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.master-stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.master-stat-divider {
+  width: 1px;
+  height: 32px;
+  background: #fef3c7;
 }

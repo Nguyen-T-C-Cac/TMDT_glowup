@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { scheduleService} from '../../services/scheduleService';
+import { technicianService } from '../../services/technicianService';
+import { getStoredUser } from '../../services/auth';
 import type { ScheduleSlot } from '../../types/schedule';
 import './TodaySchedule.css';
  
@@ -26,11 +28,19 @@ const statusDot: Record<string, string> = {
   upcoming: '#cbd5e1',
 };
 
+interface TechnicianStats {
+  rating: number;
+  reviewCount: number;
+  rewardPoints: number;
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
  
 export const TodaySchedule: React.FC = () => {
   const [slots, setSlots] = useState<ScheduleSlot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<TechnicianStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
  
   useEffect(() => {
     scheduleService
@@ -38,6 +48,30 @@ export const TodaySchedule: React.FC = () => {
       .then(setSlots)
       .catch(() => setSlots([]))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const currentUser = getStoredUser();
+    const technicianCode = currentUser?.code;
+    if (!technicianCode) {
+      setStatsLoading(false);
+      return;
+    }
+
+    technicianService
+      .getTechnicianById(technicianCode)
+      .then((res) => {
+        const data = res?.data as any;
+        if (data) {
+          setStats({
+            rating: Number(data.rating) || 0,
+            reviewCount: Number(data.reviewCount) || 0,
+            rewardPoints: Number(data.rewardPoints) || 0,
+          });
+        }
+      })
+      .catch(() => setStats(null))
+      .finally(() => setStatsLoading(false));
   }, []);
  
   const today = new Date();
@@ -133,18 +167,43 @@ export const TodaySchedule: React.FC = () => {
           })}
       </div>
  
-      {/* Chương trình thưởng */}
+      {/* Người thợ toàn năng */}
       <div className="master-program-card">
         <div className="master-program-header">
           <span className="master-icon">🏆</span>
-          <h4 className="master-title">Chương trình thợ bậc thầy</h4>
+          <h4 className="master-title">Người thợ toàn năng</h4>
         </div>
-        <p className="master-desc">
-          Bạn chỉ còn 3 đánh giá tốt nữa để đạt hạng Vàng và tăng 15% phí dịch vụ.
-        </p>
-        <div className="master-progress-bar">
-          <div className="master-progress-fill" style={{ width: '72%' }} />
-        </div>
+
+        {statsLoading && (
+          <p className="master-desc">Đang tải thống kê...</p>
+        )}
+
+        {!statsLoading && !stats && (
+          <p className="master-desc">Chưa có dữ liệu thống kê.</p>
+        )}
+
+        {!statsLoading && stats && (
+          <>
+            <p className="master-desc">
+              Đánh giá trung bình từ khách hàng và điểm thưởng tích lũy của bạn.
+            </p>
+            <div className="master-stats-row">
+              <div className="master-stat-item">
+                <span className="master-stat-value">
+                  ⭐ {stats.rating > 0 ? stats.rating.toFixed(1) : '—'}
+                </span>
+                <span className="master-stat-label">
+                  {stats.reviewCount} đánh giá
+                </span>
+              </div>
+              <div className="master-stat-divider" />
+              <div className="master-stat-item">
+                <span className="master-stat-value">🎖️ {stats.rewardPoints}</span>
+                <span className="master-stat-label">Điểm thưởng</span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

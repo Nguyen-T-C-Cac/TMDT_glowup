@@ -7,9 +7,11 @@
     padding-bottom: 2px;
 }
 
-.tab-btn {
-    background: transparent;
+.order-tab-btn {
+    background-color: transparent;
     border: none;
+    appearance: none;
+    -webkit-appearance: none;
     font-size: 15px;
     font-weight: 600;
     color: var(--text-secondary);
@@ -20,21 +22,31 @@
     font-family: var(--font-family);
 }
 
-.tab-btn:hover {
+.order-tab-btn:hover {
     color: var(--primary);
+    background-color: transparent;
 }
 
-.tab-btn:focus,
-.tab-btn:active {
+.order-tab-btn:focus,
+.order-tab-btn:active {
     outline: none;
-    background: transparent;
+    background-color: transparent;
+    box-shadow: none;
 }
 
-.tab-btn.active {
+.order-tab-btn:focus-visible {
+    outline: none;
+}
+
+.order-tab-btn::-moz-focus-inner {
+    border: 0;
+}
+
+.order-tab-btn.active {
     color: var(--primary);
 }
 
-.tab-btn.active::after {
+.order-tab-btn.active::after {
     content: "";
     position: absolute;
     bottom: -1px;

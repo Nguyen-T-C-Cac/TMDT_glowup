@@ -52,6 +52,15 @@ export const Header: React.FC<HeaderProps> = ({
     navigate(userRole === 'technician' ? '/technician/chat' : '/customer/chat');
   };
 
+  const goToOrders = () => {
+    if (!loggedIn) {
+      onNavigate && onNavigate('login');
+      return;
+    }
+
+    navigate(userRole === 'technician' ? '/technician/jobs' : customerPageMap['order-management']);
+  };
+
   const goToLogout = () => {
     logoutUser();
     clearProfile();
@@ -158,19 +167,26 @@ export const Header: React.FC<HeaderProps> = ({
           >
             Trang chủ
           </a>
-          <a
+          {/* <a
             href="#"
             className={`nav-item ${isActive('/services') ? 'active' : ''}`}
             onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('services'); }}
           >
             Dịch vụ
-          </a>
+          </a>*/}
           <a
             href="#"
             className={`nav-item ${isActive('/provider') ? 'active' : ''}`}
             onClick={(e) => { e.preventDefault(); onNavigate && onNavigate('provider'); }}
           >
             Chuyên gia
+          </a>
+          <a
+            href="#"
+            className={`nav-item ${isActive(userRole === 'technician' ? '/technician/jobs' : '/customer/order-management') ? 'active' : ''}`}
+            onClick={(e) => { e.preventDefault(); goToOrders(); }}
+          >
+            Đơn hàng
           </a>
           <a
             href="#"

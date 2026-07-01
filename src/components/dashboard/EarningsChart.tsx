@@ -1,76 +1,133 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { orderService } from '../../services/order/orderService';
+import type { OrderResponse } from '../../types/order/order';
 import './EarningsChart.css';
 
-const earningsData7Days = [
-  { day: 'T2', value: 420 },
-  { day: 'T3', value: 580 },
-  { day: 'T4', value: 350 },
-  { day: 'T5', value: 750 },
-  { day: 'Hôm nay', value: 680 },
-  { day: 'T7', value: 520 },
-  { day: 'CN', value: 300 },
-];
+const DAY_LABELS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
-const earningsData30Days = [
-  { day: 'Tuần 1', value: 2800 },
-  { day: 'Tuần 2', value: 3200 },
-  { day: 'Tuần 3', value: 2900 },
-  { day: 'Tuần 4', value: 3600 },
-];
+const toIsoDate = (d: Date) => d.toISOString().slice(0, 10);
+
+const buildDailySeries = (orders: OrderResponse[], days: number) => {
+  const today = new Date();
+  const buckets = new Map<string, number>();
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    buckets.set(toIsoDate(d), 0);
+  }
+
+  orders.forEach((o) => {
+    if (!o.completedAt) return;
+    const key = o.completedAt.slice(0, 10);
+    if (buckets.has(key)) {
+      buckets.set(key, (buckets.get(key) ?? 0) + (o.finalPrice ?? o.estimatedPrice ?? 0));
+    }
+  });
+
+  return [...buckets.entries()].map(([dateKey, value]) => {
+    const d = new Date(dateKey + 'T00:00:00');
+    const isToday = toIsoDate(d) === toIsoDate(today);
+    return {
+      day: isToday ? 'Hôm nay' : DAY_LABELS[d.getDay()],
+      value: Math.round(value / 1000), // hiển thị theo nghìn đồng giống bản gốc
+      isToday,
+    };
+  });
+};
+
+const buildWeeklySeries = (orders: OrderResponse[]) => {
+  const today = new Date();
+  const buckets = [0, 0, 0, 0]; // 4 tuần gần nhất
+
+  orders.forEach((o) => {
+    if (!o.completedAt) return;
+    const completed = new Date(o.completedAt);
+    const diffDays = Math.floor((today.getTime() - completed.getTime()) / 86400000);
+    const weekIndex = 3 - Math.floor(diffDays / 7);
+    if (weekIndex >= 0 && weekIndex <= 3) {
+      buckets[weekIndex] += o.finalPrice ?? o.estimatedPrice ?? 0;
+    }
+  });
+
+  return buckets.map((value, i) => ({
+    day: `Tuần ${i + 1}`,
+    value: Math.round(value / 1000),
+    isToday: i === 3,
+  }));
+};
 
 export const EarningsChart: React.FC = () => {
   const [period, setPeriod] = useState<'7' | '30'>('7');
-  const data = period === '7' ? earningsData7Days : earningsData30Days;
-  const maxValue = Math.max(...data.map(d => d.value));
+  const [completedOrders, setCompletedOrders] = useState<OrderResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    orderService
+      .listOrders({ status: 'completed', limit: 100 })
+      .then((page) => {
+        if (mounted) setCompletedOrders(page.items);
+      })
+      .catch(() => {
+        if (mounted) setCompletedOrders([]);
+      })
+      .finally(() => {
+        if (mounted) setIsLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const data = useMemo(
+    () =>
+      period === '7'
+        ? buildDailySeries(completedOrders, 7)
+        : buildWeeklySeries(completedOrders),
+    [completedOrders, period]
+  );
+
+  const maxValue = Math.max(1, ...data.map((d) => d.value));
 
   return (
     <div className="earnings-chart-card">
       <div className="earnings-chart-header">
         <h3 className="earnings-chart-title">Tổng quan thu nhập</h3>
         <div className="earnings-period-toggle">
-          <button
-            className={`period-btn ${period === '7' ? 'active' : ''}`}
-            onClick={() => setPeriod('7')}
-          >
+          <button className={`period-btn ${period === '7' ? 'active' : ''}`} onClick={() => setPeriod('7')}>
             7 ngày
           </button>
-          <button
-            className={`period-btn ${period === '30' ? 'active' : ''}`}
-            onClick={() => setPeriod('30')}
-          >
+          <button className={`period-btn ${period === '30' ? 'active' : ''}`} onClick={() => setPeriod('30')}>
             30 ngày
           </button>
         </div>
       </div>
 
       <div className="chart-area">
-        <div className="chart-bars-container">
-          {data.map((item, index) => {
-            const heightPercent = (item.value / maxValue) * 100;
-            const isToday = item.day === 'Hôm nay';
-            return (
-              <div key={index} className="chart-bar-wrapper">
-                <div className="chart-bar-group">
-                  <div
-                    className={`chart-bar-bg`}
-                    style={{ height: `${heightPercent * 0.6}%` }}
-                  ></div>
-                  <div
-                    className={`chart-bar-main ${isToday ? 'bar-today' : ''}`}
-                    style={{ height: `${heightPercent}%` }}
-                  >
-                    <div className="bar-tooltip">
-                      {(item.value * 1000).toLocaleString('vi-VN')} đ
+        {isLoading ? (
+          <p style={{ padding: '24px', color: '#64748b' }}>Đang tải dữ liệu thu nhập...</p>
+        ) : (
+          <div className="chart-bars-container">
+            {data.map((item, index) => {
+              const heightPercent = (item.value / maxValue) * 100;
+              return (
+                <div key={index} className="chart-bar-wrapper">
+                  <div className="chart-bar-group">
+                    <div className="chart-bar-bg" style={{ height: `${heightPercent * 0.6}%` }}></div>
+                    <div
+                      className={`chart-bar-main ${item.isToday ? 'bar-today' : ''}`}
+                      style={{ height: `${heightPercent}%` }}
+                    >
+                      <div className="bar-tooltip">{(item.value * 1000).toLocaleString('vi-VN')} đ</div>
                     </div>
                   </div>
+                  <span className={`chart-bar-label ${item.isToday ? 'label-today' : ''}`}>{item.day}</span>
                 </div>
-                <span className={`chart-bar-label ${isToday ? 'label-today' : ''}`}>
-                  {item.day}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

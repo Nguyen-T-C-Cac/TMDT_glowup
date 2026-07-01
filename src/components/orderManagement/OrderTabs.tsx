@@ -19,9 +19,10 @@ export const OrderTabs: React.FC<OrderTabsProps> = ({ activeTab, onChangeTab }) 
     return (
         <div className="order-tabs">
             {tabs.map(tab => (
+                // đổi "tab-btn" thành "order-tab-btn"
                 <button
                     key={tab.id}
-                    className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+                    className={`order-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
                     onClick={() => onChangeTab(tab.id)}
                 >
                     {tab.label}

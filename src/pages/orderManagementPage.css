@@ -24,12 +24,24 @@
 .order-page-header {
     justify-content: space-between;
     align-items: flex-start;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 0 0 8px 0;
+    text-align: left;
+    letter-spacing: -0.02em;
 }
 
 .order-page-subtitle {
-    margin: 8px 0 0;
-    font-size: var(--fs-sm);
-    color: var(--text-sub);
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 8px 0;
+    display: flex;
+    font-weight: 500;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    line-height: 1.5;
 }
 .search-bar input {
     padding: 10px 16px;

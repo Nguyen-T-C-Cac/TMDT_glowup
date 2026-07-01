@@ -116,7 +116,7 @@
 }
 
 .tab-btn.active{
-  background:#0ea5a4;
+  background:var(--white);
   color:#fff;
   border-color:#0ea5a4;
 }

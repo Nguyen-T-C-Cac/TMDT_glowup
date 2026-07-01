@@ -85,7 +85,7 @@ export default function AppRouter() {
       <Route path="/customer">
         <Route path="settings" element={<Navigate to="/customer/account-settings" replace />} />
         <Route path="chat" element={<ChatPage />} />
-        <Route path="order-management" element={<CustomerLayout activeNavKey="account" activeSidebarItem="wallet" searchPlaceholder="Tìm kiếm dịch vụ..."><OrderManagementPage role="customer" /></CustomerLayout>} />
+        <Route path="order-management" element={<CustomerLayout activeNavKey="account" searchPlaceholder="Tìm kiếm dịch vụ..."><OrderManagementPage role="customer" /></CustomerLayout>} />
         <Route path="change-password" element={<CustomerLayout activeNavKey="account" activeSidebarItem="security" searchPlaceholder="Tìm kiếm dịch vụ..."><CustomerSecurityPage /></CustomerLayout>} />
         <Route path="account-settings" element={<CustomerLayout activeNavKey="account" activeSidebarItem="personal" searchPlaceholder="Tìm kiếm dịch vụ..."><CustomerAccountSettingsPage /></CustomerLayout>} />
       </Route>
