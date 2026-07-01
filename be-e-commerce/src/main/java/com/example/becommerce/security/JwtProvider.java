@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Central JWT utility — handles generation and validation of
@@ -54,6 +55,10 @@ public class JwtProvider {
     private String buildToken(String subject, Map<String, Object> claims, long expiration) {
         return Jwts.builder()
                 .claims(claims)
+                // Unique JWT ID (jti) — guarantees two tokens issued in the same second
+                // for the same subject are never byte-identical. Without this, a rapid
+                // double login collides on the UNIQUE constraint of refresh_tokens.token.
+                .id(UUID.randomUUID().toString())
                 .subject(subject)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiration))
