@@ -13,6 +13,7 @@ import com.example.becommerce.entity.Conversation;
 import com.example.becommerce.entity.Message;
 import com.example.becommerce.entity.Order;
 import com.example.becommerce.entity.User;
+import com.example.becommerce.entity.enums.ConversationStatus;
 import com.example.becommerce.entity.enums.MessageType;
 import com.example.becommerce.entity.enums.NotificationType;
 import com.example.becommerce.entity.enums.Role;

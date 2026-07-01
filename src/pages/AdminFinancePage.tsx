@@ -1,8 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AdminHeader } from '../components/admin/AdminHeader';
 import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { FaArrowUpRightDots, FaEllipsis, FaGear } from 'react-icons/fa6';
+import Modal from '../components/common/Modal';
+import { useToast } from '../components/common/Toast';
 import {
+  adjustCommissionWallet,
   getAdminCommissionSettings,
   getAdminCommissionTransactions,
   getAdminCommissionWallets,
@@ -17,6 +20,7 @@ type TxType = AdminCommissionTransactionType;
 type TechStatus = 'all' | 'normal' | 'low' | 'locked';
 
 const AdminFinancePage: React.FC = () => {
+  const { showToast } = useToast();
   const [commissionFixed, setCommissionFixed] = useState('10000');
   const [minBalance, setMinBalance] = useState('20000');
   const [autoLockEnabled, setAutoLockEnabled] = useState(false);
@@ -34,6 +38,14 @@ const AdminFinancePage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const [walletRefreshKey, setWalletRefreshKey] = useState(0);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [adjustTarget, setAdjustTarget] = useState<AdminCommissionWalletItem | null>(null);
+  const [adjustDirection, setAdjustDirection] = useState<'topup' | 'deduct'>('topup');
+  const [adjustAmount, setAdjustAmount] = useState('');
+  const [adjustReason, setAdjustReason] = useState('');
+  const [adjustSaving, setAdjustSaving] = useState(false);
+  const walletListRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -110,7 +122,7 @@ const AdminFinancePage: React.FC = () => {
     return () => {
       active = false;
     };
-  }, [techFilter, transactionPage, transactionLimit, txDateFilter, txTypeFilter]);
+  }, [techFilter, transactionPage, transactionLimit, txDateFilter, txTypeFilter, walletRefreshKey]);
 
   const filteredWallets = useMemo(() => {
     if (techFilter === 'all') {
@@ -158,6 +170,83 @@ const AdminFinancePage: React.FC = () => {
       setError(saveError instanceof Error ? saveError.message : 'Không thể lưu cài đặt hoa hồng');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!menuOpenId) {
+      return;
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (walletListRef.current && !walletListRef.current.contains(event.target as Node)) {
+        setMenuOpenId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [menuOpenId]);
+
+  const openAdjustModal = (technician: AdminCommissionWalletItem) => {
+    setMenuOpenId(null);
+    setAdjustTarget(technician);
+    setAdjustDirection('topup');
+    setAdjustAmount('');
+    setAdjustReason('');
+  };
+
+  const closeAdjustModal = () => {
+    if (adjustSaving) {
+      return;
+    }
+
+    setAdjustTarget(null);
+  };
+
+  const handleAdjustSubmit = async () => {
+    if (!adjustTarget) {
+      return;
+    }
+
+    const numericAmount = Number(adjustAmount);
+
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      showToast('Nhập số tiền lớn hơn 0', 'error');
+      return;
+    }
+
+    if (!adjustReason.trim()) {
+      showToast('Vui lòng nhập lý do điều chỉnh', 'error');
+      return;
+    }
+
+    setAdjustSaving(true);
+
+    try {
+      const result = await adjustCommissionWallet({
+        technicianId: adjustTarget.technicianId,
+        amount: numericAmount,
+        direction: adjustDirection,
+        reason: adjustReason.trim(),
+      });
+
+      showToast(
+        `Đã ${adjustDirection === 'deduct' ? 'trừ' : 'cộng'} ${numericAmount.toLocaleString('vi-VN')}đ cho ${adjustTarget.technicianName}. Số dư mới: ${result.newBalance.toLocaleString('vi-VN')}đ`,
+        'success',
+      );
+
+      setAdjustTarget(null);
+      setAdjustAmount('');
+      setAdjustReason('');
+      setWalletRefreshKey((key) => key + 1);
+    } catch (adjustError) {
+      showToast(adjustError instanceof Error ? adjustError.message : 'Điều chỉnh ví thất bại', 'error');
+    } finally {
+      setAdjustSaving(false);
     }
   };
 
@@ -261,7 +350,7 @@ const AdminFinancePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="afp-tech-list">
+          <div className="afp-tech-list" ref={walletListRef}>
             <div className="afp-tech-row afp-tech-head">
               <span>THỢ</span>
               <span>SỐ DƯ VÍ HOA HỒNG</span>
@@ -287,7 +376,25 @@ const AdminFinancePage: React.FC = () => {
                     <strong>{t.lastOrderAtLabel}</strong>
                     <small>{t.locked ? 'Ví đang khóa' : 'Ví đang hoạt động'}</small>
                   </span>
-                  <span><button className="afp-more-btn" type="button">...</button></span>
+                  <span className="afp-tech-actions">
+                    <button
+                      className="afp-more-btn"
+                      type="button"
+                      aria-label="Mở menu thao tác"
+                      aria-haspopup="menu"
+                      aria-expanded={menuOpenId === t.technicianId}
+                      onClick={() => setMenuOpenId((current) => (current === t.technicianId ? null : t.technicianId))}
+                    >
+                      <FaEllipsis />
+                    </button>
+                    {menuOpenId === t.technicianId ? (
+                      <div className="afp-row-menu" role="menu">
+                        <button type="button" role="menuitem" onClick={() => openAdjustModal(t)}>
+                          Điều chỉnh ví
+                        </button>
+                      </div>
+                    ) : null}
+                  </span>
                 </div>
               ))}
           </div>
@@ -375,6 +482,93 @@ const AdminFinancePage: React.FC = () => {
             </div>
           </footer>
         </section>
+
+        <Modal open={adjustTarget !== null} onClose={closeAdjustModal}>
+          {adjustTarget ? (
+            <div className="afp-adjust-modal">
+              <h3>Điều chỉnh ví hoa hồng</h3>
+              <p className="afp-adjust-sub">
+                {adjustTarget.technicianName} · {adjustTarget.technicianId}
+              </p>
+
+              <div className="afp-adjust-balance">
+                <span>Số dư hiện tại</span>
+                <strong className={adjustTarget.walletBalance < 0 ? 'afp-amount-out' : 'afp-amount-in'}>
+                  {adjustTarget.walletBalanceLabel}
+                </strong>
+              </div>
+
+              <div className="afp-adjust-dir">
+                <button
+                  type="button"
+                  className={`afp-dir-btn topup ${adjustDirection === 'topup' ? 'active' : ''}`}
+                  onClick={() => setAdjustDirection('topup')}
+                >
+                  + Cộng tiền
+                </button>
+                <button
+                  type="button"
+                  className={`afp-dir-btn deduct ${adjustDirection === 'deduct' ? 'active' : ''}`}
+                  onClick={() => setAdjustDirection('deduct')}
+                >
+                  − Trừ tiền
+                </button>
+              </div>
+
+              <label className="afp-adjust-field">
+                <span>Số tiền (đ)</span>
+                <div className="afp-adjust-input-affix">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={adjustAmount ? Number(adjustAmount).toLocaleString('vi-VN') : ''}
+                    onChange={(event) => setAdjustAmount(event.target.value.replace(/\D/g, ''))}
+                    placeholder="VD: 500.000"
+                    autoFocus
+                  />
+                  <span>đ</span>
+                </div>
+                <small>Chỉ nhập số dương. Chọn “Cộng” hoặc “Trừ” ở trên để quyết định chiều điều chỉnh.</small>
+              </label>
+
+              {Number(adjustAmount) > 0 ? (
+                <div className="afp-adjust-preview">
+                  <span>Số dư sau điều chỉnh</span>
+                  {(() => {
+                    const delta = adjustDirection === 'deduct' ? -Number(adjustAmount) : Number(adjustAmount);
+                    const nextBalance = adjustTarget.walletBalance + delta;
+                    return (
+                      <strong className={nextBalance < 0 ? 'afp-amount-out' : 'afp-amount-in'}>
+                        {nextBalance.toLocaleString('vi-VN')}đ
+                        {nextBalance < 0 ? ' · sẽ bị khóa' : ''}
+                      </strong>
+                    );
+                  })()}
+                </div>
+              ) : null}
+
+              <label className="afp-adjust-field">
+                <span>Lý do</span>
+                <input
+                  type="text"
+                  value={adjustReason}
+                  onChange={(event) => setAdjustReason(event.target.value)}
+                  placeholder={adjustDirection === 'deduct' ? 'VD: Phạt' : 'VD: Hoàn tiền / nạp ví'}
+                  maxLength={255}
+                />
+              </label>
+
+              <div className="afp-adjust-actions">
+                <button type="button" className="afp-adjust-ghost" onClick={closeAdjustModal} disabled={adjustSaving}>
+                  Huỷ
+                </button>
+                <button type="button" className="afp-adjust-primary" onClick={handleAdjustSubmit} disabled={adjustSaving}>
+                  {adjustSaving ? 'Đang lưu...' : 'Xác nhận'}
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </Modal>
       </main>
     </div>
   );

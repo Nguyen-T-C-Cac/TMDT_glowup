@@ -1,8 +1,11 @@
-import React from 'react';
-import { FaArrowLeft, FaCalendarCheck, FaClock, FaMoneyBillWave, FaUser, FaUsers, FaImage, FaLocationDot, FaStar, FaTriangleExclamation } from 'react-icons/fa6';
+import React, { useEffect, useState } from 'react';
+import { FaArrowLeft, FaCalendarCheck, FaClock, FaMoneyBillWave, FaUser, FaUsers, FaImage, FaLocationDot, FaStar, FaTriangleExclamation, FaShieldHalved } from 'react-icons/fa6';
 import type { UserRole } from '../../types/UserRole.ts';
 import type { OrderResponse } from '../../types/order/order.ts';
+import type { WarrantyResponse } from '../../types/warranty.ts';
 import { getOrderStatusLabel } from '../../stores/orderStore.ts';
+import WarrantyModal from '../modal/WarrantyModal.tsx';
+import { orderService } from '../../services/order/orderService.ts';
 
 interface OrderDetailPanelProps {
     order: OrderResponse;
@@ -12,6 +15,7 @@ interface OrderDetailPanelProps {
     onReview?: (order: OrderResponse) => void;
     onEditReview?: (order: OrderResponse) => void;
     onReport?: (order: OrderResponse) => void;
+    onViewWarranty?: (orderId: string) => void;
 }
 
 const formatDateTime = (value?: string): string => {
@@ -29,12 +33,50 @@ const formatDateTime = (value?: string): string => {
 
 const formatMoney = (value?: number): string => (value ?? 0).toLocaleString('vi-VN');
 
-export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({ order, role, onBack, onCancel, onReview, onEditReview, onReport }) => {
+const warrantyStatusLabel = (status: string): string => {
+    switch (status) {
+        case 'pending': return 'Đang chờ xử lý';
+        case 'in-progress': return 'Đang bảo hành';
+        case 'completed': return 'Hoàn thành bảo hành';
+        case 'rejected': return 'Bị từ chối';
+        case 'expired': return 'Hết hạn bảo hành';
+        default: return status;
+    }
+};
+
+export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({ order, role, onBack, onCancel, onReview, onEditReview, onReport, onViewWarranty }) => {
+    const [showWarrantyModal, setShowWarrantyModal] = useState(false);
+    const [warrantySubmitted, setWarrantySubmitted] = useState(false);
+    const [existingWarranty, setExistingWarranty] = useState<WarrantyResponse | null>(null);
+    const [loadingWarranty, setLoadingWarranty] = useState(false);
+
     const partner = role === 'technician' ? order.customer : order.technician;
     const canCancel = !['completed', 'cancelled', 'warranty'].includes(order.status.toLowerCase());
     const isCompleted = order.status.toLowerCase() === 'completed';
     const isCustomer = role === 'customer';
     const hasImages = (order.images?.length ?? 0) > 0;
+
+    useEffect(() => {
+        if (isCompleted && isCustomer) {
+            setLoadingWarranty(true);
+            orderService.getWarranty(order.id)
+                .then((data) => {
+                    if (data) setExistingWarranty(data);
+                })
+                .catch(() => {})
+                .finally(() => setLoadingWarranty(false));
+        }
+    }, [order.id, isCompleted, isCustomer]);
+
+    const handleWarrantySubmit = async (description: string, images: string[], scheduledAt: string | null) => {
+        const result = await orderService.createWarranty(order.id, {
+            description,
+            images: images.length > 0 ? images : undefined,
+            scheduledAt: scheduledAt ?? undefined,
+        });
+        setWarrantySubmitted(true);
+        setExistingWarranty(result);
+    };
 
     return (
         <div className="order-detail-panel">
@@ -150,12 +192,44 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({ order, role,
                                 <FaStar /> Đánh giá dịch vụ
                             </button>
                         )}
+                        {loadingWarranty ? (
+                            <div className="detail-warranty-submitted">
+                                <FaShieldHalved /> Đang kiểm tra bảo hành...
+                            </div>
+                        ) : existingWarranty ? (
+                            <div className="detail-warranty-existing" onClick={() => onViewWarranty?.(order.id)} style={{ cursor: 'pointer' }}>
+                                <div className="detail-warranty-status-row">
+                                    <FaShieldHalved />
+                                    <span>Bảo hành: <strong>{warrantyStatusLabel(existingWarranty.status)}</strong></span>
+                                </div>
+                                {existingWarranty.status === 'rejected' && existingWarranty.rejectReason && (
+                                    <div className="detail-warranty-rejected">
+                                        <span>Lý do: {existingWarranty.rejectReason}</span>
+                                    </div>
+                                )}
+                            </div>
+                        ) : warrantySubmitted ? (
+                            <div className="detail-warranty-submitted">
+                                <FaShieldHalved /> Yêu cầu bảo hành đã gửi
+                            </div>
+                        ) : (
+                            <button className="detail-warranty-btn" onClick={() => setShowWarrantyModal(true)}>
+                                <FaShieldHalved /> Yêu cầu bảo hành
+                            </button>
+                        )}
                         <button className="detail-report-btn" onClick={() => onReport?.(order)}>
                             <FaTriangleExclamation /> Báo cáo sự cố
                         </button>
                     </div>
                 </div>
             )}
+
+            <WarrantyModal
+                open={showWarrantyModal}
+                onClose={() => setShowWarrantyModal(false)}
+                orderId={order.id}
+                onSubmit={handleWarrantySubmit}
+            />
         </div>
     );
 };

@@ -127,6 +127,10 @@ public class Order {
     @Builder.Default
     private boolean deleted = false;
 
+    /** Mark this order as a warranty re-claim of a previously completed order. */
+    @Column(name = "is_warranty", columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Builder.Default
+    private Boolean isWarranty = false;
     /**
      * Whether wallet settlement (commission fee + revenue + points) has already
      * been applied for this order. Guarantees the settlement runs exactly once

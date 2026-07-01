@@ -11,6 +11,7 @@ interface QuotationCardProps {
     previewMode?: boolean;
     onAccept?: () => void;
     onReject?: () => void;
+    onRevise?: () => void;
 }
 
 export const QuotationCard: React.FC<QuotationCardProps> = ({
@@ -22,7 +23,8 @@ export const QuotationCard: React.FC<QuotationCardProps> = ({
     isCustomer = false,
     previewMode = false,
     onAccept,
-    onReject
+    onReject,
+    onRevise,
 }) => {
     const formatPrice = (value: number) =>
         new Intl.NumberFormat('vi-VN').format(value);
@@ -106,6 +108,17 @@ export const QuotationCard: React.FC<QuotationCardProps> = ({
                     {!previewMode && !isCustomer && isPending && (
                         <p className={styles.chatStatusRejected}>Đang chờ khách xác nhận</p>
                     )}
+                    {/* Thợ thấy nút sửa khi báo giá bị từ chối */}
+                        {!previewMode && !isCustomer && isRejected && (
+                            <div className={styles.actionGroup}>
+                                <p className={styles.chatStatusRejected}>Khách đã từ chối báo giá</p>
+                                {onRevise && (
+                                    <button type="button" className={styles.btnPrimary} onClick={onRevise}>
+                                        Sửa & Gửi lại
+                                    </button>
+                                )}
+                            </div>
+                        )}
                 </div>
             </div>
         </div>

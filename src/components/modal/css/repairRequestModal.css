@@ -11,8 +11,8 @@
     --rm-accent-bg: var(--accent-bg, #b5d5b9);
     --rm-radius: 20px;
 
-    width: min(1080px, 100vw - 20px);
-    max-height: 85vh;
+    width: min(1080px, calc(100vw - 16px));
+    max-height: 90vh;
     border-radius: var(--rm-radius);
     background: var(--rm-card);
     color: var(--rm-text);
@@ -101,6 +101,7 @@
     flex: 1;
     display: grid;
     grid-template-columns: 1fr 260px;
+    grid-template-rows: 1fr;
     gap: 16px;
     overflow: hidden;
     padding: 16px 20px 20px;
@@ -115,6 +116,8 @@
     flex-direction: column;
     gap: 12px;
     padding-right: 4px;
+    min-height: 0;
+    min-width: 0;
 }
 
 /* ─── Summary sidebar ─── sticky top ───────── */
@@ -130,6 +133,7 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+    min-height: 0;
 }
 .repair-summary h4 {
     margin: 0;
@@ -346,17 +350,12 @@
 .input-icon-wrap input { border: none; box-shadow: none; padding-left: 0; }
 .input-icon-wrap input:focus { box-shadow: none; }
 
-.location-list { display: grid; gap: 6px; }
-.location-list button { text-align: left; padding: 7px 10px; font-size: 0.85rem; }
-
 .mini-map {
     min-height: 56px;
     border-radius: 12px;
     border: 1px solid var(--rm-line);
-    background: rgba(104,168,119,0.04);
-    display: flex; align-items: center; gap: 7px;
-    color: var(--rm-primary); padding: 8px 12px;
-    font-size: 0.84rem;
+    overflow: hidden;
+    position: relative;
 }
 
 .privacy-badge {
@@ -414,13 +413,13 @@
     .modal-container { align-items: flex-end; }
     .modal-inner {
         width: 100%;
-        max-height: 92vh;
+        max-height: 96vh;
         border-radius: 20px 20px 0 0;
     }
 
     .repair-modal {
         width: 100%;
-        max-height: 92vh;
+        max-height: 96vh;
         border-radius: 20px 20px 0 0;
     }
 
@@ -463,10 +462,18 @@
 
 @media (max-width: 480px) {
     .repair-headline h2 { font-size: 1.05rem; }
+    .repair-layout { padding: 8px 12px 16px; }
     .service-grid,
     .urgency-grid { grid-template-columns: 1fr 1fr; }
     .radio-grid { grid-template-columns: 1fr; }
     .preview-grid { grid-template-columns: repeat(2, 1fr); }
     .repair-section { padding: 12px; }
     .repair-section h3 { font-size: 0.9rem; }
+}
+
+/* Address selects stack vertically on small screens */
+@media (max-width: 400px) {
+    .address-row {
+        flex-direction: column !important;
+    }
 }

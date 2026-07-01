@@ -1,6 +1,19 @@
 import apiClient from '../api/config';
 import type { Technician } from './providerService';
 
+export interface BookedSlot {
+  date: string;
+  startTime: string;
+  endTime: string;
+  orderCode: string;
+  status: string;
+}
+
+export interface TechnicianSchedule {
+  weeklySchedule: Record<string, string>;
+  bookedSlots: BookedSlot[];
+}
+
 export const technicianService = {
   /**
    * GET /api/technicians
@@ -12,6 +25,7 @@ export const technicianService = {
     isAvailable?: boolean;
     page?: number;
     limit?: number;
+    locations?: string[];
   }): Promise<{ success: boolean; data: Technician[]; pagination?: any }> => {
     const response = await apiClient.get<{ success: boolean; data: Technician[]; pagination?: any }>(
       '/api/technicians',
@@ -70,6 +84,22 @@ export const technicianService = {
   ): Promise<{ success: boolean; data: { items: any[]; averageRating?: number; totalReviews?: number; pagination?: any } }> => {
     const response = await apiClient.get<{ success: boolean; data: { items: any[]; averageRating?: number; totalReviews?: number; pagination?: any } }>(
       `/api/technicians/${id}/reviews`
+    );
+    return response.data;
+  },
+
+  /**
+   * GET /api/technicians/:id/schedule?from=...&to=...
+   * Lấy lịch làm việc và các khung giờ đã đặt của thợ
+   */
+  getTechnicianSchedule: async (
+    id: string,
+    from: string,
+    to: string
+  ): Promise<{ success: boolean; data: TechnicianSchedule }> => {
+    const response = await apiClient.get<{ success: boolean; data: TechnicianSchedule }>(
+      `/api/technicians/${id}/schedule`,
+      { params: { from, to } }
     );
     return response.data;
   }

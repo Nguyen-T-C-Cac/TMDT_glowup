@@ -4,6 +4,7 @@ import com.example.becommerce.constant.ErrorCode;
 import com.example.becommerce.dto.mapper.MessageMapper;
 import com.example.becommerce.dto.mapper.QuotationMapper;
 import com.example.becommerce.dto.request.quotation.CreateQuotationRequest;
+import com.example.becommerce.dto.request.quotation.ReviseQuotationRequest;
 import com.example.becommerce.dto.response.quotation.AcceptQuotationResponse;
 import com.example.becommerce.dto.response.quotation.QuotationResponse;
 import com.example.becommerce.entity.Conversation;
@@ -17,6 +18,7 @@ import com.example.becommerce.entity.enums.OrderStatus;
 import com.example.becommerce.entity.enums.QuotationStatus;
 import com.example.becommerce.entity.enums.Role;
 import com.example.becommerce.exception.AppException;
+import com.example.becommerce.repository.BookingRepository;
 import com.example.becommerce.repository.ConversationRepository;
 import com.example.becommerce.repository.MessageRepository;
 import com.example.becommerce.repository.OrderRepository;
@@ -42,7 +44,7 @@ import java.time.LocalDateTime;
  *  - Only the technician of a conversation can post a quote.
  *  - Posting a quote also writes a "quotation" message into the conversation.
  *  - Only the customer of the conversation can accept it.
- *  - On accept, a new Order is spawned in SCHEDULED status, linking back to the quote.
+ *  - On accept, the accepted quote is converted into an Order in SCHEDULED status.
  */
 @Service
 @RequiredArgsConstructor
@@ -52,6 +54,7 @@ public class QuotationServiceImpl implements QuotationService {
     private final QuotationRepository      quotationRepository;
     private final ConversationRepository   conversationRepository;
     private final MessageRepository        messageRepository;
+    private final BookingRepository        bookingRepository;
     private final OrderRepository          orderRepository;
     private final UserRepository           userRepository;
     private final QuotationMapper          quotationMapper;
@@ -146,36 +149,53 @@ public class QuotationServiceImpl implements QuotationService {
                 ? linkedOrder.getAddress()
                 : customer.getAddress();
 
-        Order order = Order.builder()
-                .code(orderCodeGenerator.generate())
-                .customer(customer)
-                .technician(quotation.getTechnician())
-                .serviceName(quotation.getServiceName())
-                .subService(linkedOrder != null ? linkedOrder.getSubService() : null)
-                .serviceCategory(linkedOrder != null ? linkedOrder.getServiceCategory() : null)
-                .deviceName(linkedOrder != null ? linkedOrder.getDeviceName() : null)
-                .description(quotation.getDescription())
-                .address(resolvedAddress)
-                .estimatedPrice(quotation.getPrice())
-                .scheduledAt(quotation.getScheduledAt())
-                .expectedTime(quotation.getScheduledAt())
-                .status(OrderStatus.SCHEDULED)
-                .build();
-        if (conversation.getOrder() == null) {
-            // First time the conversation gets an order — link it.
-            conversation.setOrder(order);
+        Order order = linkedOrder;
+        OrderStatus previousStatus = order != null ? order.getStatus() : null;
+        if (order == null) {
+            order = Order.builder()
+                    .code(orderCodeGenerator.generate())
+                    .customer(customer)
+                    .technician(quotation.getTechnician())
+                    .status(OrderStatus.NEW)
+                    .build();
         }
+
+        order.setCustomer(customer);
+        order.setTechnician(quotation.getTechnician());
+        order.setServiceName(quotation.getServiceName());
+        order.setSubService(linkedOrder != null ? linkedOrder.getSubService() : null);
+        order.setServiceCategory(linkedOrder != null && linkedOrder.getServiceCategory() != null
+                ? linkedOrder.getServiceCategory()
+                : "booking");
+        order.setDeviceName(linkedOrder != null ? linkedOrder.getDeviceName() : null);
+        order.setDescription(quotation.getDescription());
+        order.setAddress(resolvedAddress);
+        order.setEstimatedPrice(quotation.getPrice());
+        order.setScheduledAt(quotation.getScheduledAt());
+        order.setExpectedTime(quotation.getScheduledAt());
+        order.setStatus(OrderStatus.SCHEDULED);
+
         Order savedOrder = orderRepository.save(order);
+        conversation.setOrder(savedOrder);
 
         quotation.setStatus(QuotationStatus.ACCEPTED);
         quotation.setAcceptedAt(LocalDateTime.now());
         quotation.setOrder(savedOrder);
         Quotation savedQuote = quotationRepository.save(quotation);
+
+        bookingRepository.findFirstByConversation_IdOrderByCreatedAtDesc(conversation.getId())
+                .ifPresent(booking -> {
+                    booking.setOrder(savedOrder);
+                    bookingRepository.save(booking);
+                });
+
         conversationRepository.save(conversation);
 
-        // New order is born SCHEDULED — emit so both parties can react.
+        // The accepted quote now appears in the scheduled orders flow.
         eventPublisher.publishOrderStatusChanged(
-                savedOrder.getCode(), null, OrderStatus.SCHEDULED.apiValue());
+                savedOrder.getCode(),
+                previousStatus == null ? null : previousStatus.apiValue(),
+                OrderStatus.SCHEDULED.apiValue());
 
         // Notify the technician their quote was accepted.
         try {
@@ -228,6 +248,70 @@ public class QuotationServiceImpl implements QuotationService {
         log.info("Quotation {} rejected by customer {}", savedQuote.getCode(), customer.getCode());
         return quotationMapper.toResponse(savedQuote);
     }
+
+        // ===============================================================
+        // REVISE QUOTE (thợ sửa báo giá bị từ chối, gửi lại cho khách)
+        // ===============================================================
+
+        @Override
+        @Transactional
+        public QuotationResponse reviseQuotation(String quotationCode, ReviseQuotationRequest req) {
+        Quotation old = quotationRepository.findByCode(quotationCode)
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy báo giá " + quotationCode));
+
+        User sender = getCurrentUser();
+
+        if (sender.getRole() != Role.TECHNICIAN) {
+                throw AppException.forbidden("Chỉ thợ mới có thể sửa báo giá");
+        }
+        if (!old.getTechnician().getId().equals(sender.getId())) {
+                throw AppException.forbidden("Bạn không phải thợ của báo giá này");
+        }
+        if (old.getStatus() != QuotationStatus.REJECTED) {
+                throw AppException.badRequest(ErrorCode.QUOTATION_NOT_REJECTED,
+                        "Chỉ có thể sửa báo giá đã bị từ chối");
+        }
+
+        Conversation conversation = old.getConversation();
+
+        // Tạo quotation mới PENDING thay thế cái cũ
+        Quotation revised = Quotation.builder()
+                .code(quotationCodeGenerator.generate())
+                .conversation(conversation)
+                .technician(sender)
+                .serviceName(req.getServiceName())
+                .description(req.getDescription())
+                .price(req.getPrice())
+                .scheduledAt(req.getScheduledAt())
+                .notes(req.getNotes())
+                .status(QuotationStatus.PENDING)
+                .build();
+        Quotation savedQuote = quotationRepository.save(revised);
+
+        // Gửi message type=QUOTATION vào conversation (y chang createQuotation)
+        Message message = Message.builder()
+                .code(messageCodeGenerator.generate())
+                .conversation(conversation)
+                .sender(sender)
+                .type(MessageType.QUOTATION)
+                .content(null)
+                .quotation(savedQuote)
+                .build();
+        Message savedMessage = messageRepository.save(message);
+
+        conversation.setLastMessageAt(savedMessage.getSentAt());
+        conversationRepository.save(conversation);
+
+        // Push realtime cho khách
+        eventPublisher.publishMessageNew(
+                conversation.getCode(),
+                messageMapper.toResponse(savedMessage, sender, savedMessage.getSentAt()));
+
+        log.info("Quotation {} revised by technician {} → new quotation {} in conversation {}",
+                quotationCode, sender.getCode(), savedQuote.getCode(), conversation.getCode());
+
+        return quotationMapper.toResponse(savedQuote);
+        }
 
     // ----------------------------------------------------------------
 

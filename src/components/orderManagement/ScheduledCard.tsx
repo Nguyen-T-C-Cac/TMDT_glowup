@@ -1,6 +1,6 @@
 import React from 'react';
 import type { UserRole } from '../../types/UserRole';
-import { FaLocationDot, FaClock, FaUser, FaPhone, FaPersonWalkingLuggage, FaMessage } from 'react-icons/fa6';
+import { FaLocationDot, FaClock, FaUser, FaPhone, FaPersonWalkingLuggage, FaMessage, FaShieldHalved, FaXmark } from 'react-icons/fa6';
 import './scheduledCard.css';
 import type {ScheduledOrder} from "../../types/ScheduledOrder.ts";
 import {useNavigate} from "react-router-dom";
@@ -12,9 +12,22 @@ interface ScheduledCardProps {
     onViewDetail: (id: string) => void;
     onCancel?: (id: string) => void;
     onUpdateStatus?: (id: string, status: string) => void;
+    onAcceptWarranty?: (orderId: string) => void;
+    onRejectWarranty?: (orderId: string) => void;
 }
 
-export const ScheduledCard: React.FC<ScheduledCardProps> = ({ data, role, onViewDetail, onCancel, onUpdateStatus }) => {
+const warrantyStatusLabel = (status?: string): string => {
+    switch (status) {
+        case 'pending': return 'Đang chờ';
+        case 'in-progress': return 'Đang xử lý';
+        case 'completed': return 'Hoàn thành';
+        case 'rejected': return 'Bị từ chối';
+        case 'expired': return 'Hết hạn';
+        default: return 'Bảo hành';
+    }
+};
+
+export const ScheduledCard: React.FC<ScheduledCardProps> = ({ data, role, onViewDetail, onCancel, onUpdateStatus, onAcceptWarranty, onRejectWarranty }) => {
     const navigate = useNavigate();
     const handleChatClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -30,11 +43,24 @@ export const ScheduledCard: React.FC<ScheduledCardProps> = ({ data, role, onView
             customerId: data.customerId,
         });
     };
+
+    const isWarranty = data.isWarranty;
+    const isPendingWarranty = isWarranty && data.warrantyStatus === 'pending';
+    const warrantyLabel = warrantyStatusLabel(data.warrantyStatus);
+
+    const handleDetailClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onViewDetail(data.id);
+    };
+
     return (
         <div className="sched-card" onClick={() => onViewDetail(data.id)}>
             <div className="sched-card-main">
                 <div className="sched-header">
-                    <span className="sched-badge">{data.statusText}</span>
+                    <span className={`sched-badge ${isWarranty ? 'sched-badge-warranty' : ''}`}>
+                        {isWarranty && <FaShieldHalved style={{ marginRight: 4 }} />}
+                        {isWarranty && data.warrantyStatus ? warrantyLabel : data.statusText}
+                    </span>
                     <span className="sched-id">#{data.id}</span>
                 </div>
 
@@ -58,7 +84,28 @@ export const ScheduledCard: React.FC<ScheduledCardProps> = ({ data, role, onView
             </div>
 
             <div className="sched-card-actions" onClick={(e) => e.stopPropagation()}>
-                {role === 'technician' ? (
+                {isWarranty ? (
+                    <>
+                        <button className="btn-primary" onClick={handleDetailClick}>
+                            <FaShieldHalved /> Xem chi tiết
+                        </button>
+                        {role === 'technician' && isPendingWarranty && (
+                            <>
+                                <button className="sched-btn sched-btn-warranty" onClick={(e) => { e.stopPropagation(); onAcceptWarranty?.(data.id); }}>
+                                    <FaShieldHalved /> Đồng ý
+                                </button>
+                                <button className="sched-btn sched-btn-warranty-reject" onClick={(e) => { e.stopPropagation(); onRejectWarranty?.(data.id); }}>
+                                    <FaXmark /> Từ chối
+                                </button>
+                            </>
+                        )}
+                        {role === 'customer' && data.warrantyStatus && (
+                            <span className="sched-warranty-status">
+                                <FaShieldHalved /> {warrantyLabel}
+                            </span>
+                        )}
+                    </>
+                ) : role === 'technician' ? (
                     <>
                         <button className="btn-primary" onClick={(e) => { e.stopPropagation(); onUpdateStatus?.(data.id, 'in-progress'); }}>
                             <FaPersonWalkingLuggage /> Tôi đang di chuyển

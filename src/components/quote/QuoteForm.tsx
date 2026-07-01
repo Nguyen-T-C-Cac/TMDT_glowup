@@ -236,10 +236,10 @@ const QuoteForm = ({ quote, setQuote, onClose, onSubmit }: Props) => {
             {error && <div className="quote-error">{error}</div>}
 
             <div className="quote-actions">
-                <button type="button" className="btn btn-cancel" onClick={onClose} disabled={submitting}>
+                <button type="button" className="quote-btn btn-cancel" onClick={onClose} disabled={submitting}>
                     Hủy
                 </button>
-                <button type="submit" className="btn btn-submit" disabled={submitting}>
+                <button type="submit" className="quote-btn btn-submit" disabled={submitting}>
                     {submitting ? "Đang gửi..." : "Gửi báo giá"}
                 </button>
             </div>

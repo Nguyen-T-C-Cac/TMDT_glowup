@@ -43,7 +43,7 @@ import TechnicianWalletTopUpResultPage from '../pages/TechnicianWalletTopUpResul
 import TechnicianWalletWithdrawPage from '../pages/TechnicianWalletWithdrawPage'
 import VoucherRewardsPage from '../pages/VoucherRewardsPage'
 import OrderPaymentResultPage from '../pages/OrderPaymentResultPage'
-
+import TechnicianSchedulePage from '../pages/TechnicianSchedulePage';
 
 export default function AppRouter() {
   return (
@@ -66,6 +66,11 @@ export default function AppRouter() {
 
       <Route path="/technician">
         <Route path="jobs" element={<TechnicianLayout activeItem="jobs"><OrderManagementPage role="technician" /></TechnicianLayout>} />
+        <Route path="schedule" element={
+        <TechnicianLayout activeItem="schedule">
+          <TechnicianSchedulePage />
+        </TechnicianLayout>
+      } />
         <Route path="wallet" element={<TechnicianLayout activeItem="wallet"><TechnicianWalletPage /></TechnicianLayout>} />
         <Route path="wallet/topup" element={<TechnicianLayout activeItem="wallet"><TechnicianWalletTopUpPage /></TechnicianLayout>} />
         <Route path="wallet/topup-result" element={<TechnicianLayout activeItem="wallet"><TechnicianWalletTopUpResultPage /></TechnicianLayout>} />

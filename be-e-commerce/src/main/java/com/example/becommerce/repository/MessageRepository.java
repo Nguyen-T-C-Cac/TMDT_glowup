@@ -20,7 +20,9 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     boolean existsByCode(String code);
 
     long count();
-
+    
+    // Thêm @EntityGraph để eager load sender và quotation
+    @EntityGraph(attributePaths = {"sender", "quotation"})
     Page<Message> findByConversation_IdOrderBySentAtDesc(Long conversationId, Pageable pageable);
 
     List<Message> findByConversation_IdAndTypeOrderBySentAtDesc(Long conversationId, MessageType type);

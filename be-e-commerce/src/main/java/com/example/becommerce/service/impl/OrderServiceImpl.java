@@ -19,6 +19,7 @@ import com.example.becommerce.entity.OrderPriceAdjustment;
 import com.example.becommerce.entity.OrderPriceAdjustmentPart;
 import com.example.becommerce.entity.OrderStatusHistory;
 import com.example.becommerce.entity.Review;
+import com.example.becommerce.entity.TechnicianScheduleSlot;
 import com.example.becommerce.entity.User;
 import com.example.becommerce.entity.Wallet;
 import com.example.becommerce.entity.WalletTransaction;
@@ -40,6 +41,7 @@ import com.example.becommerce.repository.WalletTransactionRepository;
 import com.example.becommerce.entity.enums.NotificationType;
 import com.example.becommerce.service.NotificationService;
 import com.example.becommerce.service.OrderService;
+import com.example.becommerce.service.ScheduleSlotService;
 import com.example.becommerce.service.WalletSettlementService;
 import com.example.becommerce.service.WsEventPublisher;
 import com.example.becommerce.utils.OrderCodeGenerator;
@@ -94,7 +96,7 @@ public class OrderServiceImpl implements OrderService {
     private final WsEventPublisher                eventPublisher;
     private final NotificationService             notificationService;
     private final WalletSettlementService         settlementService;
-
+    private final ScheduleSlotService  scheduleSlotService;
     // ===============================================================
     // LIST + DETAIL
     // ===============================================================
@@ -252,12 +254,15 @@ public class OrderServiceImpl implements OrderService {
         recordHistory(order, from, OrderStatus.SCHEDULED, OrderActor.TECHNICIAN, technician.getId(), "Thợ nhận đơn");
 
         Order saved = orderRepository.save(order);
+        
         eventPublisher.publishOrderStatusChanged(
                 saved.getCode(), from.apiValue(), OrderStatus.SCHEDULED.apiValue());
         notifyOrderEvent(saved.getCustomer(), NotificationType.ORDER_ACCEPTED,
                 "Đơn hàng được nhận",
                 "Thợ " + technician.getFullName() + " đã nhận đơn " + saved.getCode(),
                 saved.getCode());
+        // Tự động tạo slot thời gian biểu khi đơn chuyển sang SCHEDULED
+        scheduleSlotService.createSlotFromOrder(saved);
         return orderMapper.toStatusChange(saved);
     }
 
@@ -649,6 +654,7 @@ public class OrderServiceImpl implements OrderService {
                     .cancelledBy(response.getCancelledBy())
                     .cancelReason(response.getCancelReason())
                     .cancelledAt(response.getCancelledAt())
+                    .isWarranty(response.getIsWarranty())
                     .reviewed(true)
                     .myRating(review.getRating())
                     .createdAt(response.getCreatedAt())

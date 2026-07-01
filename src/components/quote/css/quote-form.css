@@ -68,7 +68,7 @@
     gap: 12px;
 }
 
-.btn {
+.quote-btn {
     flex: 1;
     padding: 14px;
     border: none;
@@ -79,7 +79,7 @@
     background: var(--blueberry-skin);
 }
 
-.btn:hover {
+.quote-btn:hover {
     opacity: 0.95;
     transform: translateY(-1px);
 }

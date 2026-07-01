@@ -206,6 +206,31 @@
   box-shadow: 0 6px 20px rgba(0, 12, 51, 0.25);
 }
 
+.ph-secondary-btn {
+  background-color: white;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 10px;
+  width: 100%;
+  justify-content: center;
+}
+
+.ph-secondary-btn:hover {
+  background-color: var(--primary);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 12, 51, 0.15);
+}
+
 @media (max-width: 900px) {
   .ph-content {
     flex-direction: column;
@@ -218,7 +243,8 @@
     width: 100%;
   }
 
-  .ph-primary-btn {
+  .ph-primary-btn,
+  .ph-secondary-btn {
     width: 100%;
     justify-content: center;
   }

@@ -1,4 +1,4 @@
-export type ChatMessageType = 'text' | 'image' | 'quotation' | 'system' | 'invoice' | 'booking';
+export type ChatMessageType = 'text' | 'image' | 'quotation' | 'system' | 'invoice' | 'booking' | 'warranty';
 
 export type EmbeddedQuotation = {
   id: string;
@@ -19,6 +19,7 @@ export type ChatMessage = {
   title?: string | null;
   quotation?: EmbeddedQuotation | null;
   booking?: import('../types/booking').EmbeddedBooking | null;
+  warranty?: import('../types/warranty').EmbeddedWarranty | null;
   sentAt: string;
   isRead?: boolean;
 };
@@ -64,4 +65,12 @@ export type ChatLocationState = {
   technicianId?: string;
   customerId?: string;
   orderId?: string;
+};
+
+export type ReviseQuotationPayload = {
+  serviceName: string;
+  description?: string;
+  price: number;
+  scheduledAt: string;
+  notes?: string;
 };

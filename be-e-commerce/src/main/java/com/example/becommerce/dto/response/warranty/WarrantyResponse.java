@@ -24,6 +24,8 @@ public class WarrantyResponse {
     private LocalDateTime warrantyExpiresAt;
     private Long remainingDays;
 
+    private String rejectReason;
+
     private OrderPartySummary technician;
 
     private LocalDateTime createdAt;

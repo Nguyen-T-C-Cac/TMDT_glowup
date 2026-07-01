@@ -5,6 +5,7 @@ import type {
   CreateConversationPayload,
   CreateQuotationPayload,
   EmbeddedQuotation,
+  ReviseQuotationPayload,
 } from '../../types/chat';
 
 type PagedData<T> = {
@@ -55,7 +56,7 @@ export const chatService = {
       id: created.id,
       orderId: created.orderId ?? undefined,
       partner: created.partner ?? {
-        id: payload.technicianId,
+        id: payload.technicianId ?? '',
         fullName: 'Thợ',
       },
       unreadCount: 0,
@@ -112,5 +113,17 @@ export const chatService = {
 
   rejectQuotation: async (quotationId: string): Promise<void> => {
     await apiClient.patch(`/api/quotes/${quotationId}/reject`);
+  },
+
+  reviseQuotation: async (
+    quotationId: string,
+    payload: ReviseQuotationPayload
+  ): Promise<EmbeddedQuotation & { id: string }> => {
+    const response = await apiClient.put(`/api/quotes/${quotationId}/revise`, payload);
+    return unwrap<EmbeddedQuotation & { id: string }>(response.data);
+  },
+  
+  deleteConversation: async (conversationId: string): Promise<void> => {
+    await apiClient.delete(`/api/conversations/${conversationId}`);
   },
 };

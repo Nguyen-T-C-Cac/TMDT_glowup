@@ -40,12 +40,21 @@ const parseBody = (body: string): MessageNewWsPayload | null => {
     return null;
   }
 };
+// Thêm type cho wallet event
+export type WalletUpdatedPayload = {
+  personalBalance: number;
+};
+
+type WalletHandler = (payload: WalletUpdatedPayload) => void;
 
 class ChatRealtimeClient {
   private client: Client | null = null;
   private subscriptions = new Map<string, StompSubscription>();
   private trackedConversationIds = new Set<string>();
   private handlers = new Set<MessageHandler>();
+  private walletHandlers = new Set<WalletHandler>();
+  private walletSubscription: StompSubscription | null = null;
+  private walletUserCode: string | null = null;
 
   activate(): void {
     const token = loadTokenFromStorage();
@@ -65,6 +74,10 @@ class ChatRealtimeClient {
         this.subscriptions.forEach((sub) => sub.unsubscribe());
         this.subscriptions.clear();
         this.trackedConversationIds.forEach((id) => this.attachSubscription(id));
+        this.walletSubscription = null;
+        if (this.walletUserCode) {
+          this.attachWalletSubscription(this.walletUserCode);
+        }
       },
       onStompError: (frame) => {
         console.warn('[Chat WS] STOMP error', frame.headers['message'] ?? frame);
@@ -140,6 +153,42 @@ class ChatRealtimeClient {
     });
     next.forEach((id) => this.subscribeConversation(id));
   }
+  subscribeWallet(userCode: string): void {
+  if (!userCode) return;
+  this.walletUserCode = userCode;
+  this.activate();
+  if (this.client?.connected) {
+    this.attachWalletSubscription(userCode);
+  }
+}
+
+unsubscribeWallet(): void {
+  this.walletSubscription?.unsubscribe();
+  this.walletSubscription = null;
+  this.walletUserCode = null;
+}
+
+onWalletUpdated(handler: WalletHandler): () => void {
+  this.walletHandlers.add(handler);
+  return () => this.walletHandlers.delete(handler);
+}
+
+private attachWalletSubscription(userCode: string): void {
+  if (!this.client?.connected || this.walletSubscription) return;
+
+  // /user/queue/wallet-updated → STOMP user destination
+  this.walletSubscription = this.client.subscribe(
+    `/user/queue/wallet-updated`,
+    (message: IMessage) => {
+      try {
+        const payload = JSON.parse(message.body) as WalletUpdatedPayload;
+        this.walletHandlers.forEach((h) => h(payload));
+      } catch {
+        // ignore malformed
+      }
+    }
+  );
+}
 }
 
 export const chatRealtimeClient = new ChatRealtimeClient();

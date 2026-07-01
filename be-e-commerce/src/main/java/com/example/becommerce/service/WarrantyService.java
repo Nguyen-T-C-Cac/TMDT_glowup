@@ -8,4 +8,8 @@ public interface WarrantyService {
     WarrantyResponse createWarranty(String orderCode, CreateWarrantyRequest request);
 
     WarrantyResponse getWarrantyByOrder(String orderCode);
+
+    WarrantyResponse acceptWarranty(String warrantyCode);
+
+    WarrantyResponse rejectWarranty(String warrantyCode, String reason);
 }

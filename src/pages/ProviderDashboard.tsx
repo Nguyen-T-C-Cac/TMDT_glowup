@@ -133,7 +133,7 @@ const ProviderDashboard: React.FC = () => {
 
             {/* Right Column */}
             <div className="pd-right-col">
-              <TodaySchedule schedule={data.todaySchedule} />
+              <TodaySchedule />
             </div>
           </div>
         )}

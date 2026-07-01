@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-
+import java.util.List;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
 
@@ -25,6 +25,8 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     long countByDeletedFalse();
 
     long countByTechnician_IdAndStatusAndDeletedFalse(Long technicianId, OrderStatus status);
+
+    List<Order> findByTechnician_IdAndScheduledAtBetweenAndDeletedFalse(Long technicianId, LocalDateTime from, LocalDateTime to);
     long countByCompletedAtBetweenAndStatusAndDeletedFalse(LocalDateTime from, LocalDateTime to, OrderStatus status);
 
     // New: count completed orders in range (deleted=false)
@@ -80,4 +82,19 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     List<Object[]> sumTechnicianEarningsGroupByDay(@Param("techId") Long techId,
                                                    @Param("from") LocalDateTime from,
                                                    @Param("to") LocalDateTime to);
+
+    /**
+     * Returns all COMPLETED orders belonging to the given technician (by User.id),
+     * ordered newest-first. Excludes soft-deleted rows.
+     */
+    @Query("""
+            SELECT o FROM Order o
+            WHERE o.technician.id = :technicianId
+              AND o.status = :status
+              AND o.deleted = false
+            ORDER BY o.completedAt DESC
+            """)
+    List<Order> findCompletedByTechnicianId(
+            @Param("technicianId") Long technicianId,
+            @Param("status") OrderStatus status);
 }

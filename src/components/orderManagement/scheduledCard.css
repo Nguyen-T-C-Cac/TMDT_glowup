@@ -84,3 +84,60 @@
     border-left: 1px dashed var(--border);
     padding-left: 24px;
 }
+
+.sched-badge-warranty {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.sched-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: var(--fw-semibold);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+    transition: 0.2s;
+    border: none;
+    font-family: var(--font-family);
+    text-align: center;
+    width: 100%;
+}
+
+.sched-btn-warranty {
+    background: #16a34a;
+    color: white;
+}
+
+.sched-btn-warranty:hover {
+    background: #15803d;
+}
+
+.sched-btn-warranty-reject {
+    background: white;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.sched-btn-warranty-reject:hover {
+    background: #fef2f2;
+}
+
+.sched-warranty-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: var(--fw-semibold);
+    font-size: var(--fs-sm);
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+    text-align: center;
+    width: 100%;
+}

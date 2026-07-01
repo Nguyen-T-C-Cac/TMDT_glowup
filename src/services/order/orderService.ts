@@ -1,5 +1,6 @@
 import apiClient from '../../api/config';
 import type { OrderListQuery, OrderPageResponse, OrderResponse, CreateOrderPayload } from '../../types/order/order';
+import type { WarrantyResponse, CreateWarrantyPayload } from '../../types/warranty';
 
 type ApiPageLike = {
     content?: OrderResponse[];
@@ -152,5 +153,29 @@ export const orderService = {
 
     confirmCashPayment: async (orderId: string): Promise<void> => {
         await apiClient.post(`/api/orders/${orderId}/invoice/confirm-cash`);
+    },
+
+    createWarranty: async (orderId: string, payload: CreateWarrantyPayload): Promise<WarrantyResponse> => {
+        const response = await apiClient.post(`/api/orders/${orderId}/warranty`, payload);
+        return unwrap<WarrantyResponse>(response.data);
+    },
+
+    getWarranty: async (orderId: string): Promise<WarrantyResponse | null> => {
+        try {
+            const response = await apiClient.get(`/api/orders/${orderId}/warranty`);
+            return unwrap<WarrantyResponse>(response.data);
+        } catch {
+            return null;
+        }
+    },
+
+    acceptWarranty: async (warrantyCode: string): Promise<WarrantyResponse> => {
+        const response = await apiClient.post(`/api/warranty/${warrantyCode}/accept`);
+        return unwrap<WarrantyResponse>(response.data);
+    },
+
+    rejectWarranty: async (warrantyCode: string, reason: string): Promise<WarrantyResponse> => {
+        const response = await apiClient.post(`/api/warranty/${warrantyCode}/reject`, { reason });
+        return unwrap<WarrantyResponse>(response.data);
     },
 };

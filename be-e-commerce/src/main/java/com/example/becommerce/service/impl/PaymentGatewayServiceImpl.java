@@ -204,7 +204,7 @@ public class PaymentGatewayServiceImpl implements PaymentGatewayService {
         tx.setStatus(TransactionStatus.SUCCESS);
         tx.setProcessedAt(LocalDateTime.now());
         walletTransactionRepository.save(tx);
-
+        
         Order order = tx.getOrder();
         if (order != null && order.getStatus() != OrderStatus.COMPLETED) {
             order.setStatus(OrderStatus.COMPLETED);
@@ -227,6 +227,24 @@ public class PaymentGatewayServiceImpl implements PaymentGatewayService {
             // invoice amount (bank transfer) and deduct the fixed commission fee from
             // the CREDIT wallet (negative allowed → account lock).
             settlementService.settleCompletedOrder(order, PaymentMethod.VNPAY);
+            // Push realtime cho thợ biết số dư ví đã cập nhật
+            // Lấy ví thợ SAU khi settlement đã chạy xong
+            User technician = order.getTechnician();
+            if (technician != null) {
+                try {
+                    walletRepository.findByUser_Id(technician.getId()).ifPresent(techWallet ->
+                        eventPublisher.publishWalletUpdated(
+                            technician.getCode(),
+                            techWallet.getPersonalBalance() != null
+                                ? techWallet.getPersonalBalance()
+                                : BigDecimal.ZERO
+                        )
+                    );
+                } catch (Exception ex) {
+                    log.warn("Failed to publish wallet update event for technician {}: {}",
+                        technician.getCode(), ex.getMessage());
+                }
+            }
 
             eventPublisher.publishOrderStatusChanged(
                     order.getCode(), OrderStatus.IN_PROGRESS.apiValue(), OrderStatus.COMPLETED.apiValue());

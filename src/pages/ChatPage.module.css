@@ -97,6 +97,39 @@
     overflow-y: auto;
 }
 
+.conversationGroup {
+    position: relative;
+}
+
+.deleteBtn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 2;
+}
+
+.conversationGroup:hover .deleteBtn {
+    opacity: 1;
+}
+
+.deleteBtn:hover {
+    background: rgba(220, 38, 38, 0.85);
+}
+
 /* HEADER */
 .chatHeader {
     padding: 18px 22px;
@@ -226,6 +259,19 @@
     font-size: 14px;
     margin-bottom: 4px;
     color: inherit;
+}
+
+.bubbleText {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.bubbleText p {
+    margin: 0;
+}
+
+.bubbleText p + p {
+    margin-top: 6px;
 }
 
 .adminTag {

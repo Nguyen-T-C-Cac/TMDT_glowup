@@ -9,10 +9,12 @@ import com.example.becommerce.dto.response.PagedResponse;
 import com.example.becommerce.dto.response.review.ReviewResponse;
 import com.example.becommerce.dto.response.technician.AvailabilityResponse;
 import com.example.becommerce.dto.response.technician.TechnicianDashboardResponse;
+import com.example.becommerce.dto.response.technician.CompletedProjectResponse;
 import com.example.becommerce.dto.response.technician.TechnicianDetailResponse;
 import com.example.becommerce.dto.response.technician.TechnicianListItemResponse;
 import com.example.becommerce.dto.response.technician.TechnicianProfileUpdateResponse;
 import com.example.becommerce.dto.response.technician.TechnicianReviewListResponse;
+import com.example.becommerce.dto.response.technician.TechnicianScheduleResponse;
 import com.example.becommerce.entity.Order;
 import com.example.becommerce.entity.Review;
 import com.example.becommerce.entity.TechnicianProfile;
@@ -38,7 +40,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-
+ 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -231,6 +233,65 @@ public class TechnicianServiceImpl implements TechnicianService {
                         .total(reviews.getTotalElements())
                         .totalPages((int) Math.ceil((double) reviews.getTotalElements() / limit))
                         .build())
+                .build();
+    }
+    // ===============================================================
+    // COMPLETED PROJECTS
+    // ===============================================================
+ 
+    @Override
+    @Transactional(readOnly = true)
+    public List<CompletedProjectResponse> listCompletedProjects(String code) {
+        User technician = findTechnicianUser(code);
+ 
+        List<Order> orders = orderRepository.findCompletedByTechnicianId(
+                technician.getId(), OrderStatus.COMPLETED);
+ 
+        return orders.stream()
+                .map(order -> CompletedProjectResponse.builder()
+                        .id(order.getId())
+                        .code(order.getCode())
+                        .serviceCategory(order.getServiceCategory())
+                        .serviceName(order.getServiceName())
+                        .description(order.getDescription())
+                        .deviceName(order.getDeviceName())
+                        .build())
+                .toList();
+    }
+    // ===============================================================
+    // SCHEDULE
+    // ===============================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public TechnicianScheduleResponse getTechnicianSchedule(String code, LocalDate from, LocalDate to) {
+        User technician = findTechnicianUser(code);
+        TechnicianProfile profile = findOrCreateProfile(technician);
+
+        LocalDateTime fromDt = from.atStartOfDay();
+        LocalDateTime toDt = to.atTime(LocalTime.MAX);
+
+        List<Order> orders = orderRepository
+                .findByTechnician_IdAndScheduledAtBetweenAndDeletedFalse(
+                        technician.getId(), fromDt, toDt);
+
+        List<TechnicianScheduleResponse.BookedSlot> bookedSlots = orders.stream()
+                .filter(o -> o.getScheduledAt() != null)
+                .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
+                .map(o -> TechnicianScheduleResponse.BookedSlot.builder()
+                        .date(o.getScheduledAt().toLocalDate())
+                        .startTime(o.getScheduledAt().toLocalTime())
+                        .endTime(o.getExpectedTime() != null
+                                ? o.getExpectedTime().toLocalTime()
+                                : o.getScheduledAt().toLocalTime().plusHours(2))
+                        .orderCode(o.getCode())
+                        .status(o.getStatus().apiValue())
+                        .build())
+                .toList();
+
+        return TechnicianScheduleResponse.builder()
+                .weeklySchedule(profile.getSchedule())
+                .bookedSlots(bookedSlots)
                 .build();
     }
 

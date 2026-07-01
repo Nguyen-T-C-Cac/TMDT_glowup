@@ -1,12 +1,12 @@
-import { BadgeCheck, Camera, Save } from 'lucide-react';
+import { BadgeCheck, Camera, MapPin, Save } from 'lucide-react';
 import { SettingsActionBar } from '../actions/SettingsActionBar';
 import { SettingsCard } from '../cards/SettingsCard';
 import { SettingsTextField } from '../fields/SettingsTextField';
-import { SettingsTextareaField } from '../fields/SettingsTextareaField';
 import type { CustomerAccountFormData } from './types';
 import { useRef, useState, useEffect } from 'react';
 import { resolveMediaUrl } from '../../../utils/mediaUrl';
 import { useToast } from '../../common/Toast';
+import GoogleAddressInput from '../../common/GoogleAddressInput';
 
 const DEFAULT_AVATAR = 'https://segayanime.com/wp-content/uploads/2026/01/avatar-fb-mac-dinh-1.jpg';
 
@@ -150,12 +150,18 @@ export function CustomerAccountProfileCard({
           onChange={(value) => onFieldChange('email', value)}
           fullWidth
         />
-        <SettingsTextareaField
-          label="Địa chỉ mặc định"
-          value={form.address}
-          onChange={(value) => onFieldChange('address', value)}
-          fullWidth
-        />
+        <label className="settings-field settings-field--full" style={{ gridColumn: '1 / -1' }}>
+          <span className="settings-field__label">
+            <MapPin size={14} style={{ marginRight: 4 }} />
+            Địa chỉ mặc định
+          </span>
+          <GoogleAddressInput
+            value={form.address}
+            onChange={(value) => onFieldChange('address', value)}
+            placeholder="Nhập địa chỉ của bạn"
+            className="settings-field__input"
+          />
+        </label>
       </div>
 
       <SettingsActionBar>

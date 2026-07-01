@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   FaArrowRight,
@@ -17,6 +17,9 @@ import {
   type TechnicianWalletSummary,
 } from '../services/walletService'
 import './TechnicianWalletPage.css'
+import { chatRealtimeClient } from '../services/chat/chatRealtimeClient';
+
+import { getStoredUser } from '../services/auth';
 
 type WalletType = 'all' | 'credit' | 'personal'
 
@@ -84,7 +87,58 @@ const TechnicianWalletPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
+   const loadWalletData = useCallback(async () => {
+    setIsLoading(true)
+    setError('')
+    try {
+      const [walletSummary, walletHistory] = await Promise.all([
+        getTechnicianWalletSummary(),
+        getTechnicianWalletHistory(),
+      ])
+      setSummary(walletSummary)
+      setHistoryItems(walletHistory.map(toHistoryRow))
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Không thể tải dữ liệu ví')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  // Load lần đầu
   useEffect(() => {
+    loadWalletData()
+  }, [loadWalletData])
+
+  // Auto-refresh khi user quay lại tab (sau khi thanh toán VNPay xong)
+  useEffect(() => {
+    const handleFocus = () => loadWalletData()
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [loadWalletData])
+
+  // Lắng nghe WebSocket wallet-updated từ backend
+  useEffect(() => {
+    const currentUser = getStoredUser()
+    if (!currentUser?.code) return
+
+    chatRealtimeClient.subscribeWallet(currentUser.code)
+
+    const unsubscribe = chatRealtimeClient.onWalletUpdated((payload) => {
+      // Cập nhật personalBalance ngay lập tức không cần reload toàn bộ
+      setSummary((prev) => ({
+        ...prev,
+        personalBalance: payload.personalBalance,
+      }))
+      // Reload lịch sử để có transaction mới
+      loadWalletData()
+    })
+
+    return () => {
+      unsubscribe()
+      chatRealtimeClient.unsubscribeWallet()
+    }
+  }, [loadWalletData])
+  /*useEffect(() => {
     let mounted = true
 
     const loadWalletData = async () => {
@@ -121,7 +175,7 @@ const TechnicianWalletPage: React.FC = () => {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [])*/
 
   const totalBalance = summary.creditBalance + summary.personalBalance
 

@@ -3,45 +3,18 @@ services:
     image: postgres:16-alpine
     container_name: tmdt-postgres
     environment:
-      POSTGRES_DB: neondb
-      POSTGRES_USER: neondb_owner
-      POSTGRES_PASSWORD: npg_zhXpetL3Fwf8
+      POSTGRES_DB: postgres
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: "12345"
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U neondb_owner -d neondb"]
+      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
-
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: tmdt-backend
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      DB_URL: jdbc:postgresql://db:5432/neondb
-      DB_USERNAME: neondb_owner
-      DB_PASSWORD: npg_zhXpetL3Fwf8
-      # Mail không có default trong application.yml -> đặt placeholder để app khởi động được.
-      # Gửi email sẽ fail lúc runtime, nhưng các endpoint khác vẫn test được.
-      MAIL_USERNAME: ${MAIL_USERNAME:-test@example.com}
-      MAIL_PASSWORD: ${MAIL_PASSWORD:-changeme}
-      # VNPay đã có default rỗng trong application.yml
-      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-}
-      VNPAY_SECRET_KEY: ${VNPAY_SECRET_KEY:-}
-      # Return URL sau khi thanh toán đơn — trỏ đúng cổng FE (Vite đang chạy 5174).
-      VNPAY_PAYMENT_RETURN_URL: ${VNPAY_PAYMENT_RETURN_URL:-http://localhost:5174/orders/%s}
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./uploads:/app/uploads
     restart: unless-stopped
 
 volumes:
