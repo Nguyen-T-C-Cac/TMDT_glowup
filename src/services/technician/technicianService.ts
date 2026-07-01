@@ -43,6 +43,7 @@ export const technicianService = {
         isAvailable: params.isAvailable,
         minRating: params.minRating,
         keyword: params.keyword,
+        sort: params.sort,
         page: params.page ?? 1,
         limit: params.limit ?? 10,
       },

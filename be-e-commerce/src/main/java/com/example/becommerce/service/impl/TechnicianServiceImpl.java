@@ -79,15 +79,17 @@ public class TechnicianServiceImpl implements TechnicianService {
     @Override
     @Transactional(readOnly = true)
     public PagedResponse<TechnicianListItemResponse> listTechnicians(
-            String service, String district, Boolean isAvailable, Double minRating,
-            String keyword, int page, int limit) {
+        String service, String district, Boolean isAvailable, Double minRating,
+        String keyword, String sort, int page, int limit) {
 
         Specification<TechnicianProfile> spec =
                 TechnicianSpecification.buildFilter(service, district, isAvailable, keyword);
 
+        // Lấy nhiều hơn để sort sau — sort xảy ra sau khi tính rating/completedJobs
+        int fetchLimit = (sort != null && !sort.isBlank()) ? Math.max(limit * 3, 100) : limit;
         Pageable pageable = PageRequest.of(
                 Math.max(0, page - 1),
-                limit,
+                fetchLimit,
                 Sort.by(Sort.Direction.DESC, "joinedAt"));
 
         Page<TechnicianProfile> profiles = profileRepository.findAll(spec, pageable);
@@ -96,14 +98,33 @@ public class TechnicianServiceImpl implements TechnicianService {
                 .map(this::buildListItem)
                 .filter(item -> minRating == null
                         || (item.getRating() != null && item.getRating().doubleValue() >= minRating))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
 
-        return PagedResponse.of(items, page, limit, profiles.getTotalElements());
+        // ← THÊM: sort sau khi đã tính rating/completedJobs
+        if ("rating".equalsIgnoreCase(sort)) {
+                items.sort((a, b) -> {
+                double rA = a.getRating() != null ? a.getRating().doubleValue() : 0;
+                double rB = b.getRating() != null ? b.getRating().doubleValue() : 0;
+                return Double.compare(rB, rA); // DESC
+                });
+        } else if ("completedJobs".equalsIgnoreCase(sort)) {
+                items.sort((a, b) -> {
+                long cA = a.getCompletedJobs() != null ? a.getCompletedJobs() : 0;
+                long cB = b.getCompletedJobs() != null ? b.getCompletedJobs() : 0;
+                return Long.compare(cB, cA); // DESC
+                });
+        }
+
+        // Phân trang thủ công sau khi sort
+        int fromIndex = (page - 1) * limit;
+        int toIndex = Math.min(fromIndex + limit, items.size());
+        List<TechnicianListItemResponse> paged = fromIndex >= items.size()
+                ? List.of()
+                : items.subList(fromIndex, toIndex);
+
+        long total = profiles.getTotalElements();
+        return PagedResponse.of(paged, page, limit, total);
     }
-
-    // ===============================================================
-    // DETAIL
-    // ===============================================================
 
     @Override
     @Transactional(readOnly = true)

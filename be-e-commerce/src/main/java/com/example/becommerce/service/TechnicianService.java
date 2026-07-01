@@ -19,7 +19,7 @@ public interface TechnicianService {
 
     PagedResponse<TechnicianListItemResponse> listTechnicians(
             String service, String district, Boolean isAvailable, Double minRating,
-            String keyword, int page, int limit);
+            String keyword, String sort, int page, int limit);
 
     TechnicianDetailResponse getTechnician(String code);
 

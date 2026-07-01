@@ -31,7 +31,7 @@ public class SearchController {
             @RequestParam(defaultValue = "10") int limit) {
         List<CategoryResponse> categories = categoryService.searchCategories(keyword);
         PagedResponse<TechnicianListItemResponse> technicians =
-                technicianService.listTechnicians(null, null, null, null, keyword, page, limit);
+                technicianService.listTechnicians(null, null, null, null, keyword, null, page, limit);
         return ResponseEntity.ok(ApiResponse.success(
                 SearchResponse.builder()
                         .categories(categories)

@@ -44,6 +44,7 @@ export type TechnicianListParams = {
   isAvailable?: boolean;
   minRating?: number;
   keyword?: string;
+  sort?: 'rating' | 'completedJobs';
   page?: number;
   limit?: number;
 };

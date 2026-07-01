@@ -548,6 +548,16 @@
     background: #e8f5e9;
 }
 
+.detail-warranty-retry-btn {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+}
+
+.detail-warranty-retry-btn:hover {
+    background: #1d4ed8;
+}
+
 .detail-warranty-submitted {
     display: flex;
     align-items: center;

@@ -124,7 +124,7 @@ public class WarrantyServiceImpl implements WarrantyService {
                     Map.of("orderId", order.getCode(), "warrantyId", saved.getCode()));
         }
 
-        return warrantyMapper.toResponse(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -137,7 +137,7 @@ public class WarrantyServiceImpl implements WarrantyService {
         WarrantyClaim claim = warrantyRepository.findTopByOrder_IdOrderByCreatedAtDesc(order.getId())
                 .orElseThrow(() -> AppException.notFound("Đơn này chưa có yêu cầu bảo hành"));
 
-        return warrantyMapper.toResponse(claim);
+        return toResponse(claim);
     }
 
     @Override
@@ -161,22 +161,14 @@ public class WarrantyServiceImpl implements WarrantyService {
         }
 
         claim.setStatus(WarrantyStatus.IN_PROGRESS);
-        warrantyRepository.save(claim);
+        WarrantyClaim saved = warrantyRepository.save(claim);
 
-        // Re-open the original order as warranty
         Order order = claim.getOrder();
-        order.setStatus(OrderStatus.SCHEDULED);
-        order.setIsWarranty(true);
-        if (claim.getScheduledAt() != null) {
-            order.setScheduledAt(claim.getScheduledAt());
-        }
-        orderRepository.save(order);
-
-        log.info("Warranty {} accepted by technician {}, order {} re-opened as warranty",
+        log.info("Warranty {} accepted by technician {} for order {}",
                 warrantyCode, technician.getCode(), order.getCode());
 
         // Send chat message
-        sendWarrantyStatusMessage(order, claim, "warranty_accepted", technician, "Thợ đã chấp nhận yêu cầu bảo hành");
+        sendWarrantyStatusMessage(order, saved, "warranty_accepted", technician, "Thợ đã chấp nhận yêu cầu bảo hành");
 
         // Notify customer
         notifyUser(order.getCustomer(), NotificationType.WARRANTY_RESPONSE,
@@ -184,7 +176,7 @@ public class WarrantyServiceImpl implements WarrantyService {
                 "Thợ " + technician.getFullName() + " đã chấp nhận yêu cầu bảo hành đơn " + order.getCode(),
                 Map.of("orderId", order.getCode(), "warrantyId", claim.getCode()));
 
-        return warrantyMapper.toResponse(claim);
+        return toResponse(claim);
     }
 
     @Override
@@ -223,7 +215,54 @@ public class WarrantyServiceImpl implements WarrantyService {
                 "Thợ " + technician.getFullName() + " đã từ chối bảo hành đơn " + order.getCode() + ". Lý do: " + reason,
                 Map.of("orderId", order.getCode(), "warrantyId", claim.getCode()));
 
-        return warrantyMapper.toResponse(claim);
+        return toResponse(claim);
+    }
+
+    @Override
+    @Transactional
+    public WarrantyResponse completeWarranty(String warrantyCode) {
+        User technician = getCurrentUser();
+        if (technician.getRole() != Role.TECHNICIAN) {
+            throw AppException.forbidden("Chỉ thợ mới có thể hoàn thành bảo hành");
+        }
+
+        WarrantyClaim claim = warrantyRepository.findByCode(warrantyCode)
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy yêu cầu bảo hành " + warrantyCode));
+
+        if (claim.getStatus() != WarrantyStatus.IN_PROGRESS) {
+            throw AppException.badRequest(ErrorCode.INVALID_ORDER_STATUS_TRANSITION,
+                    "Chỉ có thể hoàn thành yêu cầu bảo hành đang xử lý");
+        }
+
+        if (claim.getTechnician() == null || !claim.getTechnician().getId().equals(technician.getId())) {
+            throw AppException.forbidden("Bạn không phải thợ phụ trách yêu cầu bảo hành này");
+        }
+
+        claim.setStatus(WarrantyStatus.COMPLETED);
+        WarrantyClaim saved = warrantyRepository.save(claim);
+
+        Order order = claim.getOrder();
+        sendWarrantyStatusMessage(order, claim, "warranty_completed", technician, "Bảo hành đã hoàn thành");
+        notifyUser(order.getCustomer(), NotificationType.WARRANTY_RESPONSE,
+                "Yêu cầu bảo hành đã hoàn thành",
+                "Yêu cầu bảo hành cho đơn " + order.getCode() + " đã được hoàn thành.",
+                Map.of("orderId", order.getCode(), "warrantyId", claim.getCode()));
+
+        return toResponse(saved);
+    }
+
+    private WarrantyResponse toResponse(WarrantyClaim claim) {
+        WarrantyClaim previousRejectedClaim = findPreviousRejectedClaim(claim);
+        return warrantyMapper.toResponse(claim, previousRejectedClaim);
+    }
+
+    private WarrantyClaim findPreviousRejectedClaim(WarrantyClaim claim) {
+        if (claim == null || claim.getStatus() == WarrantyStatus.REJECTED) {
+            return null;
+        }
+        return warrantyRepository.findTopByOrder_IdAndStatusAndCreatedAtBeforeOrderByCreatedAtDesc(
+                claim.getOrder().getId(), WarrantyStatus.REJECTED, claim.getCreatedAt())
+                .orElse(null);
     }
 
     // ----------------------------------------------------------------

@@ -197,8 +197,8 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({ order, role,
                                 <FaShieldHalved /> Đang kiểm tra bảo hành...
                             </div>
                         ) : existingWarranty ? (
-                            <div className="detail-warranty-existing" onClick={() => onViewWarranty?.(order.id)} style={{ cursor: 'pointer' }}>
-                                <div className="detail-warranty-status-row">
+                            <div className="detail-warranty-existing">
+                                <div className="detail-warranty-status-row" onClick={() => onViewWarranty?.(order.id)} style={{ cursor: 'pointer' }}>
                                     <FaShieldHalved />
                                     <span>Bảo hành: <strong>{warrantyStatusLabel(existingWarranty.status)}</strong></span>
                                 </div>
@@ -206,6 +206,11 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({ order, role,
                                     <div className="detail-warranty-rejected">
                                         <span>Lý do: {existingWarranty.rejectReason}</span>
                                     </div>
+                                )}
+                                {existingWarranty.status === 'rejected' && (
+                                    <button className="detail-warranty-btn detail-warranty-retry-btn" onClick={() => setShowWarrantyModal(true)}>
+                                        <FaShieldHalved /> Yêu cầu lại bảo hành
+                                    </button>
                                 )}
                             </div>
                         ) : warrantySubmitted ? (

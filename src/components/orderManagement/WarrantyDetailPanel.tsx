@@ -3,9 +3,10 @@ import type { UserRole } from '../../types/UserRole';
 import type { WarrantyResponse } from '../../types/warranty';
 import { orderService } from '../../services/order/orderService';
 import {
-    FaArrowLeft, FaShieldHalved, FaImage, FaClock, FaUser,
+    FaArrowLeft, FaShieldHalved, FaClock, FaUser,
     FaCheck, FaXmark, FaCalendarDays
 } from 'react-icons/fa6';
+import WarrantyModal from '../modal/WarrantyModal';
 import './warrantyDetailPanel.css';
 
 interface WarrantyDetailPanelProps {
@@ -42,28 +43,34 @@ export const WarrantyDetailPanel: React.FC<WarrantyDetailPanelProps> = ({ orderI
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
+    const [showWarrantyModal, setShowWarrantyModal] = useState(false);
+    const [submittingCreate, setSubmittingCreate] = useState(false);
+
     // Reject modal state
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
+    const [completing, setCompleting] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
-        setLoading(true);
-        setError(null);
 
-        orderService.getWarranty(orderId)
-            .then((data) => {
+        const loadWarranty = async () => {
+            setLoading(true);
+            setError(null);
+
+            try {
+                const data = await orderService.getWarranty(orderId);
                 if (!cancelled) setWarranty(data);
-            })
-            .catch((err) => {
+            } catch (err) {
                 if (!cancelled) {
                     setError(err instanceof Error ? err.message : 'Không thể tải thông tin bảo hành');
                 }
-            })
-            .finally(() => {
+            } finally {
                 if (!cancelled) setLoading(false);
-            });
+            }
+        };
 
+        loadWarranty();
         return () => { cancelled = true; };
     }, [orderId]);
 
@@ -97,8 +104,41 @@ export const WarrantyDetailPanel: React.FC<WarrantyDetailPanelProps> = ({ orderI
         }
     };
 
+    const handleComplete = async () => {
+        if (!warranty?.id) return;
+        setCompleting(true);
+        try {
+            const updated = await orderService.completeWarranty(warranty.id);
+            setWarranty(updated);
+            alert('Đã hoàn thành bảo hành.');
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Không thể hoàn thành bảo hành');
+        } finally {
+            setCompleting(false);
+        }
+    };
+
+    const handleWarrantySubmit = async (description: string, images: string[], scheduledAt: string | null) => {
+        setSubmittingCreate(true);
+        try {
+            const updated = await orderService.createWarranty(orderId, {
+                description,
+                images: images.length > 0 ? images : undefined,
+                scheduledAt: scheduledAt ?? undefined,
+            });
+            setWarranty(updated);
+            setShowWarrantyModal(false);
+            alert('Yêu cầu bảo hành đã được gửi lại.');
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Không thể gửi lại yêu cầu bảo hành');
+        } finally {
+            setSubmittingCreate(false);
+        }
+    };
+
     const isTechnician = role === 'technician';
     const isPending = warranty?.status === 'pending';
+    const canCompleteWarranty = isTechnician && warranty?.status === 'in-progress';
 
     if (loading) {
         return (
@@ -222,11 +262,61 @@ export const WarrantyDetailPanel: React.FC<WarrantyDetailPanelProps> = ({ orderI
                 </div>
             )}
 
+            {warranty.previousRejectedClaim && (
+                <div className="wd-card wd-card-secondary">
+                    <h3 className="wd-card-title">Yêu cầu trước bị từ chối</h3>
+                    <div className="wd-info-grid">
+                        <div className="wd-info-item">
+                            <span className="wd-info-label">Ngày gửi</span>
+                            <span className="wd-info-value">
+                                {warranty.previousRejectedClaim.createdAt
+                                    ? new Date(warranty.previousRejectedClaim.createdAt).toLocaleString('vi-VN')
+                                    : '--'}
+                            </span>
+                        </div>
+                        {warranty.previousRejectedClaim.rejectReason && (
+                            <div className="wd-info-item">
+                                <span className="wd-info-label">Lý do bị từ chối</span>
+                                <span className="wd-info-value">{warranty.previousRejectedClaim.rejectReason}</span>
+                            </div>
+                        )}
+                        {warranty.previousRejectedClaim.scheduledAt && (
+                            <div className="wd-info-item">
+                                <span className="wd-info-label">Lịch hẹn yêu cầu trước</span>
+                                <span className="wd-info-value">
+                                    {new Date(warranty.previousRejectedClaim.scheduledAt).toLocaleString('vi-VN')}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                    <div className="wd-card-body">
+                        <p className="wd-description">{warranty.previousRejectedClaim.description || 'Không có mô tả'}</p>
+                    </div>
+                    {warranty.previousRejectedClaim.images && warranty.previousRejectedClaim.images.length > 0 && (
+                        <div className="wd-card-footer">
+                            <span>{warranty.previousRejectedClaim.images.length} ảnh đính kèm</span>
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Reject reason (for customer) */}
             {!isTechnician && warranty.status === 'rejected' && warranty.rejectReason && (
                 <div className="wd-card wd-card-danger">
                     <h3 className="wd-card-title">Lý do bị từ chối</h3>
                     <p className="wd-reject-reason">{warranty.rejectReason}</p>
+                </div>
+            )}
+
+            {!isTechnician && warranty.status === 'rejected' && (
+                <div className="wd-actions">
+                    <button
+                        className="wd-btn wd-btn-retry"
+                        onClick={() => setShowWarrantyModal(true)}
+                        disabled={submitting || submittingCreate}
+                    >
+                        <FaShieldHalved /> {submittingCreate ? 'Đang gửi lại...' : 'Yêu cầu lại bảo hành'}
+                    </button>
                 </div>
             )}
 
@@ -246,6 +336,18 @@ export const WarrantyDetailPanel: React.FC<WarrantyDetailPanelProps> = ({ orderI
                         disabled={submitting}
                     >
                         <FaXmark /> Từ chối bảo hành
+                    </button>
+                </div>
+            )}
+
+            {canCompleteWarranty && (
+                <div className="wd-actions">
+                    <button
+                        className="wd-btn wd-btn-complete"
+                        onClick={handleComplete}
+                        disabled={completing}
+                    >
+                        <FaCheck /> {completing ? 'Đang hoàn thành...' : 'Hoàn thành'}
                     </button>
                 </div>
             )}
@@ -285,6 +387,15 @@ export const WarrantyDetailPanel: React.FC<WarrantyDetailPanelProps> = ({ orderI
                         </div>
                     </div>
                 </div>
+            )}
+
+            {showWarrantyModal && (
+                <WarrantyModal
+                    open={showWarrantyModal}
+                    onClose={() => setShowWarrantyModal(false)}
+                    orderId={orderId}
+                    onSubmit={handleWarrantySubmit}
+                />
             )}
         </div>
     );

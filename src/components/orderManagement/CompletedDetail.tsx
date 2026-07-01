@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useEffect } from 'react';
 import type { UserRole } from '../../types/UserRole';
 import type { CompletedOrder } from './CompletedCard';
+import type { WarrantyResponse } from '../../types/warranty';
 import {
     FaCheck, FaWallet, FaShieldHalved, FaStar,
     FaDownload, FaMessage, FaTriangleExclamation,
@@ -29,20 +31,141 @@ interface CompletedDetailProps {
         technicianName: string;
     };
 }
-
+// Thay hàm isWithinWarranty và cách tính withinWarranty
+const isWithinWarranty = (
+    completedAt: string,
+    warrantyMonths?: number,
+    warrantyExpiresAt?: string,   // Ưu tiên dùng field này nếu có
+): boolean => {
+    // Ưu tiên dùng warrantyExpiresAt từ API nếu có — chính xác nhất
+    if (warrantyExpiresAt) {
+        const expiry = new Date(warrantyExpiresAt);
+        return !Number.isNaN(expiry.getTime()) && new Date() <= expiry;
+    }
+    // Fallback: tính từ completedAt + warrantyMonths
+    if (!warrantyMonths) return true;
+    const completed = new Date(completedAt);
+    if (Number.isNaN(completed.getTime())) return false;
+    const expiry = new Date(completed);
+    expiry.setMonth(expiry.getMonth() + warrantyMonths);
+    return new Date() <= expiry;
+};
 export const CompletedDetail: React.FC<CompletedDetailProps> = ({ role, onBack, onOpenRating, order }) => {
     const [showWarrantyModal, setShowWarrantyModal] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
-    const [warrantySubmitted, setWarrantySubmitted] = useState(false);
+    const [existingWarranty, setExistingWarranty] = useState<WarrantyResponse | null>(null);
+    const [loadingWarranty, setLoadingWarranty] = useState(false);
 
-    const handleWarrantySubmit = async (description: string, images: string[], scheduledAt: string | null) => {
-        await orderService.createWarranty(order.id, {
+    
+    useEffect(() => {
+        if (role !== 'customer') return;
+        let cancelled = false;
+        setLoadingWarranty(true);
+        orderService.getWarranty(order.id)
+            .then((data) => { if (!cancelled) setExistingWarranty(data); })
+            .catch(() => { if (!cancelled) setExistingWarranty(null); })
+            .finally(() => { if (!cancelled) setLoadingWarranty(false); });
+        return () => { cancelled = true; };
+    }, [order.id, role]);
+
+
+    const handleWarrantySubmit = async (
+        description: string, images: string[], scheduledAt: string | null,
+    ) => {
+        const created = await orderService.createWarranty(order.id, {
             description,
             images: images.length > 0 ? images : undefined,
             scheduledAt: scheduledAt ?? undefined,
         });
-        setWarrantySubmitted(true);
+        setExistingWarranty(created);
+        setShowWarrantyModal(false);
     };
+    const renderWarrantySection = () => {
+        if (loadingWarranty) {
+            return (
+                <div className="warranty-submitted-notice">
+                    <FaShieldHalved /> Đang kiểm tra trạng thái bảo hành...
+                </div>
+            );
+        }
+
+        const withinWarranty = isWithinWarranty(
+            order.completedAt,
+            order.warrantyMonths,
+            existingWarranty?.warrantyExpiresAt,  
+        );
+        const status = existingWarranty?.status;
+
+        // Đang chờ hoặc đang xử lý → chỉ hiện trạng thái, không cho gửi thêm
+        if (status === 'pending' || status === 'in-progress') {
+            return (
+                <div className="warranty-submitted-notice">
+                    <FaShieldHalved />
+                    {status === 'pending'
+                        ? ' Đang chờ thợ xác nhận — thợ sẽ phản hồi sớm nhất.'
+                        : ' Đang trong quá trình bảo hành.'}
+                </div>
+            );
+        }
+         // Bảo hành trước đã hoàn thành + còn hạn → cho gửi yêu cầu mới
+        if (status === 'completed') {
+            return (
+                <div className="warranty-completed-block">
+                    <div className="warranty-submitted-notice">
+                        <FaCheck /> Lần bảo hành trước đã hoàn thành.
+                    </div>
+                    {withinWarranty && (
+                        <button
+                            className="btn-outline-dark w-100 mb-3"
+                            onClick={() => setShowWarrantyModal(true)}
+                        >
+                            <FaShieldHalved /> Yêu cầu bảo hành lại
+                        </button>
+                    )}
+                </div>
+            );
+        }
+        // Thợ từ chối → hiện lý do + nút gửi lại nếu còn hạn
+        if (status === 'rejected') {
+            return (
+                <div className="warranty-rejected-block">
+                    <div className="warranty-expired-notice">
+                        Yêu cầu bảo hành bị từ chối
+                        {existingWarranty?.rejectReason ? `: ${existingWarranty.rejectReason}` : '.'}
+                    </div>
+                    {withinWarranty ? (
+                        <button
+                            className="btn-outline-dark w-100 mb-3"
+                            onClick={() => setShowWarrantyModal(true)}
+                        >
+                            <FaShieldHalved /> Yêu cầu bảo hành lại
+                        </button>
+                    ) : (
+                        <div className="warranty-expired-notice">Đã hết thời hạn bảo hành.</div>
+                    )}
+                </div>
+            );
+        }
+       // Hết hạn bảo hành
+        if (!withinWarranty) {
+            return (
+                <div className="warranty-expired-notice">
+                    Đã hết thời hạn bảo hành ({order.warrantyMonths} tháng).
+                </div>
+            );
+        }
+
+        // Chưa có yêu cầu nào hoặc bảo hành trước đã hoàn thành
+        // → luôn hiện nút để gửi yêu cầu mới nếu còn hạn
+        return (
+            <button
+                className="btn-outline-dark w-100 mb-3"
+                onClick={() => setShowWarrantyModal(true)}
+            >
+                <FaShieldHalved /> Yêu cầu bảo hành
+            </button>
+        );
+    }; 
 
     return (
         <div className="cmp-detail-container">
@@ -158,18 +281,7 @@ export const CompletedDetail: React.FC<CompletedDetailProps> = ({ role, onBack, 
                                     <p>{order.warrantyMonths ? `Sản phẩm/dịch vụ này còn thời hạn bảo hành ${order.warrantyMonths} tháng.` : 'Dịch vụ này được bảo hành theo chính sách của GlowUp.'}</p>
                                 </div>
                             </div>
-                            {warrantySubmitted ? (
-                                <div className="warranty-submitted-notice">
-                                    <FaCheck /> Yêu cầu bảo hành đã được gửi. Thợ sẽ phản hồi trong thời gian sớm nhất.
-                                </div>
-                            ) : (
-                                <button
-                                    className="btn-outline-dark w-100 mb-3"
-                                    onClick={() => setShowWarrantyModal(true)}
-                                >
-                                    Yêu cầu bảo hành
-                                </button>
-                            )}
+                            {renderWarrantySection()}
                             <button
                                 className="btn-text-danger w-100 text-center"
                                 onClick={() => setShowReportModal(true)}

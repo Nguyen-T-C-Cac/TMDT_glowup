@@ -51,17 +51,24 @@ export const ProviderList: React.FC<Props> = ({
 
     try {
       const minRating = selectedSort === 'ĐÁNH GIÁ CAO NHẤT' ? 4.5 : undefined;
+      const sortParam: 'rating' | 'completedJobs' | undefined =
+        selectedSort === 'ĐÁNH GIÁ CAO NHẤT'
+          ? 'rating'
+          : selectedSort === 'NHIỀU ĐƠN NHẤT'
+            ? 'completedJobs'
+            : undefined;
       const data = await technicianService.listTechnicians({
         service: selectedService,
         page: currentPage,
         limit: ITEMS_PER_PAGE,
         minRating,
+        sort: sortParam,  
         //locations: selectedLocations,
       });
 
       let items = data.items.map(mapListItemToProviderEntry);
 
-      if (selectedLocations.length > 0) {
+      /*if (selectedLocations.length > 0) {
           items = items.filter(item => {
             if (item.kind !== 'normal') {
               return false;
@@ -71,7 +78,7 @@ export const ProviderList: React.FC<Props> = ({
               item.location.toLowerCase().includes(location.toLowerCase())
             );
           });
-        }
+        }*/
     
       if (selectedSort === 'GIÁ THẤP NHẤT') {
         items = [...items].sort((a, b) => {
@@ -99,7 +106,7 @@ export const ProviderList: React.FC<Props> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, selectedService, selectedSort, selectedLocations, setTotalPages]);
+  }, [currentPage, selectedService, selectedSort, setTotalPages]);
 
   useEffect(() => {
     loadProviders();
@@ -148,7 +155,7 @@ export const ProviderList: React.FC<Props> = ({
 
           {isSortOpen && (
             <div className="sort-dropdown">
-              {['PHỔ BIẾN NHẤT', 'ĐÁNH GIÁ CAO NHẤT', 'GIÁ THẤP NHẤT'].map((option) => (
+              {['PHỔ BIẾN NHẤT', 'ĐÁNH GIÁ CAO NHẤT', 'NHIỀU ĐƠN NHẤT', 'GIÁ THẤP NHẤT'].map((option) => (
                 <div
                   key={option}
                   className={`sort-option ${selectedSort === option ? 'active' : ''}`}

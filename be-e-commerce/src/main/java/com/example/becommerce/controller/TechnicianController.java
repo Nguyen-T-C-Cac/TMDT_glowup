@@ -43,10 +43,11 @@ public class TechnicianController {
             @RequestParam(required = false) Boolean isAvailable,
             @RequestParam(required = false) Double minRating,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String sort,   // ← THÊM: "rating" | "completedJobs"
             @RequestParam(defaultValue = "1")  int page,
             @RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok(ApiResponse.success(
-                technicianService.listTechnicians(service, district, isAvailable, minRating, keyword, page, limit)));
+                technicianService.listTechnicians(service, district, isAvailable, minRating, keyword, sort, page, limit)));
     }
 
     @GetMapping("/{id}")

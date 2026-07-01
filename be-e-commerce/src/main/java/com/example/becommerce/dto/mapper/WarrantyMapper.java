@@ -1,6 +1,7 @@
 package com.example.becommerce.dto.mapper;
 
 import com.example.becommerce.dto.response.order.OrderPartySummary;
+import com.example.becommerce.dto.response.warranty.PreviousWarrantyClaimResponse;
 import com.example.becommerce.dto.response.warranty.WarrantyResponse;
 import com.example.becommerce.entity.WarrantyClaim;
 import org.springframework.stereotype.Component;
@@ -13,6 +14,10 @@ import java.util.List;
 public class WarrantyMapper {
 
     public WarrantyResponse toResponse(WarrantyClaim claim) {
+        return toResponse(claim, null);
+    }
+
+    public WarrantyResponse toResponse(WarrantyClaim claim, WarrantyClaim previousRejectedClaim) {
         if (claim == null) return null;
 
         List<String> images = claim.getImages();
@@ -34,6 +39,20 @@ public class WarrantyMapper {
                         .phone(claim.getTechnician().getPhone())
                         .avatar(claim.getTechnician().getAvatar())
                         .build())
+                .previousRejectedClaim(previousRejectedClaim == null ? null : toPreviousRejectedClaimResponse(previousRejectedClaim))
+                .createdAt(claim.getCreatedAt())
+                .build();
+    }
+
+    private PreviousWarrantyClaimResponse toPreviousRejectedClaimResponse(WarrantyClaim claim) {
+        if (claim == null) return null;
+
+        return PreviousWarrantyClaimResponse.builder()
+                .id(claim.getCode())
+                .description(claim.getDescription())
+                .images(claim.getImages() != null && !claim.getImages().isEmpty() ? claim.getImages() : null)
+                .scheduledAt(claim.getScheduledAt())
+                .rejectReason(claim.getRejectReason())
                 .createdAt(claim.getCreatedAt())
                 .build();
     }

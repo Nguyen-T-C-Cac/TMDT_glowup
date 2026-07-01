@@ -455,7 +455,7 @@ class SystemApiControllerTest {
     @Test
     @DisplayName("TECHNICIANS — list / detail / update profile / availability / reviews")
     void technicianApisReturnExpectedContracts() throws Exception {
-        when(technicianService.listTechnicians(any(), any(), any(), any(), any(), anyInt(), anyInt()))
+        when(technicianService.listTechnicians(any(), any(), any(), any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(PagedResponse.of(List.of(TechnicianListItemResponse.builder()
                         .id("TECH-001").fullName("Trần Văn B").rating(BigDecimal.valueOf(4.8))
                         .isAvailable(true).build()), 1, 10, 1));

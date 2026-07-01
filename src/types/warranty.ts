@@ -16,7 +16,17 @@ export interface WarrantyResponse {
         phone?: string;
         avatar?: string;
     };
+    previousRejectedClaim?: PreviousWarrantyClaimResponse;
     createdAt: string;
+}
+
+export interface PreviousWarrantyClaimResponse {
+    id: string;
+    description?: string;
+    images?: string[];
+    scheduledAt?: string;
+    rejectReason?: string;
+    createdAt?: string;
 }
 
 export interface CreateWarrantyPayload {

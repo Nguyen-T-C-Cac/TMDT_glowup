@@ -273,6 +273,15 @@
     border: 1px solid var(--border);
 }
 
+.wd-btn-retry {
+    background: #2563eb;
+    color: white;
+}
+
+.wd-btn-retry:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
 .wd-btn-cancel:hover:not(:disabled) {
     background: var(--plate-white);
 }

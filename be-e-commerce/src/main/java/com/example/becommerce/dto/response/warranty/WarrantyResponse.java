@@ -1,6 +1,7 @@
 package com.example.becommerce.dto.response.warranty;
 
 import com.example.becommerce.dto.response.order.OrderPartySummary;
+import com.example.becommerce.dto.response.warranty.PreviousWarrantyClaimResponse;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
 import lombok.Getter;
@@ -27,6 +28,8 @@ public class WarrantyResponse {
     private String rejectReason;
 
     private OrderPartySummary technician;
+
+    private PreviousWarrantyClaimResponse previousRejectedClaim;
 
     private LocalDateTime createdAt;
 }
