@@ -10,6 +10,7 @@
   justify-content: center;
   z-index: 100;
   padding: 20px;
+  font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
 }
 
 .notif-modal-container {
@@ -22,6 +23,7 @@
   flex-direction: column;
   box-shadow: 0 25px 60px rgba(15, 23, 42, 0.2);
   overflow: hidden;
+  font-family: inherit;
 }
 
 .notif-modal-header {
@@ -38,6 +40,7 @@
   font-size: 17px;
   font-weight: 700;
   color: #1e293b;
+  font-family: inherit;
 }
 
 .notif-modal-close {
@@ -98,7 +101,12 @@
   font-size: 20px;
   font-weight: 800;
   color: #1e293b;
-  line-height: 1.35;
+  line-height: 1.4;
+  font-family: inherit;
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  -webkit-font-smoothing: antialiased;
 }
 
 .notif-modal-meta {
@@ -113,6 +121,9 @@
   font-size: 15px;
   line-height: 1.75;
   color: #334155;
+  font-family: inherit;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .notif-modal-content strong {
@@ -138,4 +149,40 @@
 .notif-modal-no-content {
   color: #94a3b8;
   font-size: 14px;
+}
+/* Thêm vào cuối file NotificationDetailModal.css */
+.notif-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.notif-modal-action-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--primary, #68A877);
+  color: #fff;
+  transition: opacity 0.15s;
+}
+
+.notif-modal-action-btn:hover {
+  opacity: 0.85;
+}
+
+.notif-modal-action-btn--secondary {
+  background: transparent;
+  border: 1.5px solid var(--primary, #68A877);
+  color: var(--primary, #68A877);
+}
+
+.notif-modal-action-btn--secondary:hover {
+  background: rgba(104, 168, 119, 0.08);
+  opacity: 1;
 }

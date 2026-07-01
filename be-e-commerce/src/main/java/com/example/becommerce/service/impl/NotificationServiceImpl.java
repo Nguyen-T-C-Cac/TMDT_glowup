@@ -84,6 +84,24 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public NotificationResponse getNotification(String id) {
+        if (!StringUtils.hasText(id)) {
+            throw AppException.badRequest(ErrorCode.BAD_REQUEST, "Mã thông báo không hợp lệ");
+        }
+
+        User currentUser = getCurrentUser();
+        Notification notification = notificationRepository
+                .findByNotificationCodeAndUser_Id(id.trim(), currentUser.getId())
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.NOTIFICATION_NOT_FOUND,
+                        "Không tìm thấy thông báo",
+                        HttpStatus.NOT_FOUND));
+
+        return notificationMapper.toResponse(notification);
+    }
+
+    @Override
     @Transactional
     public MarkReadResponse markAsRead(String id) {
         if (!StringUtils.hasText(id)) {

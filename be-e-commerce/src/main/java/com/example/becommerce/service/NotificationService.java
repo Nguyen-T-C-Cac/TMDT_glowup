@@ -20,6 +20,7 @@ public interface NotificationService {
     MarkReadResponse markAsRead(String id);
 
     ReadAllNotificationResponse markAllAsRead();
+    NotificationResponse getNotification(String id);
 
     NotificationResponse createNotification(
             User user,

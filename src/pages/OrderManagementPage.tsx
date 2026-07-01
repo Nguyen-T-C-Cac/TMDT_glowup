@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import './orderManagementPage.css';
-
+import { useLocation, useNavigate } from 'react-router-dom';
 import type { UserRole } from '../types/UserRole.ts';
 import type { OrderResponse } from '../types/order/order.ts';
 import type { OrderTabId } from '../stores/orderStore.ts';
@@ -71,7 +71,9 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
     const [reviewOrder, setReviewOrder] = useState<OrderResponse | null>(null);
     const [reviewEditData, setReviewEditData] = useState<{ rating: number; content?: string } | undefined>(undefined);
     const [reportOrder, setReportOrder] = useState<OrderResponse | null>(null);
-
+    
+    const location = useLocation();
+    const navigate = useNavigate();
     const loadOrders = useCallback(async () => {
         setLoadingList(true);
         setError(null);
@@ -134,9 +136,41 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
         setSelectedOrder(null);
     }, [activeTab]);
 
-    const handleTabChange = (tabId: string) => {
-        setActiveTab(tabId as OrderTabId);
-    };
+    // Xử lý deep-link từ thông báo: { openOrderId, openTab }
+    useEffect(() => {
+        const state = location.state as Record<string, unknown> | null;
+        if (!state?.openOrderId) return;
+
+        const id = state.openOrderId as string;
+        const openTab = state.openTab as string | undefined;
+
+        // Clear state ngay để tránh re-trigger khi navigate nội bộ
+        navigate(location.pathname, { replace: true, state: {} });
+
+        if (openTab === 'warranty') {
+            // Chuyển sang tab bảo hành và mở chi tiết đơn
+            setActiveTab('warranty');
+            setPage(1);
+            setSelectedOrder(null);
+            orderService.getOrderById(id)
+                .then((order) => setSelectedOrder(order))
+                .catch(() => setError('Không thể tải chi tiết đơn hàng'));
+        } else {
+            // Tìm đúng tab của đơn rồi mở chi tiết
+            orderService.getOrderById(id)
+                .then((order) => {
+                    const tab = getOrderTab(order) as OrderTabId;
+                    setActiveTab(tab);
+                    setPage(1);
+                    setSelectedOrder(order);
+                })
+                .catch(() => setError('Không thể tải chi tiết đơn hàng'));
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location.state]);
+        const handleTabChange = (tabId: string) => {
+            setActiveTab(tabId as OrderTabId);
+        };
 
     const handleSelectOrder = async (orderId: string) => {
         setLoadingDetail(true);

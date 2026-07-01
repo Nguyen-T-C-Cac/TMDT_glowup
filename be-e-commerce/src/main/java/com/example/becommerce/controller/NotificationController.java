@@ -6,6 +6,7 @@ import com.example.becommerce.dto.request.AdminSendNotificationRequest;
 import com.example.becommerce.dto.response.ApiResponse;
 import com.example.becommerce.dto.response.MarkReadResponse;
 import com.example.becommerce.dto.response.NotificationListResponse;
+import com.example.becommerce.dto.response.NotificationResponse;
 import com.example.becommerce.dto.response.ReadAllNotificationResponse;
 import com.example.becommerce.service.NotificationService;
 import jakarta.validation.Valid;
@@ -52,6 +53,11 @@ public class NotificationController {
     @PatchMapping(ApiConstant.NOTIFICATION_MARK_ALL_READ)
     public ResponseEntity<ApiResponse<ReadAllNotificationResponse>> markAllAsRead() {
         return ResponseEntity.ok(ApiResponse.success(notificationService.markAllAsRead()));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<NotificationResponse>> getNotification(@PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.success(notificationService.getNotification(id)));
     }
 
     @PostMapping(ApiConstant.NOTIFICATION_SEND)

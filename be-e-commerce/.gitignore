@@ -34,3 +34,6 @@ build/
 
 .env
 .gitnexus
+
+docker_compose.yml
+
