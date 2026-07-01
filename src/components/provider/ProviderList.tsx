@@ -4,6 +4,7 @@ import { ProviderCard } from './ProviderCard';
 import { ChevronDownIcon } from '../common/Icons';
 import RepairRequestModal from '../modal/RepairRequestModal.tsx';
 import { technicianService } from '../../services/technician/technicianService';
+import type { ProviderFilters } from './FilterSidebar';
 import {
   mapListItemToProviderEntry,
   type ProviderListEntry,
@@ -12,25 +13,28 @@ import {
 interface Props {
   onNavigate?: (page: string, data?: unknown) => void;
   selectedService?: string;
+  filters?: ProviderFilters;
   currentPage?: number;
   totalPages?: number;
   setCurrentPage?: (page: number) => void;
   setTotalPages?: (total: number) => void;
-  selectedLocations?: string[];
 }
 
 export const ProviderList: React.FC<Props> = ({
   onNavigate,
   selectedService,
+  filters,
   currentPage = 1,
-  totalPages = 1,
   setCurrentPage,
   setTotalPages,
-  selectedLocations = [],
 }) => {
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [selectedSort, setSelectedSort] = useState('PHỔ BIẾN NHẤT');
   const ITEMS_PER_PAGE = 7;
+  // Tách giá trị nguyên thủy để dùng làm dependency ổn định (tránh re-fetch vô hạn do object filters đổi tham chiếu).
+  const filterDistrict = filters?.district;
+  const filterMinRating = filters?.minRating;
+  const filterAvailable = filters?.isAvailable;
   const [selectedProvider, setSelectedProvider] = useState<ProviderListEntry | null>(null);
   const [providers, setProviders] = useState<ProviderListEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,28 +54,20 @@ export const ProviderList: React.FC<Props> = ({
     setLoadError(null);
 
     try {
-      const minRating = selectedSort === 'ĐÁNH GIÁ CAO NHẤT' ? 4.5 : undefined;
+      const sortMinRating = selectedSort === 'ĐÁNH GIÁ CAO NHẤT' ? 4.5 : undefined;
+      // Bộ lọc người dùng chọn được ưu tiên hơn rating suy ra từ sắp xếp.
+      const minRating = filterMinRating ?? sortMinRating;
       const data = await technicianService.listTechnicians({
         service: selectedService,
+        district: filterDistrict,
+        isAvailable: filterAvailable,
         page: currentPage,
         limit: ITEMS_PER_PAGE,
         minRating,
-        //locations: selectedLocations,
       });
 
       let items = data.items.map(mapListItemToProviderEntry);
 
-      if (selectedLocations.length > 0) {
-          items = items.filter(item => {
-            if (item.kind !== 'normal') {
-              return false;
-            }
-
-            return selectedLocations.some(location =>
-              item.location.toLowerCase().includes(location.toLowerCase())
-            );
-          });
-        }
     
       if (selectedSort === 'GIÁ THẤP NHẤT') {
         items = [...items].sort((a, b) => {
@@ -99,31 +95,23 @@ export const ProviderList: React.FC<Props> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, selectedService, selectedSort, selectedLocations, setTotalPages]);
+  }, [currentPage, selectedService, selectedSort, filterDistrict, filterMinRating, filterAvailable, setTotalPages]);
 
   useEffect(() => {
     loadProviders();
   }, [loadProviders]);
 
   useEffect(() => {
-    setCurrentPage?.(1);
-}, [selectedLocations, setCurrentPage]);
-  
-  useEffect(() => {
-      const timer = setTimeout(() => {
-        setCurrentPage?.(1);
-      }, 0);
-      return () => clearTimeout(timer);
-    }, [selectedService, setCurrentPage]);
+    const timer = setTimeout(() => {
+      setCurrentPage?.(1);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [selectedService, selectedSort, filterDistrict, filterMinRating, filterAvailable, setCurrentPage]);
 
-    const pageTitle = selectedService
-      ? `Thợ chuyên ${selectedService}`
-      : 'Thợ sửa chữa chuyên nghiệp';
+  const pageTitle = selectedService
+    ? `Thợ chuyên ${selectedService}`
+    : 'Thợ sửa chữa chuyên nghiệp';
 
-    const total =
-    selectedLocations.length > 0
-        ? providers.length
-        : resultTotal;
   /*const resultCount = useMemo(
     () => providers.filter((p) => p.kind !== 'premium').length,
     [providers]
@@ -135,7 +123,7 @@ export const ProviderList: React.FC<Props> = ({
         <div className="pl-header-left">
           <h1 className="pl-title">{pageTitle}</h1>
           <p className="pl-subtitle">
-            Tìm thấy {total} chuyên gia
+            Tìm thấy {resultTotal || providers.length} chuyên gia
             {selectedService && <span className="pl-service-tag">{selectedService}</span>}{' '}
             tại khu vực TP.HCM
           </p>

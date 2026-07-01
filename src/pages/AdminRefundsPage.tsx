@@ -17,6 +17,12 @@ const statusLabels: Record<string, string> = {
   failed: 'Thất bại',
 };
 
+const methodLabels: Record<string, string> = {
+  wallet: 'Ví',
+  bank_transfer: 'Chuyển khoản',
+  'bank-transfer': 'Chuyển khoản',
+};
+
 const formatMoney = (value: number | null | undefined) =>
   value == null ? '—' : `${Number(value).toLocaleString('vi-VN')}₫`;
 
@@ -40,6 +46,10 @@ const AdminRefundsPage: React.FC = () => {
   const [orderCode, setOrderCode] = useState('');
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
+  const [method, setMethod] = useState<'wallet' | 'bank-transfer'>('wallet');
+  const [bankName, setBankName] = useState('');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [bankAccountOwner, setBankAccountOwner] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const loadRefunds = useCallback(async (targetPage: number) => {
@@ -76,15 +86,35 @@ const AdminRefundsPage: React.FC = () => {
       showToast('Số tiền hoàn phải lớn hơn 0', 'error');
       return;
     }
+    if (method === 'bank-transfer' && (!bankAccountNumber.trim() || !bankName.trim() || !bankAccountOwner.trim())) {
+      showToast('Vui lòng nhập đủ số tài khoản, tên ngân hàng và chủ tài khoản', 'error');
+      return;
+    }
 
     try {
       setSubmitting(true);
-      const refund = await createRefund(trimmedCode, numericAmount, reason.trim());
+      const refund = await createRefund(
+        trimmedCode,
+        numericAmount,
+        reason.trim(),
+        method === 'bank-transfer'
+          ? {
+              method: 'bank-transfer',
+              customerBankName: bankName.trim(),
+              customerBankAccountNumber: bankAccountNumber.trim(),
+              customerBankAccountOwner: bankAccountOwner.trim(),
+            }
+          : { method: 'wallet' },
+      );
       const lockNote = refund.technicianLocked ? ' — Thợ đã bị khoá do ví âm.' : '';
       showToast(`Hoàn tiền ${formatMoney(refund.amount)} cho đơn ${refund.orderCode} thành công.${lockNote}`, 'success');
       setOrderCode('');
       setAmount('');
       setReason('');
+      setMethod('wallet');
+      setBankName('');
+      setBankAccountNumber('');
+      setBankAccountOwner('');
       await loadRefunds(1);
     } catch (err: any) {
       showToast(err?.message || 'Hoàn tiền thất bại', 'error');
@@ -130,6 +160,13 @@ const AdminRefundsPage: React.FC = () => {
                 placeholder="VD: 500000"
               />
             </label>
+            <label className="arf-field">
+              <span>Phương thức</span>
+              <select value={method} onChange={(e) => setMethod(e.target.value as 'wallet' | 'bank-transfer')}>
+                <option value="wallet">Ví (cộng vào ví khách)</option>
+                <option value="bank-transfer">Chuyển khoản ngân hàng</option>
+              </select>
+            </label>
             <label className="arf-field arf-field--wide">
               <span>Lý do</span>
               <input
@@ -140,7 +177,44 @@ const AdminRefundsPage: React.FC = () => {
                 maxLength={500}
               />
             </label>
+            {method === 'bank-transfer' && (
+              <>
+                <label className="arf-field">
+                  <span>Số tài khoản khách</span>
+                  <input
+                    type="text"
+                    value={bankAccountNumber}
+                    onChange={(e) => setBankAccountNumber(e.target.value)}
+                    placeholder="VD: 0123456789"
+                  />
+                </label>
+                <label className="arf-field">
+                  <span>Tên ngân hàng</span>
+                  <input
+                    type="text"
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                    placeholder="VD: Vietcombank"
+                  />
+                </label>
+                <label className="arf-field">
+                  <span>Chủ tài khoản</span>
+                  <input
+                    type="text"
+                    value={bankAccountOwner}
+                    onChange={(e) => setBankAccountOwner(e.target.value)}
+                    placeholder="VD: NGUYEN VAN A"
+                  />
+                </label>
+              </>
+            )}
           </div>
+          {method === 'bank-transfer' && (
+            <p className="arf-note">
+              Hoàn qua chuyển khoản: hệ thống không cộng ví khách, chỉ lưu số tài khoản để đối soát.
+              Admin tự chuyển khoản tới tài khoản trên.
+            </p>
+          )}
           <button type="submit" className="arf-submit-btn" disabled={submitting}>
             {submitting ? 'Đang xử lý...' : 'Hoàn tiền'}
           </button>
@@ -165,6 +239,7 @@ const AdminRefundsPage: React.FC = () => {
                     <th>Khách hàng</th>
                     <th>Thợ</th>
                     <th>Số tiền</th>
+                    <th>Phương thức</th>
                     <th>Trạng thái</th>
                     <th>Ví thợ sau</th>
                     <th>Thời gian</th>
@@ -174,7 +249,7 @@ const AdminRefundsPage: React.FC = () => {
                   {loading &&
                     Array.from({ length: 5 }).map((_, idx) => (
                       <tr key={`sk-${idx}`} className="arf-skeleton-row">
-                        {Array.from({ length: 8 }).map((__, c) => (
+                        {Array.from({ length: 9 }).map((__, c) => (
                           <td key={c}><div className="arf-skeleton" /></td>
                         ))}
                       </tr>
@@ -191,6 +266,15 @@ const AdminRefundsPage: React.FC = () => {
                       </td>
                       <td className="arf-amount">{formatMoney(item.amount)}</td>
                       <td>
+                        {methodLabels[item.method ?? 'wallet'] ?? 'Ví'}
+                        {item.method && item.method.replace('-', '_') === 'bank_transfer' && item.customerBankAccountNumber && (
+                          <div className="arf-bank-info">
+                            {item.customerBankName} · {item.customerBankAccountNumber}
+                            {item.customerBankAccountOwner ? ` · ${item.customerBankAccountOwner}` : ''}
+                          </div>
+                        )}
+                      </td>
+                      <td>
                         <span className={`arf-status arf-status--${item.status}`}>
                           {statusLabels[item.status] ?? item.status}
                         </span>
@@ -205,7 +289,7 @@ const AdminRefundsPage: React.FC = () => {
 
                   {!loading && items.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="arf-state">Chưa có yêu cầu hoàn tiền nào.</td>
+                      <td colSpan={9} className="arf-state">Chưa có yêu cầu hoàn tiền nào.</td>
                     </tr>
                   )}
                 </tbody>

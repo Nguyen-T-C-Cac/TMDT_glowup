@@ -7,6 +7,7 @@ import NotificationMenu from '../common/NotificationMenu';
 import { logoutUser, isAuthenticated, getStoredUser } from '../../services/auth';
 import { customerPageMap } from './customerNavigation';
 import { useUserProfile } from '../../contexts/UserProfileContext';
+import { useToast } from '../common/Toast';
 
 interface HeaderProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -24,6 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const currentPath = location.pathname;
   const [searchKeyword, setSearchKeyword] = useState('');
   const { profile, isProfileLoaded, clearProfile } = useUserProfile();
@@ -55,6 +57,7 @@ export const Header: React.FC<HeaderProps> = ({
   const goToLogout = () => {
     logoutUser();
     clearProfile();
+    showToast('Đã đăng xuất thành công', 'success');
     navigate('/');
   };
 

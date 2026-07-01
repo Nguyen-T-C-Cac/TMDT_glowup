@@ -318,6 +318,51 @@ export const updateAdminCommission = async (payload: {
   }
 }
 
+export interface WalletAdjustResult {
+  transactionId: string
+  technicianId: string
+  amount: number
+  newBalance: number
+  reason: string | null
+}
+
+/**
+ * Admin nạp/trừ ví tín dụng (hoa hồng) của thợ.
+ * direction='topup' cộng, 'deduct' trừ. Số tiền nhập luôn dương; hàm tự gán dấu
+ * để admin không thể nhầm dấu. BE chặn nếu số dư sau khi trừ < 0.
+ */
+export const adjustCommissionWallet = async (payload: {
+  technicianId: string
+  amount: number
+  direction: 'topup' | 'deduct'
+  reason: string
+}): Promise<WalletAdjustResult> => {
+  const signedAmount = payload.direction === 'deduct' ? -Math.abs(payload.amount) : Math.abs(payload.amount)
+  const data = await requestApi<{
+    transactionId: string
+    technicianId: string
+    amount: number
+    newBalance: number
+    reason: string | null
+  }>('/admin/wallet/adjust', {
+    method: 'POST',
+    body: JSON.stringify({
+      technicianId: payload.technicianId,
+      amount: signedAmount,
+      type: payload.direction === 'deduct' ? 'ADMIN_DEDUCTION' : 'ADMIN_TOPUP',
+      reason: payload.reason,
+    }),
+  })
+
+  return {
+    transactionId: data.transactionId,
+    technicianId: data.technicianId,
+    amount: parseNumber(data.amount),
+    newBalance: parseNumber(data.newBalance),
+    reason: data.reason ?? null,
+  }
+}
+
 export const getAdminCommissionWallets = async (filters: AdminCommissionWalletFilters = {}): Promise<AdminCommissionWalletListResult> => {
   const query = new URLSearchParams()
 

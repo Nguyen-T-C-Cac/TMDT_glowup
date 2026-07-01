@@ -1,32 +1,52 @@
-import React, { useState, useEffect } from 'react';
-// import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StatsCards } from '../components/dashboard/StatsCards';
 import { EarningsChart } from '../components/dashboard/EarningsChart';
 import { AvailableTasks } from '../components/dashboard/AvailableTasks';
 import { TodaySchedule } from '../components/dashboard/TodaySchedule';
+import { technicianService } from '../services/technician/technicianService';
 import { getStoredUser } from '../services/auth';
 import { getVerificationByTechnician } from '../services/verificationService';
+import type { TechnicianDashboard } from '../types/technician';
 import './ProviderDashboard.css';
 
-// const pageMap: Record<string, string> = {
-//   'home': '/',
-//   'find-provider': '/find-provider',
-//   'provider-profile': '/provider-profile',
-//   'provider-dashboard': '/provider-dashboard',
-//   'dashboard': '/provider-dashboard',
-//   'jobs': '/technician/jobs',
-//   'profile': '/technician/profile',
-//   'earnings': '/provider-dashboard',
-//   'wallet': '/technician/wallet',
-//   'services': '/services',
-// };
+const greetingByHour = () => {
+  const h = new Date().getHours();
+  if (h < 11) return 'CHÀO BUỔI SÁNG';
+  if (h < 14) return 'CHÀO BUỔI TRƯA';
+  if (h < 18) return 'CHÀO BUỔI CHIỀU';
+  return 'CHÀO BUỔI TỐI';
+};
 
 const ProviderDashboard: React.FC = () => {
-  // const nav = useNavigate();
-  // const onNavigate = (page: string, data?: unknown) => {
-  //   const path = pageMap[page] || '/';
-  //   nav(path, { state: data });
-  // };
+  const currentUser = getStoredUser();
+  const technicianCode = currentUser?.code;
+
+  const [data, setData] = useState<TechnicianDashboard | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!technicianCode) {
+      setError('Không xác định được tài khoản thợ. Vui lòng đăng nhập lại.');
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      setData(await technicianService.getDashboard(technicianCode));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể tải tổng quan công việc');
+    } finally {
+      setLoading(false);
+    }
+  }, [technicianCode]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const greetingName = (currentUser?.fullName || 'BẠN').toUpperCase();
 
   const [verificationStatus, setVerificationStatus] = useState<string>('checking');
   const [isAcceptingJobs, setIsAcceptingJobs] = useState<boolean>(false);
@@ -69,13 +89,11 @@ const ProviderDashboard: React.FC = () => {
 
   return (
     <div className="pd-layout">
-      {/*<TechnicianSidebar activeItem="dashboard" onNavigate={onNavigate} />*/}
-
       <div className="pd-main">
         {/* Top Header Bar */}
         <div className="pd-top-bar">
           <div className="pd-greeting">
-            <span className="pd-greeting-text">CHÀO BUỔI SÁNG, {userName.toUpperCase() || 'KỸ THUẬT VIÊN'}</span>
+            <span className="pd-greeting-text">{greetingByHour()}, {userName ? userName.toUpperCase() : greetingName}</span>
             <h1 className="pd-page-title">Tổng quan công việc</h1>
           </div>
           <div className="pd-availability" onClick={toggleAcceptingJobs} style={{ cursor: verificationStatus === 'approved' ? 'pointer' : 'not-allowed' }}>
@@ -96,28 +114,29 @@ const ProviderDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="pd-content-grid">
-          {/* Left Column */}
-          <div className="pd-left-col">
-            <StatsCards />
-            <EarningsChart />
-            <AvailableTasks />
-          </div>
+        {loading && <div className="pd-state">Đang tải tổng quan công việc...</div>}
+        {!loading && error && <div className="pd-state pd-state--error">{error}</div>}
 
-          {/* Right Column */}
-          <div className="pd-right-col">
-            <TodaySchedule />
-          </div>
-        </div>
+        {!loading && !error && data && (
+          <div className="pd-content-grid">
+            {/* Left Column */}
+            <div className="pd-left-col">
+              <StatsCards
+                newOrders={data.newOrders}
+                completedOrders={data.completedOrders}
+                completedToday={data.completedToday}
+                monthEarnings={data.monthEarnings}
+              />
+              <EarningsChart earnings7d={data.earnings7d} earnings30d={data.earnings30d} />
+              <AvailableTasks />
+            </div>
 
-        {/* Floating Action Button */}
-        <button className="pd-fab" title="Thêm mới">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-        </button>
+            {/* Right Column */}
+            <div className="pd-right-col">
+              <TodaySchedule />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

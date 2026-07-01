@@ -6,6 +6,7 @@ import {
   mapUserResponseToFrontend,
 } from '../../services/adminUserService';
 import { isAuthenticated } from '../../services/auth';
+import { useToast } from '../common/Toast';
 import './UserManagementTable.css';
 
 type UserRole = 'customer' | 'technician';
@@ -23,6 +24,8 @@ interface User {
   orderCount: number;
   joinedAt: string;
   isVerified: boolean;
+  isLocked?: boolean;
+  lockedReason?: string | null;
 }
 
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
@@ -52,12 +55,14 @@ export const UserManagementTable: React.FC<Props> = ({
   onAreaFilterChange,
 }) => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  const [pageSize, setPageSize] = useState(5);
+  const PAGE_SIZE_OPTIONS = [5, 10, 20, 50, 100];
 
   // ============================================================================
   // FETCH DATA FROM API
@@ -202,7 +207,7 @@ export const UserManagementTable: React.FC<Props> = ({
       );
     } catch (err: any) {
       console.error('Error updating user status:', err);
-      alert(`Lỗi: ${err.message || 'Cập nhật trạng thái thất bại'}`);
+      showToast(`Lỗi: ${err.message || 'Cập nhật trạng thái thất bại'}`, 'error');
     }
   };
 
@@ -224,7 +229,7 @@ export const UserManagementTable: React.FC<Props> = ({
       );
     } catch (err: any) {
       console.error('Error approving user:', err);
-      alert(`Lỗi: ${err.message || 'Phê duyệt thất bại'}`);
+      showToast(`Lỗi: ${err.message || 'Phê duyệt thất bại'}`, 'error');
     }
   };
 
@@ -381,6 +386,15 @@ export const UserManagementTable: React.FC<Props> = ({
                       <span className="umt-status-dot" style={{ backgroundColor: statusColor }}></span>
                       {statusLabel}
                     </span>
+                    {user.isLocked && (
+                      <span
+                        className="umt-status-badge"
+                        style={{ color: '#b91c1c', backgroundColor: '#fee2e2', marginLeft: 6 }}
+                        title={user.lockedReason ?? 'Ví tín dụng bị khóa'}
+                      >
+                        🔒 Khóa ví
+                      </span>
+                    )}
                   </td>
                   <td>
                     <div className="umt-actions">
@@ -415,9 +429,30 @@ export const UserManagementTable: React.FC<Props> = ({
       </div>
 
       <div className="umt-footer">
-        <span className="umt-footer-text">
-          Hiển thị {paginatedUsers.length} trong {filteredUsers.length} {activeRole === 'technician' ? 'thợ sửa chữa' : 'khách hàng'}
-        </span>
+        <div className="umt-footer-info">
+          <span className="umt-footer-text">
+            Hiển thị {paginatedUsers.length} trong {filteredUsers.length} {activeRole === 'technician' ? 'thợ sửa chữa' : 'khách hàng'}
+          </span>
+
+          <label className="umt-page-size">
+            <span>Số dòng/trang:</span>
+            <select
+              className="umt-select umt-select-sm"
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              aria-label="Số dòng mỗi trang"
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
 
         <div className="umt-pagination">
           <button className="umt-page-btn" onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} disabled={safePage === 1}>

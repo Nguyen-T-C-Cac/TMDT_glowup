@@ -70,6 +70,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 
 @Service
@@ -510,8 +511,10 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional
     public WalletAdjustResponse adjustWallet(WalletAdjustRequest request) {
-        User technician = userRepository.findByCodeAndDeletedFalse(request.getTechnicianId())
-                .orElseThrow(() -> AppException.notFound("Không tìm thấy kỹ thuật viên"));
+        // technicianId có thể là mã thợ (code) — từ tab tín dụng ở trang chi tiết —
+        // hoặc id dạng số — từ bảng ví hoa hồng (getCommissionWallets trả về user.id).
+        // Chấp nhận cả hai để không phụ thuộc nguồn gọi.
+        User technician = resolveTechnician(request.getTechnicianId());
         Wallet wallet = walletRepository.findWithLockByUser_Id(technician.getId())
                 .orElseGet(() -> walletRepository.save(Wallet.builder()
                         .user(technician)
@@ -519,16 +522,16 @@ public class AdminServiceImpl implements AdminService {
                         .personalBalance(BigDecimal.ZERO)
                         .currency("VND")
                         .build()));
+        // Admin được phép trừ ví tín dụng xuống ÂM (tạo nợ) — nhất quán với luồng
+        // hoàn tiền (RefundServiceImpl) vốn cũng cho phép số dư CREDIT âm. Không chặn
+        // ở đây; syncWalletLock() bên dưới sẽ tự khóa tài khoản khi số dư < ngưỡng.
         BigDecimal newBalance = wallet.getBalance().add(request.getAmount());
-        if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
-            throw AppException.badRequest(ErrorCode.INSUFFICIENT_BALANCE, "Số dư ví không đủ để điều chỉnh");
-        }
         wallet.normalizeForPersistence();
         wallet.setBalance(newBalance);
         walletRepository.save(wallet);
 
-        // Nạp/điều chỉnh ví xong thì đồng bộ lại trạng thái khóa: nếu số dư đã hồi phục
-        // >= ngưỡng thì tự mở khóa tài khoản (is_locked=false), xóa lý do khóa.
+        // Điều chỉnh ví xong thì đồng bộ trạng thái khóa: số dư âm/dưới ngưỡng -> khóa;
+        // hồi phục >= ngưỡng -> tự mở khóa (is_locked=false), xóa lý do khóa.
         walletSettlementService.syncWalletLock(wallet, technician);
 
         WalletTransaction transaction = WalletTransaction.builder()
@@ -541,7 +544,7 @@ public class AdminServiceImpl implements AdminService {
                 .amount(request.getAmount())
                 .fee(BigDecimal.ZERO)
                 .netAmount(request.getAmount())
-                .afterBalance(newBalance.longValueExact())
+                .afterBalance(newBalance.setScale(0, java.math.RoundingMode.DOWN).longValue())
                 .note(request.getReason())
                 .actor(currentAdminLabel())
                 .status(TransactionStatus.SUCCESS)
@@ -557,6 +560,20 @@ public class AdminServiceImpl implements AdminService {
                 .reason(request.getReason())
                 .createdAt(transaction.getCreatedAt())
                 .build();
+    }
+
+    private User resolveTechnician(String identifier) {
+        String value = identifier == null ? "" : identifier.trim();
+        Optional<User> byCode = userRepository.findByCodeAndDeletedFalse(value);
+        if (byCode.isPresent()) {
+            return byCode.get();
+        }
+        try {
+            return userRepository.findByIdAndDeletedFalse(Long.parseLong(value))
+                    .orElseThrow(() -> AppException.notFound("Không tìm thấy kỹ thuật viên"));
+        } catch (NumberFormatException ex) {
+            throw AppException.notFound("Không tìm thấy kỹ thuật viên");
+        }
     }
 
     @Override

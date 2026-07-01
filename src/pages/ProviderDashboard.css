@@ -155,3 +155,10 @@
     align-items: flex-start;
   }
 }
+.pd-state {
+  padding: 40px 24px;
+  text-align: center;
+  color: #64748b;
+  font-size: 15px;
+}
+.pd-state--error { color: #dc2626; }

@@ -9,6 +9,7 @@ import { chatService } from '../services/chat/chatService';
 import { ArrowLeft, Bell, CheckCircle2, CircleAlert, CircleCheckBig, MessageSquare, Phone, ThumbsDown, Wallet } from 'lucide-react';
 import { RichTextEditor } from '../components/admin/RichTextEditor';
 import { sendAdminNotification } from '../services/notificationService';
+import { createRefund } from '../services/adminRefundPointsService';
 
 import './AdminComplaintResolvePage.css';
 
@@ -47,8 +48,11 @@ type NotificationForm = {
 
 type RefundForm = {
   amount: string;
-  method: 'wallet' | 'bank-transfer' | 'voucher';
+  method: 'wallet' | 'bank-transfer';
   reason: string;
+  bankName: string;
+  bankAccountNumber: string;
+  bankAccountOwner: string;
   confirm: boolean;
 };
 
@@ -211,10 +215,19 @@ const notificationTitleSuggestions = [
   'Thông báo xử lý khiếu nại',
   'Cập nhật tiến độ xử lý khiếu nại',
   'Yêu cầu cung cấp thông tin',
+  'Yêu cầu cung cấp số tài khoản nhận hoàn tiền',
   'Thông báo kết quả giải quyết khiếu nại',
   'Nhắc nhở phối hợp xử lý',
   'Thông báo hoàn tiền / bồi thường',
 ];
+
+const BANK_REQUEST_TITLE = 'Yêu cầu cung cấp số tài khoản nhận hoàn tiền';
+const BANK_REQUEST_MESSAGE =
+  '<p>Kính gửi Quý khách,</p>'
+  + '<p>Khiếu nại của Quý khách đã được tiếp nhận và chúng tôi sẽ tiến hành hoàn tiền. '
+  + 'Vui lòng phản hồi tin nhắn này với <strong>thông tin tài khoản ngân hàng</strong> để nhận hoàn tiền:</p>'
+  + '<ul><li>Số tài khoản</li><li>Tên ngân hàng</li><li>Tên chủ tài khoản</li></ul>'
+  + '<p>Trân trọng cảm ơn.</p>';
 
 const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '').trim();
 
@@ -235,6 +248,9 @@ const initialRefundForm: RefundForm = {
   amount: '',
   method: 'wallet',
   reason: '',
+  bankName: '',
+  bankAccountNumber: '',
+  bankAccountOwner: '',
   confirm: false,
 };
 
@@ -359,6 +375,11 @@ export default function AdminComplaintResolvePage() {
     if (!refundForm.amount.trim()) return 'Vui lòng nhập số tiền hoàn.';
     if (Number.isNaN(Number(refundForm.amount)) || Number(refundForm.amount) <= 0) return 'Số tiền hoàn phải lớn hơn 0.';
     if (!refundForm.reason.trim()) return 'Vui lòng nhập lý do hoàn tiền.';
+    if (refundForm.method === 'bank-transfer') {
+      if (!refundForm.bankAccountNumber.trim()) return 'Vui lòng nhập số tài khoản ngân hàng của khách.';
+      if (!refundForm.bankName.trim()) return 'Vui lòng nhập tên ngân hàng.';
+      if (!refundForm.bankAccountOwner.trim()) return 'Vui lòng nhập tên chủ tài khoản.';
+    }
     if (!refundForm.confirm) return 'Vui lòng xác nhận trước khi hoàn tiền.';
     return '';
   };
@@ -507,10 +528,40 @@ export default function AdminComplaintResolvePage() {
         setBanner('error', error);
         return;
       }
+      if (!complaint?.orderCode) {
+        setBanner('error', 'Khiếu nại không gắn với đơn hàng nên không thể hoàn tiền.');
+        return;
+      }
 
-      setComplaintStatus('investigating');
-      persistStatus('investigating');
-      setBanner('success', 'Đã tạo giao dịch hoàn tiền, thông báo khách hàng.');
+      const methodLabel =
+        refundForm.method === 'bank-transfer' ? 'Chuyển khoản ngân hàng' : 'Hoàn vào ví';
+      const reasonWithMethod = `[${methodLabel}] ${refundForm.reason.trim()}`;
+
+      try {
+        const result = await createRefund(
+          complaint.orderCode,
+          Number(refundForm.amount),
+          reasonWithMethod,
+          refundForm.method === 'bank-transfer'
+            ? {
+                method: 'bank-transfer',
+                customerBankName: refundForm.bankName.trim(),
+                customerBankAccountNumber: refundForm.bankAccountNumber.trim(),
+                customerBankAccountOwner: refundForm.bankAccountOwner.trim(),
+              }
+            : { method: 'wallet' },
+        );
+        setComplaintStatus('investigating');
+        persistStatus('investigating');
+        const lockNote = result.technicianLocked ? ' Thợ đã bị khóa do ví tín dụng âm.' : '';
+        const methodNote = refundForm.method === 'bank-transfer'
+          ? ' Vui lòng chuyển khoản tay tới số tài khoản đã nhập.'
+          : '';
+        setBanner('success', `Đã hoàn ${Number(refundForm.amount).toLocaleString('vi-VN')}đ cho khách hàng.${methodNote}${lockNote}`);
+        setRefundForm(initialRefundForm);
+      } catch (err) {
+        setBanner('error', err instanceof Error ? err.message : 'Hoàn tiền thất bại, vui lòng thử lại.');
+      }
       return;
     }
 
@@ -765,6 +816,21 @@ export default function AdminComplaintResolvePage() {
               handleSubmit('send-notification');
             }}
           >
+            <button
+              type="button"
+              className="crp-secondary-btn crp-template-btn"
+              disabled={isLocked}
+              onClick={() => setNotificationForm((current) => ({
+                ...current,
+                receiver: 'customer',
+                title: BANK_REQUEST_TITLE,
+                message: BANK_REQUEST_MESSAGE,
+                type: 'status-update',
+              }))}
+            >
+              Dùng mẫu: yêu cầu khách cung cấp số tài khoản
+            </button>
+
             <label className="crp-field">
               <span>Người nhận</span>
               <select
@@ -882,12 +948,55 @@ export default function AdminComplaintResolvePage() {
                   onChange={(event) => setRefundForm((current) => ({ ...current, method: event.target.value as RefundForm['method'] }))}
                   disabled={isLocked}
                 >
-                  <option value="wallet">Ví</option>
+                  <option value="wallet">Ví (cộng vào ví khách)</option>
                   <option value="bank-transfer">Chuyển khoản ngân hàng</option>
-                  <option value="voucher">Phiếu giảm giá</option>
                 </select>
               </label>
             </div>
+
+            {refundForm.method === 'bank-transfer' && (
+              <div className="crp-bank-box">
+                <p className="crp-notice crp-notice--info">
+                  Hoàn qua chuyển khoản: hệ thống KHÔNG cộng ví khách. Admin tự chuyển khoản tới
+                  số tài khoản dưới đây (khách cung cấp qua thông báo/chat) và hệ thống chỉ lưu lại để đối soát.
+                </p>
+                <label className="crp-field">
+                  <span>Số tài khoản khách hàng</span>
+                  <input
+                    className="crp-input"
+                    type="text"
+                    placeholder="VD: 0123456789"
+                    value={refundForm.bankAccountNumber}
+                    onChange={(event) => setRefundForm((current) => ({ ...current, bankAccountNumber: event.target.value }))}
+                    disabled={isLocked}
+                  />
+                </label>
+                <div className="crp-form-row">
+                  <label className="crp-field">
+                    <span>Tên ngân hàng</span>
+                    <input
+                      className="crp-input"
+                      type="text"
+                      placeholder="VD: Vietcombank"
+                      value={refundForm.bankName}
+                      onChange={(event) => setRefundForm((current) => ({ ...current, bankName: event.target.value }))}
+                      disabled={isLocked}
+                    />
+                  </label>
+                  <label className="crp-field">
+                    <span>Chủ tài khoản</span>
+                    <input
+                      className="crp-input"
+                      type="text"
+                      placeholder="VD: NGUYEN VAN A"
+                      value={refundForm.bankAccountOwner}
+                      onChange={(event) => setRefundForm((current) => ({ ...current, bankAccountOwner: event.target.value }))}
+                      disabled={isLocked}
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
 
             <label className="crp-field">
               <span>Lý do hoàn tiền</span>

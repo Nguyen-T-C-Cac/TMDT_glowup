@@ -77,6 +77,17 @@ public class Conversation {
     @Column(name = "last_message_at")
     private LocalDateTime lastMessageAt;
 
+    /**
+     * Soft-delete watermark per participant. When set, the conversation is hidden
+     * from that user's list unless a newer message arrives (lastMessageAt > deletedAt).
+     * Deleting one side never affects the other side's view.
+     */
+    @Column(name = "customer_deleted_at")
+    private LocalDateTime customerDeletedAt;
+
+    @Column(name = "technician_deleted_at")
+    private LocalDateTime technicianDeletedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

@@ -17,6 +17,7 @@ public class WalletTransactionResponse {
 
     private String id;
     private String type;
+    private String walletType;
     private String title;
     private String category;
     private BigDecimal amount;

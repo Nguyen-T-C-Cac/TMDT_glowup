@@ -12,6 +12,9 @@ export interface UserResponse {
   phone: string
   role: 'customer' | 'technician'
   status: 'active' | 'pending' | 'locked' | 'inactive'
+  /** Khóa nghiệp vụ ví (is_locked) — độc lập với status. */
+  isLocked?: boolean
+  lockedReason?: string | null
   avatar: string | null
   district: string | null
   address: string | null
@@ -251,6 +254,45 @@ export const updateAdminUserStatus = async (
   }
 }
 
+/**
+ * Mở khóa nghiệp vụ ví (is_locked) của thợ — admin only
+ * PATCH /api/users/{id}/unlock-wallet
+ */
+export const unlockUserWallet = async (
+  userId: number,
+  reason?: string
+): Promise<UserResponse> => {
+  try {
+    const response = await fetchWithAuth(`${API_URL}/users/${userId}/unlock-wallet`, {
+      method: 'PATCH',
+      body: JSON.stringify({ reason: reason ?? '' }),
+    })
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.')
+      }
+      if (response.status === 403) {
+        throw new Error('Bạn không có quyền mở khóa ví.')
+      }
+      if (response.status === 404) {
+        throw new Error('Người dùng không tồn tại.')
+      }
+      const errorBody = await response.json().catch(() => null)
+      throw new Error(errorBody?.error?.message || `Lỗi HTTP ${response.status}`)
+    }
+
+    const result: ApiResponse<UserResponse> = await response.json()
+    if (!result.success) {
+      throw new Error(result.message || 'Mở khóa ví thất bại')
+    }
+    return result.data
+  } catch (error: any) {
+    console.error('unlockUserWallet error:', error)
+    throw error
+  }
+}
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
@@ -271,6 +313,8 @@ export const mapUserResponseToFrontend = (user: UserResponse) => ({
   isVerified: user.status === 'active',
   email: user.email,
   code: user.code,
+  isLocked: user.isLocked ?? false,
+  lockedReason: user.lockedReason ?? null,
 })
 
 /**

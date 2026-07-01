@@ -14,13 +14,14 @@ interface InProgressCardProps {
     data: InProgressOrder;
     role: UserRole;
     onViewDetail: (id: string) => void;
-    onUpdateStatus?: (id: string, status: string) => void;
     onCreateInvoice?: (id: string) => Promise<void>;
+    onConfirmCash?: (id: string) => Promise<void>;
 }
 
-export const InProgressCard: React.FC<InProgressCardProps> = ({data, role, onViewDetail, onUpdateStatus, onCreateInvoice}) => {
+export const InProgressCard: React.FC<InProgressCardProps> = ({data, role, onViewDetail, onCreateInvoice, onConfirmCash}) => {
     const navigate = useNavigate();
     const [invoiceLoading, setInvoiceLoading] = React.useState(false);
+    const [cashLoading, setCashLoading] = React.useState(false);
 
     const handleChatClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -45,6 +46,19 @@ export const InProgressCard: React.FC<InProgressCardProps> = ({data, role, onVie
             await onCreateInvoice(data.id);
         } finally {
             setInvoiceLoading(false);
+        }
+    };
+
+    // Thu tiền mặt = xác nhận thanh toán → đơn hoàn thành + settle (trừ phí ví tín dụng, cộng điểm).
+    // Theo nghiệp vụ: đơn chỉ "hoàn thành" sau khi đã thanh toán (tiền mặt hoặc khách trả VNPay).
+    const handleConfirmCash = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!onConfirmCash || cashLoading) return;
+        setCashLoading(true);
+        try {
+            await onConfirmCash(data.id);
+        } finally {
+            setCashLoading(false);
         }
     };
 
@@ -102,8 +116,8 @@ export const InProgressCard: React.FC<InProgressCardProps> = ({data, role, onVie
                         <button className="btn-warning" onClick={handleSendInvoice} disabled={invoiceLoading}>
                             <FaFileInvoiceDollar/> {invoiceLoading ? 'Đang gửi...' : 'Gửi hoá đơn'}
                         </button>
-                        <button className="btn-success" onClick={(e) => { e.stopPropagation(); onUpdateStatus?.(data.id, 'completed'); }}>
-                            <FaCheck/> Hoàn thành
+                        <button className="btn-success" onClick={handleConfirmCash} disabled={cashLoading}>
+                            <FaCheck/> {cashLoading ? 'Đang xử lý...' : 'Thu tiền mặt'}
                         </button>
                     </>
                 )}

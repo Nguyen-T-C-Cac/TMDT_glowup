@@ -17,5 +17,6 @@ public interface ConversationService {
 
     MessageResponse sendMessage(String conversationCode, SendMessageRequest request);
 
+    /** Soft-delete the conversation for the current user only (the other side keeps it). */
     void deleteConversation(String conversationCode);
 }

@@ -26,6 +26,7 @@ import { OrderDetailPanel } from '../components/orderManagement/OrderDetailPanel
 import { WarrantyDetailPanel } from '../components/orderManagement/WarrantyDetailPanel.tsx';
 import ReviewModal from '../components/modal/ReviewModal.tsx';
 import ReportModal from '../components/modal/ReportModal.tsx';
+import { useToast } from '../components/common/Toast';
 
 interface OrderPageProps {
     role: UserRole;
@@ -42,6 +43,7 @@ const tabStatusMap: Record<Exclude<OrderTabId, 'warranty'>, string | undefined> 
 };
 
 export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
+    const { showToast } = useToast();
     const [activeTab, setActiveTab] = useState<OrderTabId>('new');
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState('');
@@ -181,7 +183,7 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
         }
 
         if (!cancelReason.trim()) {
-            window.alert('Vui lòng nhập lý do hủy đơn.');
+            showToast('Vui lòng nhập lý do hủy đơn.', 'warning');
             return;
         }
 
@@ -214,12 +216,27 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
         setError(null);
         try {
             await orderService.createInvoice(orderId);
-            alert('Hoá đơn đã được gửi vào chat thành công!');
+            showToast('Hoá đơn đã được gửi vào chat thành công!', 'success');
         } catch (err: unknown) {
             const axiosError = err as { response?: { data?: { error?: { message?: string } } } };
             const serverMsg = axiosError?.response?.data?.error?.message;
             const msg = serverMsg || (err instanceof Error ? err.message : 'Không thể gửi hoá đơn');
             setError(msg);
+        }
+    };
+
+    // Thu tiền mặt → xác nhận thanh toán: đơn hoàn thành + settle (trừ phí ví tín dụng, cộng điểm).
+    // Đây là bước "hoàn thành" đúng nghiệp vụ — chỉ chạy sau khi đã thu tiền.
+    const handleConfirmCash = async (orderId: string) => {
+        setError(null);
+        try {
+            await orderService.confirmCashPayment(orderId);
+            showToast('Đã thu tiền mặt — đơn hoàn thành, ví & điểm đã cập nhật', 'success');
+            await loadOrders();
+        } catch (err: unknown) {
+            const axiosError = err as { response?: { data?: { error?: { message?: string } } } };
+            const serverMsg = axiosError?.response?.data?.error?.message;
+            showToast(serverMsg || (err instanceof Error ? err.message : 'Không thể xác nhận thu tiền. Hãy gửi hoá đơn trước.'), 'error');
         }
     };
 
@@ -401,8 +418,8 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                     data={mapOrderToInProgressOrder(order)}
                     role={role}
                     onViewDetail={handleSelectOrder}
-                    onUpdateStatus={handleUpdateStatus}
                     onCreateInvoice={role === 'technician' ? handleCreateInvoice : undefined}
+                    onConfirmCash={role === 'technician' ? handleConfirmCash : undefined}
                 />
             ));
         }

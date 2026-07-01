@@ -5,6 +5,7 @@ import com.example.becommerce.dto.request.technician.UpdateTechnicianProfileRequ
 import com.example.becommerce.dto.response.ApiResponse;
 import com.example.becommerce.dto.response.PagedResponse;
 import com.example.becommerce.dto.response.technician.AvailabilityResponse;
+import com.example.becommerce.dto.response.technician.TechnicianDashboardResponse;
 import com.example.becommerce.dto.response.technician.CompletedProjectResponse;
 import com.example.becommerce.dto.response.technician.TechnicianDetailResponse;
 import com.example.becommerce.dto.response.technician.TechnicianListItemResponse;
@@ -66,6 +67,11 @@ public class TechnicianController {
             @PathVariable("id") String code,
             @Valid @RequestBody UpdateAvailabilityRequest request) {
         return ResponseEntity.ok(ApiResponse.success(technicianService.updateAvailability(code, request)));
+    }
+
+    @GetMapping("/{id}/dashboard")
+    public ResponseEntity<ApiResponse<TechnicianDashboardResponse>> dashboard(@PathVariable("id") String code) {
+        return ResponseEntity.ok(ApiResponse.success(technicianService.getDashboard(code)));
     }
 
     @GetMapping("/{id}/schedule")

@@ -4,6 +4,7 @@ import com.example.becommerce.dto.request.technician.UpdateAvailabilityRequest;
 import com.example.becommerce.dto.request.technician.UpdateTechnicianProfileRequest;
 import com.example.becommerce.dto.response.PagedResponse;
 import com.example.becommerce.dto.response.technician.AvailabilityResponse;
+import com.example.becommerce.dto.response.technician.TechnicianDashboardResponse;
 import com.example.becommerce.dto.response.technician.CompletedProjectResponse;
 import com.example.becommerce.dto.response.technician.TechnicianDetailResponse;
 import com.example.becommerce.dto.response.technician.TechnicianListItemResponse;
@@ -28,6 +29,9 @@ public interface TechnicianService {
     AvailabilityResponse updateAvailability(String code, UpdateAvailabilityRequest request);
 
     TechnicianReviewListResponse listReviews(String code, int page, int limit);
+
+    /** Aggregated overview/dashboard data for a technician (self or admin). */
+    TechnicianDashboardResponse getDashboard(String code);
 
     /**
      * Returns the list of completed orders (projects) for the technician identified

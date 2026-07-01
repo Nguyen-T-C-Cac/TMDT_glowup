@@ -48,6 +48,33 @@ export type TechnicianListParams = {
   limit?: number;
 };
 
+export type TechnicianScheduleItem = {
+  code: string;
+  serviceName?: string | null;
+  deviceName?: string | null;
+  customerName?: string | null;
+  address?: string | null;
+  scheduledAt?: string | null;
+  expectedTime?: string | null;
+  status?: string | null;
+};
+
+export type TechnicianEarningPoint = {
+  label: string;
+  amount: number;
+};
+
+export type TechnicianDashboard = {
+  newOrders: number;
+  completedOrders: number;
+  completedToday: number;
+  todayEarnings: number;
+  monthEarnings: number;
+  todaySchedule: TechnicianScheduleItem[];
+  earnings7d: TechnicianEarningPoint[];
+  earnings30d: TechnicianEarningPoint[];
+};
+
 export type PagedTechnicians = {
   items: TechnicianListItem[];
   pagination: {
