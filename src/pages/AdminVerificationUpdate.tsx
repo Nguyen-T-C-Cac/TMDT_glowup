@@ -11,6 +11,18 @@ import {
 import type { VerificationRequest, VerificationStatus } from '../types/VerificationRequest'
 import './AdminVerificationUpdate.css'
 
+type ReviewPreset = { value: string; label: string; description: string }
+
+/** Gợi ý nội dung từ chối hồ sơ định danh (status = rejected). */
+const REJECT_PRESETS: ReviewPreset[] = [
+  { value: 'id-blurry', label: 'Ảnh CCCD không rõ nét', description: 'Ảnh CCCD bạn cung cấp bị mờ/lóa, không đọc được đầy đủ thông tin. Vui lòng chụp lại rõ nét, đủ sáng và không bị che khuất các góc.' },
+  { value: 'info-mismatch', label: 'Thông tin không khớp', description: 'Thông tin trên giấy tờ không khớp với thông tin tài khoản bạn đã đăng ký (họ tên/ngày sinh/số CCCD). Vui lòng kiểm tra và cập nhật lại cho đúng.' },
+  { value: 'portrait-invalid', label: 'Ảnh chân dung không hợp lệ', description: 'Ảnh chân dung không rõ mặt hoặc không trùng khớp với ảnh trên CCCD. Vui lòng chụp ảnh chân dung trực diện, rõ mặt, không đeo khẩu trang/kính râm.' },
+  { value: 'cert-expired', label: 'Chứng chỉ hết hạn / không hợp lệ', description: 'Chứng chỉ nghề bạn cung cấp đã hết hạn hoặc không hợp lệ. Vui lòng tải lên chứng chỉ còn hiệu lực do cơ quan có thẩm quyền cấp.' },
+  { value: 'doc-fake', label: 'Nghi ngờ giấy tờ giả mạo', description: 'Hệ thống ghi nhận dấu hiệu chỉnh sửa/giả mạo trên giấy tờ. Hồ sơ bị từ chối. Vui lòng cung cấp giấy tờ gốc, hợp lệ để được xét duyệt lại.' },
+  { value: 'other', label: 'Khác', description: '' },
+]
+
 export default function AdminVerificationUpdate() {
   const navigate = useNavigate()
   const { requestId } = useParams()
@@ -19,6 +31,7 @@ export default function AdminVerificationUpdate() {
   const initialDecision = (params.get('decision') as VerificationStatus | null) || 'approved'
   const [status, setStatus] = useState<VerificationStatus>(initialDecision)
   const [note, setNote] = useState('')
+  const [notePreset, setNotePreset] = useState('')
   const [notifyTechnician, setNotifyTechnician] = useState(true)
   const [isDone, setIsDone] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -113,10 +126,32 @@ export default function AdminVerificationUpdate() {
             <div className="avu-group">
               <label>Trạng thái mới</label>
               <div className="avu-options">
-                <label><input type="radio" checked={status === 'approved'} onChange={() => setStatus('approved')} /> Đã phê duyệt</label>
-                <label><input type="radio" checked={status === 'rejected'} onChange={() => setStatus('rejected')} /> Từ chối</label>
+                <label><input type="radio" checked={status === 'approved'} onChange={() => { setStatus('approved'); setNotePreset('') }} /> Đã phê duyệt</label>
+                <label><input type="radio" checked={status === 'rejected'} onChange={() => { setStatus('rejected'); setNotePreset('') }} /> Từ chối</label>
               </div>
             </div>
+
+            {status === 'rejected' && (
+              <div className="avu-group">
+                <label>Gợi ý lý do từ chối</label>
+                <select
+                  className="avu-select"
+                  value={notePreset}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    const found = REJECT_PRESETS.find((p) => p.value === value)
+                    setNotePreset(value)
+                    if (found && found.value !== 'other') setNote(found.description)
+                    else if (found?.value === 'other') setNote('')
+                  }}
+                >
+                  <option value="">-- Chọn nội dung gợi ý --</option>
+                  {REJECT_PRESETS.map((p) => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="avu-group">
               <label>Ghi chú gửi cho kỹ thuật viên</label>

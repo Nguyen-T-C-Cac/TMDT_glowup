@@ -19,4 +19,16 @@ public class RefundRequest {
 
     @Size(max = 500, message = "Lý do tối đa 500 ký tự")
     private String reason;
+
+    /** "wallet" (default) or "bank-transfer". Parsed leniently server-side. */
+    private String method;
+
+    @Size(max = 120, message = "Tên ngân hàng tối đa 120 ký tự")
+    private String customerBankName;
+
+    @Size(max = 40, message = "Số tài khoản tối đa 40 ký tự")
+    private String customerBankAccountNumber;
+
+    @Size(max = 120, message = "Tên chủ tài khoản tối đa 120 ký tự")
+    private String customerBankAccountOwner;
 }

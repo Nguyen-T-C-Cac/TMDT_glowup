@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import './ProviderList.css';
-import { ProviderCard } from './ProviderCard';
+import { ProviderCard, type ProviderProps } from './ProviderCard';
 import { ChevronDownIcon } from '../common/Icons';
 import RepairRequestModal from '../modal/RepairRequestModal.tsx';
 import { technicianService } from '../../services/technician/technicianService';
+import type { ProviderFilters } from './FilterSidebar';
 import {
   mapListItemToProviderEntry,
   type ProviderListEntry,
@@ -12,25 +13,28 @@ import {
 interface Props {
   onNavigate?: (page: string, data?: unknown) => void;
   selectedService?: string;
+  filters?: ProviderFilters;
   currentPage?: number;
   totalPages?: number;
   setCurrentPage?: (page: number) => void;
   setTotalPages?: (total: number) => void;
-  selectedLocations?: string[];
 }
 
 export const ProviderList: React.FC<Props> = ({
   onNavigate,
   selectedService,
+  filters,
   currentPage = 1,
-  totalPages = 1,
   setCurrentPage,
   setTotalPages,
-  selectedLocations = [],
 }) => {
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [selectedSort, setSelectedSort] = useState('PHỔ BIẾN NHẤT');
   const ITEMS_PER_PAGE = 7;
+  // Tách giá trị nguyên thủy để dùng làm dependency ổn định (tránh re-fetch vô hạn do object filters đổi tham chiếu).
+  const filterDistrict = filters?.district;
+  const filterMinRating = filters?.minRating;
+  const filterAvailable = filters?.isAvailable;
   const [selectedProvider, setSelectedProvider] = useState<ProviderListEntry | null>(null);
   const [providers, setProviders] = useState<ProviderListEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,12 +49,44 @@ export const ProviderList: React.FC<Props> = ({
     onNavigate?.(page, data);
   };
 
+  const toCardProps = (provider: ProviderListEntry): ProviderProps => {
+    if (provider.kind === 'premium') {
+      return {
+        id: provider.id,
+        name: provider.name,
+        avatar: provider.avatar,
+        rating: 0,
+        reviewCount: 0,
+        location: 'TP.HCM',
+        skills: [],
+        price: 'Liên hệ',
+        isAvailable: true,
+        timeAvailable: undefined,
+      };
+    }
+
+    return {
+      id: provider.id,
+      name: provider.name,
+      avatar: provider.avatar,
+      rating: provider.rating,
+      reviewCount: provider.reviewCount,
+      location: provider.location,
+      skills: provider.skills,
+      price: provider.price,
+      isAvailable: provider.isAvailable,
+      timeAvailable: provider.timeAvailable,
+    };
+  };
+
   const loadProviders = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
 
     try {
-      const minRating = selectedSort === 'ĐÁNH GIÁ CAO NHẤT' ? 4.5 : undefined;
+      const sortMinRating = selectedSort === 'ĐÁNH GIÁ CAO NHẤT' ? 4.5 : undefined;
+      // Bộ lọc người dùng chọn được ưu tiên hơn rating suy ra từ sắp xếp.
+      const minRating = filterMinRating ?? sortMinRating;
       const sortParam: 'rating' | 'completedJobs' | undefined =
         selectedSort === 'ĐÁNH GIÁ CAO NHẤT'
           ? 'rating'
@@ -59,11 +95,12 @@ export const ProviderList: React.FC<Props> = ({
             : undefined;
       const data = await technicianService.listTechnicians({
         service: selectedService,
+        district: filterDistrict,
+        isAvailable: filterAvailable,
         page: currentPage,
         limit: ITEMS_PER_PAGE,
         minRating,
-        sort: sortParam,  
-        //locations: selectedLocations,
+        sort: sortParam,
       });
 
       let items = data.items.map(mapListItemToProviderEntry);
@@ -106,31 +143,27 @@ export const ProviderList: React.FC<Props> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, selectedService, selectedSort, setTotalPages]);
+  }, [currentPage, selectedService, selectedSort, filterDistrict, filterMinRating, filterAvailable, setTotalPages]);
 
   useEffect(() => {
-    loadProviders();
+    const timer = window.setTimeout(() => {
+      void loadProviders();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [loadProviders]);
 
   useEffect(() => {
-    setCurrentPage?.(1);
-}, [selectedLocations, setCurrentPage]);
-  
-  useEffect(() => {
-      const timer = setTimeout(() => {
-        setCurrentPage?.(1);
-      }, 0);
-      return () => clearTimeout(timer);
-    }, [selectedService, setCurrentPage]);
+    const timer = setTimeout(() => {
+      setCurrentPage?.(1);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [selectedService, selectedSort, filterDistrict, filterMinRating, filterAvailable, setCurrentPage]);
 
-    const pageTitle = selectedService
-      ? `Thợ chuyên ${selectedService}`
-      : 'Thợ sửa chữa chuyên nghiệp';
+  const pageTitle = selectedService
+    ? `Thợ chuyên ${selectedService}`
+    : 'Thợ sửa chữa chuyên nghiệp';
 
-    const total =
-    selectedLocations.length > 0
-        ? providers.length
-        : resultTotal;
   /*const resultCount = useMemo(
     () => providers.filter((p) => p.kind !== 'premium').length,
     [providers]
@@ -142,7 +175,7 @@ export const ProviderList: React.FC<Props> = ({
         <div className="pl-header-left">
           <h1 className="pl-title">{pageTitle}</h1>
           <p className="pl-subtitle">
-            Tìm thấy {total} chuyên gia
+            Tìm thấy {resultTotal || providers.length} chuyên gia
             {selectedService && <span className="pl-service-tag">{selectedService}</span>}{' '}
             tại khu vực TP.HCM
           </p>
@@ -179,19 +212,7 @@ export const ProviderList: React.FC<Props> = ({
         {!isLoading &&
           !loadError &&
           providers.map((p) => {
-            // fallback data an toàn để khớp hoàn toàn với cấu trúc 'ProviderProps' của ProviderCard
-            const safeProviderProps = {
-              id: p.id,
-              name: p.name,
-              avatar: p.avatar,
-              rating: (p as any).rating ?? 5.0,
-              reviewCount: (p as any).reviewCount ?? 0,
-              location: (p as any).location ?? 'TP.HCM',
-              skills: (p as any).skills ?? [],
-              price: (p as any).price ?? 'Liên hệ',
-              isAvailable: (p as any).isAvailable ?? true,
-              timeAvailable: (p as any).timeAvailable,
-            };
+            const safeProviderProps = toCardProps(p);
 
             return (
               <ProviderCard key={p.id} provider={safeProviderProps} onNavigate={handleNavigate} />
@@ -213,9 +234,9 @@ export const ProviderList: React.FC<Props> = ({
         technicianId={selectedProvider?.id}
         provider={selectedProvider ? {
             id: selectedProvider.id,
-            name: (selectedProvider as any).name || selectedProvider.id,
-            avatar: (selectedProvider as any).avatar || 'https://placehold.co/80x80',
-            rating: (selectedProvider as any).rating || 0,
+            name: selectedProvider.name,
+            avatar: selectedProvider.avatar,
+            rating: selectedProvider.kind === 'normal' ? selectedProvider.rating : 0,
         } : undefined}
       />
     </div>

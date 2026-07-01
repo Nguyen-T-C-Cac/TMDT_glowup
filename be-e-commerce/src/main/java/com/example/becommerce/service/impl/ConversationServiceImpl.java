@@ -158,21 +158,6 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     // ===============================================================
-    // DELETE CONVERSATION
-    // ===============================================================
-
-    @Override
-    @Transactional
-    public void deleteConversation(String conversationCode) {
-        Conversation conversation = findConversation(conversationCode);
-        User viewer = getCurrentUser();
-        ensureParticipant(conversation, viewer);
-        conversation.setStatus(ConversationStatus.CLOSED);
-        conversationRepository.save(conversation);
-        log.info("Conversation {} closed by user={}", conversation.getCode(), viewer.getCode());
-    }
-
-    // ===============================================================
     // LIST MESSAGES
     // ===============================================================
 
@@ -261,6 +246,35 @@ public class ConversationServiceImpl implements ConversationService {
         }
 
         return response;
+    }
+
+    // ===============================================================
+    // DELETE CONVERSATION (per-user soft delete)
+    // ===============================================================
+
+    @Override
+    @Transactional
+    public void deleteConversation(String conversationCode) {
+        Conversation conversation = findConversation(conversationCode);
+        User viewer = getCurrentUser();
+        ensureParticipant(conversation, viewer);
+
+        LocalDateTime now = LocalDateTime.now();
+        boolean isCustomer = conversation.getCustomer() != null
+                && conversation.getCustomer().getId().equals(viewer.getId());
+        boolean isTechnician = conversation.getTechnician() != null
+                && conversation.getTechnician().getId().equals(viewer.getId());
+
+        if (isCustomer) {
+            conversation.setCustomerDeletedAt(now);
+        } else if (isTechnician) {
+            conversation.setTechnicianDeletedAt(now);
+        } else {
+            // Admin không thuộc một trong hai phía thì không có "hộp thoại của mình" để xóa.
+            throw AppException.forbidden("Không thể xóa cuộc trò chuyện này");
+        }
+        conversationRepository.save(conversation);
+        log.info("Conversation {} soft-deleted for user {}", conversation.getCode(), viewer.getCode());
     }
 
     // ===============================================================

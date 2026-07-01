@@ -44,6 +44,7 @@ interface WalletApi {
 interface WalletTransactionApi {
   id?: string | null
   type?: string | null
+  walletType?: string | null
   title?: string | null
   category?: string | null
   amount?: number | string | null
@@ -208,6 +209,13 @@ const toWalletStatus = (value?: string | null): WalletStatus => {
 }
 
 const mapWalletGroup = (transaction: WalletTransactionApi): WalletGroup => {
+  // Nguồn sự thật: walletType do backend gắn cho từng giao dịch (CREDIT/PERSONAL).
+  const walletType = (transaction.walletType || '').trim().toLowerCase()
+  if (walletType === 'credit' || walletType === 'personal') {
+    return walletType
+  }
+
+  // Fallback cho dữ liệu cũ không có walletType — suy đoán theo type/category/dấu.
   const type = (transaction.type || '').trim().toLowerCase()
   const category = (transaction.category || '').trim().toLowerCase()
   const amount = parseNumber(transaction.amount)
@@ -221,7 +229,7 @@ const mapWalletGroup = (transaction: WalletTransactionApi): WalletGroup => {
   }
 
   if (type === 'commission') {
-    if (category === 'commission_deduction' || amount < 0) {
+    if (category === 'commission_deduction' || category.includes('deduction') || amount < 0) {
       return 'credit'
     }
 

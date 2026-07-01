@@ -3,6 +3,11 @@ import { orderService } from '../../services/order/orderService';
 import { getTechnicianWalletSummary } from '../../services/walletService';
 import './StatsCards.css';
 
+interface StatsCardsProps {
+  newOrders?: number;
+  completedToday?: number;
+}
+
 interface StatCard {
   id: string;
   icon: React.ReactNode;
@@ -26,7 +31,7 @@ const isSameDay = (iso?: string) => {
 
 const formatMoney = (value: number) => `${value.toLocaleString('vi-VN')} đ`;
 
-export const StatsCards: React.FC = () => {
+export const StatsCards: React.FC<StatsCardsProps> = ({ newOrders, completedToday }) => {
   const [newJobsCount, setNewJobsCount] = useState(0);
   const [completedTodayCount, setCompletedTodayCount] = useState(0);
   const [availableBalance, setAvailableBalance] = useState(0);
@@ -37,18 +42,30 @@ export const StatsCards: React.FC = () => {
 
     const load = async () => {
       try {
-        const [assignedPage, completedPage, wallet] = await Promise.all([
-          orderService.listOrders({ status: 'assigned', limit: 50 }),
-          orderService.listOrders({ status: 'completed', limit: 50 }),
-          getTechnicianWalletSummary(),
-        ]);
+        const hasDashboardCounts = typeof newOrders === 'number' || typeof completedToday === 'number';
+
+        const [wallet, assignedPage, completedPage] = hasDashboardCounts
+          ? await Promise.all([
+              getTechnicianWalletSummary(),
+              Promise.resolve({ items: [] as Array<unknown> }),
+              Promise.resolve({ items: [] as Array<unknown> }),
+            ])
+          : await Promise.all([
+              getTechnicianWalletSummary(),
+              orderService.listOrders({ status: 'assigned', limit: 50 }),
+              orderService.listOrders({ status: 'completed', limit: 50 }),
+            ]);
 
         if (!mounted) return;
 
-        setNewJobsCount(assignedPage.items.length);
+        setNewJobsCount(hasDashboardCounts ? (newOrders ?? 0) : assignedPage.items.length);
 
-        const today = completedPage.items.filter((o) => isSameDay(o.completedAt));
-        setCompletedTodayCount(today.length);
+        if (hasDashboardCounts) {
+          setCompletedTodayCount(completedToday ?? 0);
+        } else {
+          const today = completedPage.items.filter((o: { completedAt?: string }) => isSameDay(o.completedAt));
+          setCompletedTodayCount(today.length);
+        }
 
         const actualAvailableBalance = wallet.creditBalance + wallet.personalBalance;
         setAvailableBalance(actualAvailableBalance);
@@ -63,11 +80,14 @@ export const StatsCards: React.FC = () => {
       }
     };
 
-    load();
+    setNewJobsCount(newOrders ?? 0);
+    setCompletedTodayCount(completedToday ?? 0);
+    void load();
+
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [completedToday, newOrders]);
 
   const statsData: StatCard[] = [
     {

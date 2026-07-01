@@ -183,6 +183,22 @@ export default function AdminChatPage() {
     await loadMessages(conversationId);
   };
 
+  const handleDeleteConversation = async (conversationId: string) => {
+    if (!window.confirm('Xóa hộp thoại này khỏi danh sách của bạn? Hộp thoại sẽ hiện lại nếu có tin nhắn mới.')) {
+      return;
+    }
+    try {
+      await chatService.deleteConversation(conversationId);
+      setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+      if (activeConversationId === conversationId) {
+        setActiveConversationId(null);
+        setMessages([]);
+      }
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Không thể xóa hộp thoại');
+    }
+  };
+
   const handleSendMessage = async () => {
     const text = messageText.trim();
     if (!text || !activeConversationId) return;
@@ -226,6 +242,7 @@ export default function AdminChatPage() {
                   contact={toContact(conversation)}
                   isActive={conversation.id === activeConversationId}
                   onClick={() => handleSelectConversation(conversation.id)}
+                  onDelete={() => handleDeleteConversation(conversation.id)}
                 />
               ))}
               {!isLoading && filteredConversations.length === 0 && (

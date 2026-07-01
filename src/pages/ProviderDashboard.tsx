@@ -1,40 +1,80 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StatsCards } from '../components/dashboard/StatsCards';
 import { EarningsChart } from '../components/dashboard/EarningsChart';
 import { AvailableTasks } from '../components/dashboard/AvailableTasks';
 import { TodaySchedule } from '../components/dashboard/TodaySchedule';
 import { getStoredUser } from '../services/auth';
 import { getVerificationByTechnician } from '../services/verificationService';
+import { technicianService } from '../services/technician/technicianService';
+import type { TechnicianDashboard } from '../types/technician';
 import './ProviderDashboard.css';
 
+const getGreeting = () => {
+  const hour = new Date().getHours();
+
+  if (hour >= 5 && hour < 11) {
+    return 'CHÀO BUỔI SÁNG';
+  }
+
+  if (hour >= 11 && hour < 13) {
+    return 'CHÀO BUỔI TRƯA';
+  }
+
+  if (hour >= 13 && hour < 18) {
+    return 'CHÀO BUỔI CHIỀU';
+  }
+
+  if (hour >= 18 && hour < 22) {
+    return 'CHÀO BUỔI TỐI';
+  }
+
+  return 'CHÚC BẠN NGỦ NGON';
+};
+
 const ProviderDashboard: React.FC = () => {
+  const currentUser = getStoredUser();
   const [verificationStatus, setVerificationStatus] = useState<string>('checking');
   const [isAcceptingJobs, setIsAcceptingJobs] = useState<boolean>(false);
   const [userName, setUserName] = useState<string>('');
+  const [dashboardData, setDashboardData] = useState<TechnicianDashboard | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const getGreeting = () => {
-  const hour = new Date().getHours();
-
-    if (hour >= 5 && hour < 11) {
-      return "CHÀO BUỔI SÁNG";
+  const loadDashboard = useCallback(async () => {
+    const technicianCode = currentUser?.code;
+    if (!technicianCode) {
+      setError('Không xác định được tài khoản thợ. Vui lòng đăng nhập lại.');
+      setLoading(false);
+      return;
     }
 
-    if (hour >= 11 && hour < 13) {
-      return "CHÀO BUỔI TRƯA";
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await technicianService.getDashboard(technicianCode);
+      setDashboardData(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể tải tổng quan công việc');
+    } finally {
+      setLoading(false);
     }
+  }, [currentUser?.code]);
 
-    if (hour >= 13 && hour < 18) {
-      return "CHÀO BUỔI CHIỀU";
-    }
+  useEffect(() => {
+    let cancelled = false;
 
-    if (hour >= 18 && hour < 22) {
-      return "CHÀO BUỔI TỐI";
-    }
+    const run = async () => {
+      await loadDashboard();
+      if (cancelled) {
+        return;
+      }
+    };
 
-    return "CHÚC BẠN NGỦ NGON";
-  };
-
-  const greeting = getGreeting();
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadDashboard]);
 
   useEffect(() => {
     let isMounted = true;
@@ -59,8 +99,11 @@ const ProviderDashboard: React.FC = () => {
         }
       }
     };
+
     fetchStatus();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const toggleAcceptingJobs = () => {
@@ -71,15 +114,16 @@ const ProviderDashboard: React.FC = () => {
     setIsAcceptingJobs(!isAcceptingJobs);
   };
 
+  const greeting = getGreeting();
+  const greetingName = (currentUser?.fullName || 'KỸ THUẬT VIÊN').toUpperCase();
+
   return (
     <div className="pd-layout">
       <div className="pd-main">
         <div className="pd-top-bar">
           <div className="pd-greeting">
             <span className="pd-greeting-text">
-              {userName
-                ? `${greeting}, ${userName.toUpperCase()}`
-                : `${greeting}, KỸ THUẬT VIÊN`}
+              {userName ? `${greeting}, ${userName.toUpperCase()}` : `${greeting}, ${greetingName}`}
             </span>
             <h1 className="pd-page-title">Tổng quan công việc</h1>
           </div>
@@ -105,17 +149,28 @@ const ProviderDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="pd-content-grid">
-          <div className="pd-left-col">
-            <StatsCards />
-            <EarningsChart />
-            <AvailableTasks />
-          </div>
+        {loading && <div className="pd-state">Đang tải tổng quan công việc...</div>}
+        {!loading && error && <div className="pd-state pd-state--error">{error}</div>}
 
-          <div className="pd-right-col">
-            <TodaySchedule />
+        {!loading && !error && dashboardData && (
+          <div className="pd-content-grid">
+            <div className="pd-left-col">
+              <StatsCards
+                newOrders={dashboardData.newOrders}
+                completedToday={dashboardData.completedToday}
+              />
+              <EarningsChart
+                earnings7d={dashboardData.earnings7d}
+                earnings30d={dashboardData.earnings30d}
+              />
+              <AvailableTasks />
+            </div>
+
+            <div className="pd-right-col">
+              <TodaySchedule />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -3,6 +3,11 @@ import { orderService } from '../../services/order/orderService';
 import type { OrderResponse } from '../../types/order/order';
 import './EarningsChart.css';
 
+interface EarningsChartProps {
+  earnings7d?: Array<{ label: string; amount: number }>;
+  earnings30d?: Array<{ label: string; amount: number }>;
+}
+
 const DAY_LABELS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
 const toIsoDate = (d: Date) => d.toISOString().slice(0, 10);
@@ -57,12 +62,17 @@ const buildWeeklySeries = (orders: OrderResponse[]) => {
   }));
 };
 
-export const EarningsChart: React.FC = () => {
+export const EarningsChart: React.FC<EarningsChartProps> = ({ earnings7d, earnings30d }) => {
   const [period, setPeriod] = useState<'7' | '30'>('7');
   const [completedOrders, setCompletedOrders] = useState<OrderResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (earnings7d || earnings30d) {
+      setIsLoading(false);
+      return;
+    }
+
     let mounted = true;
     orderService
       .listOrders({ status: 'completed', limit: 100 })
@@ -78,15 +88,29 @@ export const EarningsChart: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [earnings30d, earnings7d]);
 
-  const data = useMemo(
-    () =>
-      period === '7'
-        ? buildDailySeries(completedOrders, 7)
-        : buildWeeklySeries(completedOrders),
-    [completedOrders, period]
-  );
+  const data = useMemo(() => {
+    if (period === '7' && earnings7d) {
+      return earnings7d.map((item) => ({
+        day: item.label,
+        value: Math.round(item.amount / 1000),
+        isToday: item.label === 'Hôm nay',
+      }));
+    }
+
+    if (period === '30' && earnings30d) {
+      return earnings30d.map((item) => ({
+        day: item.label,
+        value: Math.round(item.amount / 1000),
+        isToday: item.label === 'Hôm nay',
+      }));
+    }
+
+    return period === '7'
+      ? buildDailySeries(completedOrders, 7)
+      : buildWeeklySeries(completedOrders);
+  }, [completedOrders, earnings30d, earnings7d, period]);
 
   const maxValue = Math.max(1, ...data.map((d) => d.value));
 

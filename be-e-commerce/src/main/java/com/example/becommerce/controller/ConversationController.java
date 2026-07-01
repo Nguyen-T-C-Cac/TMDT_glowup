@@ -70,9 +70,10 @@ public class ConversationController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable("id") String conversationCode) {
+    public ResponseEntity<ApiResponse<Void>> delete(
+            @PathVariable("id") String conversationCode) {
         conversationService.deleteConversation(conversationCode);
-        return ResponseEntity.ok(ApiResponse.success(null));
+        return ResponseEntity.ok(ApiResponse.<Void>success());
     }
 
     @PostMapping("/{id}/quotes")

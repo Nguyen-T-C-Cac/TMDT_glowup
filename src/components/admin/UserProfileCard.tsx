@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { BadgeCheckIcon } from '../common/Icons';
+import { unlockUserWallet } from '../../services/adminUserService';
+import { useToast } from '../common/Toast';
 import './UserProfileCard.css';
 
 interface UserProfile {
@@ -15,6 +17,9 @@ interface UserProfile {
   ratingLabel?: string;
   balance?: string;
   isVerified?: boolean;
+  /** Khóa nghiệp vụ ví (is_locked) — độc lập với status. */
+  isLocked?: boolean;
+  lockedReason?: string | null;
 }
 
 const defaultUser: UserProfile = {
@@ -31,9 +36,29 @@ const defaultUser: UserProfile = {
 
 export const UserProfileCard: React.FC<{ user?: UserProfile }> = ({ user: passedUser }) => {
   const user = passedUser || defaultUser;
+  const { showToast } = useToast();
   const [showLockModal, setShowLockModal] = useState(false);
   const [lockReason, setLockReason] = useState('');
   const isLocked = user.status === 'locked';
+
+  // Khóa nghiệp vụ ví (is_locked) — riêng với khóa tài khoản (status)
+  const [walletLocked, setWalletLocked] = useState<boolean>(!!user.isLocked);
+  const [unlocking, setUnlocking] = useState(false);
+
+  const handleUnlockWallet = async () => {
+    if (!user.id) return;
+    if (!window.confirm(`Mở khóa ví cho ${user.name}? Thợ sẽ rút tiền & nhận đơn trở lại.`)) return;
+    try {
+      setUnlocking(true);
+      await unlockUserWallet(Number(user.id), 'Admin mở khóa ví thủ công');
+      setWalletLocked(false);
+      showToast('Đã mở khóa ví cho thợ.', 'success');
+    } catch (e: any) {
+      showToast(e?.message || 'Mở khóa ví thất bại', 'error');
+    } finally {
+      setUnlocking(false);
+    }
+  };
 
   return (
     <>
@@ -47,6 +72,11 @@ export const UserProfileCard: React.FC<{ user?: UserProfile }> = ({ user: passed
             <div className="upc-name-row">
               <h2 className="upc-name">{user.name}</h2>
               <span className="upc-id-tag">ID: {user.id}</span>
+              {walletLocked && (
+                <span className="upc-wallet-lock-badge" title={user.lockedReason || 'Ví tín dụng bị khóa'}>
+                  🔒 Khóa ví
+                </span>
+              )}
             </div>
             <span className="upc-badge-tag">{user.badge || user.serviceType}</span>
             <div className="upc-stats-row">
@@ -75,6 +105,11 @@ export const UserProfileCard: React.FC<{ user?: UserProfile }> = ({ user: passed
           <button className={`upc-btn-lock ${isLocked ? 'upc-btn-locked' : ''}`} onClick={() => setShowLockModal(true)}>
             {isLocked ? 'Đang bị khóa tài khoản' : 'Khóa tài khoản'}
           </button>
+          {walletLocked && (
+            <button className="upc-btn-unlock-wallet" onClick={handleUnlockWallet} disabled={unlocking}>
+              {unlocking ? 'Đang mở...' : '🔓 Mở khóa ví'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -88,7 +123,7 @@ export const UserProfileCard: React.FC<{ user?: UserProfile }> = ({ user: passed
                 <p className="upc-modal-desc">Bạn có chắc chắn muốn mở lại tài khoản <strong>{user.name}</strong> ({user.id}) không?</p>
                 <div className="upc-modal-actions">
                   <button className="upc-modal-cancel" onClick={() => setShowLockModal(false)}>Hủy</button>
-                  <button className="upc-modal-confirm upc-modal-unlock" onClick={() => { alert('Đã mở lại tài khoản!'); setShowLockModal(false); }}>Xác nhận mở lại</button>
+                  <button className="upc-modal-confirm upc-modal-unlock" onClick={() => { showToast('Đã mở lại tài khoản!', 'success'); setShowLockModal(false); }}>Xác nhận mở lại</button>
                 </div>
               </>
             ) : (
@@ -104,7 +139,7 @@ export const UserProfileCard: React.FC<{ user?: UserProfile }> = ({ user: passed
                 />
                 <div className="upc-modal-actions">
                   <button className="upc-modal-cancel" onClick={() => setShowLockModal(false)}>Hủy</button>
-                  <button className="upc-modal-confirm" onClick={() => { alert('Đã khóa tài khoản!'); setShowLockModal(false); }}>Xác nhận khóa</button>
+                  <button className="upc-modal-confirm" onClick={() => { showToast('Đã khóa tài khoản!', 'success'); setShowLockModal(false); }}>Xác nhận khóa</button>
                 </div>
               </>
             )}

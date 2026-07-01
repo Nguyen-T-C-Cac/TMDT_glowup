@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.List;
@@ -50,6 +51,37 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     // Recent orders page within completedAt range, ordered by scheduledAt desc
     Page<Order> findByCompletedAtBetweenAndDeletedFalseOrderByScheduledAtDesc(LocalDateTime from, LocalDateTime to, Pageable pageable);
+
+    // ===== Technician dashboard (TN5) =====
+
+    /** Orders of a technician scheduled within [from, to], earliest first — drives "today's schedule". */
+    List<Order> findByTechnician_IdAndScheduledAtBetweenAndDeletedFalseOrderByScheduledAtAsc(
+            Long technicianId, LocalDateTime from, LocalDateTime to);
+
+    /** Count a technician's orders currently in any of the given statuses (e.g. active/in-progress). */
+    long countByTechnician_IdAndStatusInAndDeletedFalse(Long technicianId, Collection<OrderStatus> statuses);
+
+    /** Count a technician's orders of one status completed within [from, to]. */
+    long countByTechnician_IdAndStatusAndCompletedAtBetweenAndDeletedFalse(
+            Long technicianId, OrderStatus status, LocalDateTime from, LocalDateTime to);
+
+    /** Sum a technician's COMPLETED earnings within [from, to]. */
+    @Query(value = "SELECT COALESCE(SUM(final_price), 0) FROM orders "
+            + "WHERE deleted = false AND technician_id = :techId AND status = 'COMPLETED' "
+            + "AND completed_at BETWEEN :from AND :to", nativeQuery = true)
+    long sumTechnicianEarningsBetween(@Param("techId") Long techId,
+                                      @Param("from") LocalDateTime from,
+                                      @Param("to") LocalDateTime to);
+
+    /** Daily COMPLETED earnings of a technician within [from, to] as (yyyy-MM-dd, total). */
+    @Query(value = "SELECT to_char(completed_at, 'YYYY-MM-DD') AS period, COALESCE(SUM(final_price), 0) AS total "
+            + "FROM orders "
+            + "WHERE deleted = false AND technician_id = :techId AND status = 'COMPLETED' "
+            + "AND completed_at BETWEEN :from AND :to "
+            + "GROUP BY period ORDER BY period", nativeQuery = true)
+    List<Object[]> sumTechnicianEarningsGroupByDay(@Param("techId") Long techId,
+                                                   @Param("from") LocalDateTime from,
+                                                   @Param("to") LocalDateTime to);
 
     /**
      * Returns all COMPLETED orders belonging to the given technician (by User.id),

@@ -282,10 +282,32 @@
   flex-wrap: wrap;
 }
 
+.umt-footer-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .umt-footer-text {
   font-size: 13px;
   color: var(--text-light);
   font-weight: 500;
+}
+
+.umt-page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-light);
+  font-weight: 500;
+}
+
+.umt-select-sm {
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
 }
 
 .umt-pagination {

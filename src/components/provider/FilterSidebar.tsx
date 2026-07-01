@@ -1,58 +1,44 @@
 import React from 'react';
 import './FilterSidebar.css';
+import { StarIcon } from '../common/Icons';
+
+export interface ProviderFilters {
+  district?: string;
+  minRating?: number;
+  isAvailable?: boolean;
+}
+
+const DISTRICT_OPTIONS = [
+  'Quận 1, HCMC',
+  'Quận 7, HCMC',
+  'Thủ Đức, HCMC',
+  'Quận Bình Thạnh, HCMC',
+];
+
+const RATING_OPTIONS = [
+  { value: 4.5, label: '4.5+', filled: 5 },
+  { value: 4.0, label: '4.0+', filled: 4 },
+];
 
 interface FilterSidebarProps {
+  filters?: ProviderFilters;
+  onFiltersChange?: (filters: ProviderFilters) => void;
   currentPage?: number;
   totalPages?: number;
   onPageChange?: (page: number) => void;
-
-  selectedLocations: string[];
-  onLocationChange: (locations: string[]) => void;
 }
-const HCMC_LOCATIONS = [
-  "Quận 1",
-  "Quận 3",
-  "Quận 4",
-  "Quận 5",
-  "Quận 6",
-  "Quận 7",
-  "Quận 8",
-  "Quận 10",
-  "Quận 11",
-  "Quận 12",
-  "Quận Bình Thạnh",
-  "Quận Gò Vấp",
-  "Quận Phú Nhuận",
-  "Quận Tân Bình",
-  "Quận Tân Phú",
-  "Thành phố Thủ Đức",
-  "Huyện Bình Chánh",
-  "Huyện Củ Chi",
-  "Huyện Hóc Môn",
-  "Huyện Nhà Bè",
-  "Huyện Cần Giờ",
-];
 
 export const FilterSidebar: React.FC<FilterSidebarProps> = ({
+  filters = {},
+  onFiltersChange,
   currentPage = 1,
   totalPages = 1,
   onPageChange,
-  selectedLocations,
-  onLocationChange,
 }) => {
+  const update = (patch: Partial<ProviderFilters>) => {
+    onFiltersChange?.({ ...filters, ...patch });
+  };
 
-    const handleChange = (location: string) => {
-        if (selectedLocations.includes(location)) {
-            onLocationChange(
-                selectedLocations.filter(item => item !== location)
-            );
-        } else {
-            onLocationChange([
-                ...selectedLocations,
-                location
-            ]);
-        }
-    };
   return (
     <aside className="filter-sidebar">
       <div className="filter-section">
@@ -60,33 +46,83 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
         <p className="filter-subtitle">TP.HCM</p>
         
         <div className="filter-options">
-  {HCMC_LOCATIONS.map((location) => (
-    <label key={location} className="filter-checkbox">
-      <input
-        type="checkbox"
-        checked={selectedLocations.includes(location)}
-        onChange={() => handleChange(location)}
-      />
+          <label className="filter-checkbox">
+            <input
+              type="radio"
+              name="district"
+              checked={!filters.district}
+              onChange={() => update({ district: undefined })}
+            />
+            <span className="checkmark border-circle"></span>
+            <span className="filter-text">Tất cả khu vực</span>
+          </label>
+          {DISTRICT_OPTIONS.map((district) => (
+            <label className="filter-checkbox" key={district}>
+              <input
+                type="radio"
+                name="district"
+                checked={filters.district === district}
+                onChange={() => update({ district })}
+              />
+              <span className="checkmark border-circle"></span>
+              <span className="filter-text">{district}</span>
+            </label>
+          ))}
+        </div>
+      </div>
 
-      <span className="checkmark">
-        <svg
-          className="check-icon"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="white"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-      </span>
+      <div className="filter-section">
+        <h3 className="filter-title">Đánh giá</h3>
+        <div className="filter-options">
+          <label className="filter-checkbox">
+            <input
+              type="radio"
+              name="rating"
+              checked={!filters.minRating}
+              onChange={() => update({ minRating: undefined })}
+            />
+            <span className="checkmark border-circle"></span>
+            <span className="filter-text">Tất cả</span>
+          </label>
+          {RATING_OPTIONS.map((option) => (
+            <label className="filter-checkbox" key={option.value}>
+              <input
+                type="radio"
+                name="rating"
+                checked={filters.minRating === option.value}
+                onChange={() => update({ minRating: option.value })}
+              />
+              <span className="checkmark border-circle"></span>
+              <div className="filter-rating">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <StarIcon
+                    key={i}
+                    size={14}
+                    className={`star-icon ${i < option.filled ? 'text-yellow-500' : 'text-gray-300'}`}
+                  />
+                ))}
+                <span className="rating-text">{option.label}</span>
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
 
-      <span className="filter-text">{location}</span>
-    </label>
-  ))}
-</div>
-</div>
+      <div className="filter-section">
+        <h3 className="filter-title">Trạng thái</h3>
+        <div className="filter-options">
+          <label className="filter-checkbox">
+            <input
+              type="checkbox"
+              checked={!!filters.isAvailable}
+              onChange={(e) => update({ isAvailable: e.target.checked ? true : undefined })}
+            />
+            <span className="checkmark"></span>
+            <span className="filter-text">Đang nhận việc</span>
+          </label>
+        </div>
+      </div>
+
       {/* Phân trang nằm dưới lọc khu vực */}
       {totalPages > 1 && onPageChange && (
         <div className="sidebar-pagination">

@@ -12,6 +12,7 @@ import {
   SettingsMain,
 } from '../components/settings';
 import type { CustomerAccountFormData } from '../components/settings';
+import { useToast } from '../components/common/Toast';
 
 function profileToForm(profile: {
   fullName: string;
@@ -29,6 +30,7 @@ function profileToForm(profile: {
 
 export default function CustomerAccountSettingsPage() {
   const location = useLocation();
+  const { showToast } = useToast();
   const { profile, refreshProfile, setAvatar, updateProfile } = useUserProfile();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [form, setForm] = useState<CustomerAccountFormData>(() => profileToForm(profile));
@@ -94,10 +96,10 @@ export default function CustomerAccountSettingsPage() {
         email: form.email,
         address: form.address,
       });
-      alert('Cập nhật thông tin thành công!');
+      showToast('Cập nhật thông tin thành công!', 'success');
     } catch (err) {
       console.error(err);
-      alert('Cập nhật thất bại. Vui lòng thử lại.');
+      showToast('Cập nhật thất bại. Vui lòng thử lại.', 'error');
     } finally {
       setIsSaving(false);
     }

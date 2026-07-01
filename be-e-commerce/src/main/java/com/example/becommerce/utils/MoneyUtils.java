@@ -25,8 +25,11 @@ public final class MoneyUtils {
 
     public static BigDecimal displayAmount(TransactionType type, BigDecimal amount) {
         BigDecimal normalized = safeZero(amount);
+        // COMMISSION đã được lưu với dấu thật (trừ = âm, nạp = dương) ở cả phí hoa hồng
+        // tự động lẫn admin điều chỉnh ví — KHÔNG đảo dấu, nếu không sẽ bị double-flip.
+        // PAYMENT/WITHDRAW lưu dưới dạng độ lớn dương nên vẫn đảo để hiển thị là khoản chi.
         return switch (type) {
-            case COMMISSION, PAYMENT, WITHDRAW -> normalized.negate();
+            case PAYMENT, WITHDRAW -> normalized.negate();
             default -> normalized;
         };
     }

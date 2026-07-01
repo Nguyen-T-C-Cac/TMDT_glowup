@@ -8,11 +8,22 @@ export interface RefundItem {
   technicianName: string | null
   amount: number
   reason: string | null
+  method?: string | null
+  customerBankName?: string | null
+  customerBankAccountNumber?: string | null
+  customerBankAccountOwner?: string | null
   status: string
   technicianDebt: boolean
   technicianBalanceAfter: number | null
   technicianLocked: boolean
   createdAt: string
+}
+
+export interface RefundOptions {
+  method?: 'wallet' | 'bank-transfer'
+  customerBankName?: string
+  customerBankAccountNumber?: string
+  customerBankAccountOwner?: string
 }
 
 export interface RefundListResult {
@@ -81,11 +92,23 @@ export const createRefund = async (
   orderCode: string,
   amount: number,
   reason: string,
+  options: RefundOptions = {},
 ): Promise<RefundItem> => {
   const response = await fetchWithAuth(`${API_URL}/admin/orders/${encodeURIComponent(orderCode)}/refund`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ amount, reason }),
+    body: JSON.stringify({
+      amount,
+      reason,
+      method: options.method ?? 'wallet',
+      ...(options.method === 'bank-transfer'
+        ? {
+            customerBankName: options.customerBankName,
+            customerBankAccountNumber: options.customerBankAccountNumber,
+            customerBankAccountOwner: options.customerBankAccountOwner,
+          }
+        : {}),
+    }),
   })
   return handleResponse<RefundItem>(response)
 }
