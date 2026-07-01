@@ -12,7 +12,7 @@ const ProviderDashboard: React.FC = () => {
   const [isAcceptingJobs, setIsAcceptingJobs] = useState<boolean>(false);
   const [userName, setUserName] = useState<string>('');
 
-    const getGreeting = () => {
+  const getGreeting = () => {
   const hour = new Date().getHours();
 
     if (hour >= 5 && hour < 11) {

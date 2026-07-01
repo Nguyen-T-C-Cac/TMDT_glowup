@@ -29,7 +29,7 @@ const formatMoney = (value: number) => `${value.toLocaleString('vi-VN')} đ`;
 export const StatsCards: React.FC = () => {
   const [newJobsCount, setNewJobsCount] = useState(0);
   const [completedTodayCount, setCompletedTodayCount] = useState(0);
-  const [weeklyEarnings, setWeeklyEarnings] = useState(0);
+  const [availableBalance, setAvailableBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -50,17 +50,13 @@ export const StatsCards: React.FC = () => {
         const today = completedPage.items.filter((o) => isSameDay(o.completedAt));
         setCompletedTodayCount(today.length);
 
-        // Tổng thu nhập trong 7 ngày gần nhất từ các đơn đã hoàn thành
-        const sevenDaysAgo = Date.now() - 7 * 86400000;
-        const weekly = completedPage.items
-          .filter((o) => o.completedAt && new Date(o.completedAt).getTime() >= sevenDaysAgo)
-          .reduce((sum, o) => sum + (o.finalPrice ?? o.estimatedPrice ?? 0), 0);
-        setWeeklyEarnings(weekly || wallet.totalEarned);
+        const actualAvailableBalance = wallet.creditBalance + wallet.personalBalance;
+        setAvailableBalance(actualAvailableBalance);
       } catch {
         if (mounted) {
           setNewJobsCount(0);
           setCompletedTodayCount(0);
-          setWeeklyEarnings(0);
+          setAvailableBalance(0);
         }
       } finally {
         if (mounted) setIsLoading(false);
@@ -113,9 +109,9 @@ export const StatsCards: React.FC = () => {
           <line x1="2" y1="10" x2="22" y2="10"></line>
         </svg>
       ),
-      value: isLoading ? '--' : formatMoney(weeklyEarnings),
-      label: 'Tổng thu nhập',
-      badge: 'Tuần này',
+      value: isLoading ? '--' : formatMoney(availableBalance),
+      label: 'Tổng tiền thực có',
+      badge: '2 ví thợ',
       highlight: true,
     },
   ];
