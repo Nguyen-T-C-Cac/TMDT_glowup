@@ -26,6 +26,7 @@ import com.example.becommerce.repository.QuotationRepository;
 import com.example.becommerce.repository.UserRepository;
 import com.example.becommerce.service.NotificationService;
 import com.example.becommerce.service.QuotationService;
+import com.example.becommerce.service.ScheduleSlotService;
 import com.example.becommerce.service.WsEventPublisher;
 import com.example.becommerce.utils.MessageCodeGenerator;
 import com.example.becommerce.utils.OrderCodeGenerator;
@@ -64,6 +65,7 @@ public class QuotationServiceImpl implements QuotationService {
     private final OrderCodeGenerator       orderCodeGenerator;
     private final WsEventPublisher         eventPublisher;
     private final NotificationService      notificationService;
+    private final ScheduleSlotService      scheduleSlotService;
 
     // ===============================================================
     // CREATE QUOTE
@@ -177,6 +179,8 @@ public class QuotationServiceImpl implements QuotationService {
 
         Order savedOrder = orderRepository.save(order);
         conversation.setOrder(savedOrder);
+
+        scheduleSlotService.createSlotFromOrder(savedOrder);
 
         quotation.setStatus(QuotationStatus.ACCEPTED);
         quotation.setAcceptedAt(LocalDateTime.now());

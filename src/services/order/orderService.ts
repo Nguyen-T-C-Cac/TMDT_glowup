@@ -1,5 +1,6 @@
 import apiClient from '../../api/config';
 import type { OrderListQuery, OrderPageResponse, OrderResponse, CreateOrderPayload } from '../../types/order/order';
+import type { InvoiceDiscountResponse } from '../../types/voucher';
 import type { WarrantyResponse, CreateWarrantyPayload } from '../../types/warranty';
 
 type ApiPageLike = {
@@ -145,8 +146,19 @@ export const orderService = {
         await apiClient.post(`/api/orders/${orderId}/invoice`);
     },
 
-    createVnpayCheckout: async (orderId: string): Promise<string> => {
-        const response = await apiClient.post(`/api/orders/${orderId}/invoice/vnpay-checkout`);
+    applyInvoiceDiscount: async (
+        orderId: string,
+        payload: { voucherCode?: string | null; pointsToUse?: number } = {}
+    ): Promise<InvoiceDiscountResponse> => {
+        const response = await apiClient.post(`/api/orders/${orderId}/invoice/discount-preview`, payload);
+        return unwrap<InvoiceDiscountResponse>(response.data);
+    },
+
+    createVnpayCheckout: async (
+        orderId: string,
+        payload: { voucherCode?: string | null; pointsToUse?: number } = {}
+    ): Promise<string> => {
+        const response = await apiClient.post(`/api/orders/${orderId}/invoice/vnpay-checkout`, payload);
         const data = unwrap<{ checkoutUrl: string }>(response.data);
         return data.checkoutUrl;
     },

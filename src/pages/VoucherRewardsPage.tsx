@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, ShieldCheck, Sparkles, WalletCards, ShoppingBag, UserPlus, CalendarCheck2, CircleDollarSign } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, Sparkles, WalletCards, ShoppingBag, UserPlus, CalendarCheck2, CircleDollarSign, BadgeCheck, Loader2 } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
+import { voucherService } from '../services/voucherService';
+import type { VoucherResponse } from '../types/voucher';
+import { loadTokenFromStorage } from '../utils/token';
 import './VoucherRewardsPage.css';
 
 
@@ -354,38 +357,78 @@ function PremiumBenefitsCard() {
   );
 }
 
-function VoucherListSection() {
-  const filters = ['All', 'HOT', 'VIP', 'Expiring'];
+function formatVnd(amount?: number | null): string {
+  if (amount === undefined || amount === null) return '';
+  return amount.toLocaleString('vi-VN') + 'đ';
+}
 
-  const vouchers = [
-    {
-      tone: 'hot',
-      badge: 'HOT',
-      title: 'Giảm 20K cho dịch vụ phổ biến',
-      description: 'Voucher dùng nhanh cho các đơn dịch vụ đang được đặt nhiều nhất.',
-      expiry: '12/05/2026',
-      cta: 'Dùng ngay',
-      accent: '20K',
-    },
-    {
-      tone: 'vip',
-      badge: 'VIP',
-      title: 'Ưu đãi Platinum dành riêng cho hội viên',
-      description: 'Tăng giá trị đơn hàng với mức ưu đãi dành riêng cho thành viên thân thiết.',
-      expiry: '16/05/2026',
-      cta: 'Xem điều kiện',
-      accent: '50K',
-    },
-    {
-      tone: 'expiring',
-      badge: 'EXPIRING',
-      title: 'Voucher sắp hết hạn cho hôm nay',
-      description: 'Áp dụng trước khi kết thúc ngày để không bỏ lỡ ưu đãi đang mở.',
-      expiry: 'Hết hạn hôm nay',
-      cta: 'Kích hoạt',
-      accent: '15%',
-    },
-  ];
+function formatExpiry(endAt?: string | null): string {
+  if (!endAt) return 'Không giới hạn';
+  const date = new Date(endAt);
+  if (Number.isNaN(date.getTime())) return endAt;
+  const now = new Date();
+  const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays <= 1) return 'Hết hạn hôm nay';
+  return date.toLocaleDateString('vi-VN');
+}
+
+function voucherAccent(v: VoucherResponse): string {
+  if (v.discountType === 'percent') return `${v.discountValue}%`;
+  return `${Math.round(v.discountValue / 1000)}K`;
+}
+
+function VoucherListSection() {
+  const navigate = useNavigate();
+  const filters = ['All', 'HOT', 'VIP', 'Expiring'];
+  const [activeFilter, setActiveFilter] = useState(0);
+  const [vouchers, setVouchers] = useState<VoucherResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [savingCode, setSavingCode] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const isLoggedIn = !!loadTokenFromStorage();
+
+  useEffect(() => {
+    let mounted = true;
+    voucherService
+      .listAvailable()
+      .then((data) => {
+        if (mounted) setVouchers(data);
+      })
+      .catch(() => {
+        if (mounted) setError('Không thể tải danh sách voucher, vui lòng thử lại.');
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleSave = async (code: string) => {
+    if (!isLoggedIn) {
+      navigate('/auth/login');
+      return;
+    }
+    setSavingCode(code);
+    try {
+      const updated = await voucherService.save(code);
+      setVouchers((prev) => prev.map((v) => (v.code === code ? updated : v)));
+    } catch {
+      setError('Không thể lưu voucher này, có thể bạn đã lưu trước đó.');
+    } finally {
+      setSavingCode(null);
+    }
+  };
+
+  const filteredVouchers = vouchers.filter((v) => {
+    if (activeFilter === 0) return true;
+    if (activeFilter === 1) return v.badge === 'HOT' || v.tone === 'hot';
+    if (activeFilter === 2) return v.badge === 'VIP' || v.tone === 'vip';
+    if (activeFilter === 3) return v.badge === 'EXPIRING' || v.tone === 'expiring';
+    return true;
+  });
+
   return (
     <div className="voucher-list-section">
       <div className="voucher-list-head">
@@ -398,8 +441,9 @@ function VoucherListSection() {
             <button
               key={filter}
               type="button"
-              className={`voucher-filter-pill ${index === 0 ? 'is-active' : ''}`}
-              aria-pressed={index === 0}
+              className={`voucher-filter-pill ${index === activeFilter ? 'is-active' : ''}`}
+              aria-pressed={index === activeFilter}
+              onClick={() => setActiveFilter(index)}
             >
               {filter}
             </button>
@@ -407,36 +451,64 @@ function VoucherListSection() {
         </div>
       </div>
 
-      <div className="voucher-stack-list">
-        {vouchers.map((voucher, index) => (
-          <article key={voucher.title} className={`voucher-list-card tone-${voucher.tone}`}>
-            <div className="voucher-list-left">
-              <div className="voucher-list-badge">{voucher.badge}</div>
-              <div className="voucher-list-amount">{voucher.accent}</div>
-            </div>
+      {error && <p className="voucher-list-error">{error}</p>}
 
-            <div className="voucher-list-divider" aria-hidden />
-
-            <div className="voucher-list-right">
-              <div className="voucher-list-top">
-                <div className="voucher-list-copy">
-                  <h4>{voucher.title}</h4>
-                  <p>{voucher.description}</p>
-                </div>
-                <span className="voucher-list-chip">#{index + 1}</span>
+      {loading ? (
+        <div className="voucher-list-loading">
+          <Loader2 className="spin" size={20} /> Đang tải voucher...
+        </div>
+      ) : (
+        <div className="voucher-stack-list">
+          {filteredVouchers.length === 0 && (
+            <p className="voucher-list-empty">Chưa có voucher phù hợp trong mục này.</p>
+          )}
+          {filteredVouchers.map((voucher, index) => (
+            <article key={voucher.code} className={`voucher-list-card tone-${voucher.tone}`}>
+              <div className="voucher-list-left">
+                <div className="voucher-list-badge">{voucher.badge}</div>
+                <div className="voucher-list-amount">{voucherAccent(voucher)}</div>
               </div>
 
-              <div className="voucher-list-bottom">
-                <div className="voucher-list-expiry">
-                  <span>Expiry</span>
-                  <strong>{voucher.expiry}</strong>
+              <div className="voucher-list-divider" aria-hidden />
+
+              <div className="voucher-list-right">
+                <div className="voucher-list-top">
+                  <div className="voucher-list-copy">
+                    <h4>{voucher.title}</h4>
+                    <p>{voucher.description}</p>
+                    {voucher.minOrderAmount > 0 && (
+                      <p className="voucher-list-condition">Đơn tối thiểu {formatVnd(voucher.minOrderAmount)}</p>
+                    )}
+                  </div>
+                  <span className="voucher-list-chip">#{index + 1}</span>
                 </div>
-                <button className="voucher-list-cta">{voucher.cta}</button>
+
+                <div className="voucher-list-bottom">
+                  <div className="voucher-list-expiry">
+                    <span>Expiry</span>
+                    <strong>{formatExpiry(voucher.endAt)}</strong>
+                  </div>
+                  <button
+                    className="voucher-list-cta"
+                    disabled={voucher.saved || savingCode === voucher.code}
+                    onClick={() => handleSave(voucher.code)}
+                  >
+                    {voucher.saved ? (
+                      <>
+                        <BadgeCheck size={14} /> Đã lưu
+                      </>
+                    ) : savingCode === voucher.code ? (
+                      'Đang lưu...'
+                    ) : (
+                      'Lưu voucher'
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
-          </article>
-        ))}
-      </div>
+            </article>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
