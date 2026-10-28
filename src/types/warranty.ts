@@ -4,6 +4,7 @@ export interface WarrantyResponse {
     id: string;
     orderId: string;
     status: WarrantyStatus;
+    claimCount?: number;
     description?: string;
     images?: string[];
     scheduledAt?: string;
@@ -36,7 +37,7 @@ export interface CreateWarrantyPayload {
 }
 
 export interface EmbeddedWarranty {
-    event: 'warranty_request' | 'warranty_accepted' | 'warranty_rejected';
+    event: 'warranty_request' | 'warranty_accepted' | 'warranty_rejected' | 'warranty_completed';
     warrantyId: string;
     description?: string;
     images?: string[];

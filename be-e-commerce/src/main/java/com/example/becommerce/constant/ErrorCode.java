@@ -98,4 +98,14 @@ public final class ErrorCode {
     public static final String DEVICE_TYPE_NOT_FOUND             = "DEVICE_TYPE_NOT_FOUND";
     public static final String BRAND_NOT_FOUND                   = "BRAND_NOT_FOUND";
     public static final String NO_TECHNICIAN_AVAILABLE           = "NO_TECHNICIAN_AVAILABLE";
+
+    // Voucher / Reward points
+    public static final String VOUCHER_NOT_FOUND                 = "VOUCHER_NOT_FOUND";
+    public static final String VOUCHER_ALREADY_SAVED             = "VOUCHER_ALREADY_SAVED";
+    public static final String VOUCHER_EXPIRED                   = "VOUCHER_EXPIRED";
+    public static final String VOUCHER_OUT_OF_QUOTA              = "VOUCHER_OUT_OF_QUOTA";
+    public static final String VOUCHER_NOT_APPLICABLE            = "VOUCHER_NOT_APPLICABLE";
+    public static final String VOUCHER_NOT_SAVED                 = "VOUCHER_NOT_SAVED";
+    public static final String INSUFFICIENT_POINTS               = "INSUFFICIENT_POINTS";
 }
+

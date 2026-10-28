@@ -1,6 +1,8 @@
 package com.example.becommerce.service.impl;
 
 import com.example.becommerce.constant.ErrorCode;
+import com.example.becommerce.dto.request.ApplyInvoiceDiscountRequest;
+import com.example.becommerce.dto.response.InvoiceDiscountResponse;
 import com.example.becommerce.entity.Conversation;
 import com.example.becommerce.entity.Invoice;
 import com.example.becommerce.entity.Message;
@@ -25,6 +27,7 @@ import com.example.becommerce.repository.WalletRepository;
 import com.example.becommerce.repository.WalletTransactionRepository;
 import com.example.becommerce.service.InvoiceService;
 import com.example.becommerce.service.PaymentGatewayService;
+import com.example.becommerce.service.VoucherService;
 import com.example.becommerce.service.WalletSettlementService;
 import com.example.becommerce.service.WsEventPublisher;
 import com.example.becommerce.utils.ConversationCodeGenerator;
@@ -40,6 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Service
@@ -59,6 +63,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final ConversationCodeGenerator conversationCodeGenerator;
     private final PaymentGatewayService paymentGatewayService;
     private final WalletSettlementService settlementService;
+    private final VoucherService voucherService;
     private final WsEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
 
@@ -113,6 +118,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .conversation(conversation)
                 .technician(technician)
                 .totalPrice(finalPrice)
+                .payableAmount(finalPrice)
                 .status(InvoiceStatus.PENDING)
                 .build();
         invoiceRepository.save(invoice);
@@ -138,6 +144,41 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     @Transactional
+    public InvoiceDiscountResponse applyDiscount(String orderCode, ApplyInvoiceDiscountRequest request) {
+        User customer = getCurrentUser();
+        Order order = findOrder(orderCode);
+
+        if (order.getCustomer() == null || !order.getCustomer().getId().equals(customer.getId())) {
+            throw AppException.forbidden("Bạn không phải khách hàng của đơn này");
+        }
+
+        Invoice invoice = invoiceRepository.findByOrder_Id(order.getId())
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy hoá đơn cho đơn này"));
+
+        if (invoice.getStatus() != InvoiceStatus.PENDING) {
+            throw AppException.badRequest(ErrorCode.BAD_REQUEST, "Hoá đơn đã được thanh toán");
+        }
+
+        InvoiceDiscountResponse result = voucherService.computeDiscount(
+                customer, invoice.getCode(), invoice.getTotalPrice(),
+                request.getVoucherCode(), request.getPointsToUse());
+
+        invoice.setVoucherCode(result.getVoucherCode());
+        invoice.setDiscountAmount(result.getDiscountAmount());
+        invoice.setPointsUsed(result.getPointsUsed());
+        invoice.setPointsDiscountAmount(result.getPointsDiscountAmount());
+        invoice.setPayableAmount(result.getPayableAmount());
+        invoiceRepository.save(invoice);
+
+        refreshInvoiceMessage(invoice, order);
+
+        log.info("Invoice {} discount staged: voucher={}, points={}, payable={}",
+                invoice.getCode(), result.getVoucherCode(), result.getPointsUsed(), result.getPayableAmount());
+        return result;
+    }
+
+    @Override
+    @Transactional
     public String createVnpayCheckout(String orderCode) {
         User customer = getCurrentUser();
         Order order = findOrder(orderCode);
@@ -153,6 +194,8 @@ public class InvoiceServiceImpl implements InvoiceService {
             throw AppException.badRequest(ErrorCode.BAD_REQUEST, "Hoá đơn đã được thanh toán");
         }
 
+        Long payableAmount = invoice.getPayableAmount() != null ? invoice.getPayableAmount() : invoice.getTotalPrice();
+
         // Create a WalletTransaction for the payment
         Wallet customerWallet = walletRepository.findByUser_Id(customer.getId())
                 .orElseThrow(() -> AppException.notFound("Không tìm thấy ví của khách hàng"));
@@ -165,10 +208,13 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .walletType(WalletType.PERSONAL)
                 .category("ORDER_PAYMENT")
                 .title("Thanh toán đơn hàng " + orderCode)
-                .amount(BigDecimal.valueOf(invoice.getTotalPrice()))
+                .amount(BigDecimal.valueOf(payableAmount))
                 .fee(BigDecimal.ZERO)
-                .netAmount(BigDecimal.valueOf(invoice.getTotalPrice()))
-                .note("Thanh toán hoá đơn " + invoice.getCode())
+                .netAmount(BigDecimal.valueOf(payableAmount))
+                .note("Thanh toán hoá đơn " + invoice.getCode()
+                        + (invoice.getVoucherCode() != null ? " (voucher " + invoice.getVoucherCode() + ")" : "")
+                        + (invoice.getPointsUsed() != null && invoice.getPointsUsed() > 0
+                                ? " (dùng " + invoice.getPointsUsed() + " điểm)" : ""))
                 .actor("CUSTOMER")
                 .status(TransactionStatus.AWAITING_PAYMENT)
                 .paymentMethod(PaymentMethod.VNPAY)
@@ -208,7 +254,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setPaidAt(LocalDateTime.now());
         invoiceRepository.save(invoice);
 
-        order.setFinalPrice(invoice.getTotalPrice());
+        Long payableAmount = invoice.getPayableAmount() != null ? invoice.getPayableAmount() : invoice.getTotalPrice();
+
+        order.setFinalPrice(payableAmount);
         order.setStatus(OrderStatus.COMPLETED);
         order.setCompletedAt(LocalDateTime.now());
         orderRepository.save(order);
@@ -218,6 +266,12 @@ public class InvoiceServiceImpl implements InvoiceService {
         // collected the money, so the PERSONAL wallet is NOT credited.
         settlementService.settleCompletedOrder(order, PaymentMethod.CASH);
 
+        User customer = order.getCustomer();
+        if (customer != null) {
+            voucherService.finalizeRewards(customer, order, invoice.getVoucherCode(),
+                    invoice.getPointsUsed() != null ? invoice.getPointsUsed() : 0L, payableAmount);
+        }
+
         eventPublisher.publishOrderStatusChanged(
                 order.getCode(), OrderStatus.IN_PROGRESS.apiValue(), OrderStatus.COMPLETED.apiValue());
 
@@ -226,17 +280,39 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     private String buildInvoiceJson(Invoice invoice, Order order) {
         try {
-            return objectMapper.writeValueAsString(Map.of(
-                    "invoiceCode", invoice.getCode(),
-                    "totalPrice", invoice.getTotalPrice(),
-                    "serviceName", order.getServiceName() != null ? order.getServiceName() : "",
-                    "subService", order.getSubService() != null ? order.getSubService() : "",
-                    "description", order.getDescription() != null ? order.getDescription() : "",
-                    "status", invoice.getStatus().name(),
-                    "createdAt", invoice.getCreatedAt() != null ? invoice.getCreatedAt().toString() : ""
-            ));
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("invoiceCode", invoice.getCode());
+            data.put("totalPrice", invoice.getTotalPrice());
+            data.put("serviceName", order.getServiceName() != null ? order.getServiceName() : "");
+            data.put("subService", order.getSubService() != null ? order.getSubService() : "");
+            data.put("description", order.getDescription() != null ? order.getDescription() : "");
+            data.put("status", invoice.getStatus().name());
+            data.put("createdAt", invoice.getCreatedAt() != null ? invoice.getCreatedAt().toString() : "");
+            data.put("voucherCode", invoice.getVoucherCode());
+            data.put("discountAmount", invoice.getDiscountAmount());
+            data.put("pointsUsed", invoice.getPointsUsed());
+            data.put("pointsDiscountAmount", invoice.getPointsDiscountAmount());
+            data.put("payableAmount", invoice.getPayableAmount() != null ? invoice.getPayableAmount() : invoice.getTotalPrice());
+            return objectMapper.writeValueAsString(data);
         } catch (Exception e) {
             return "{}";
+        }
+    }
+
+    /** Push the latest invoice snapshot (incl. staged discount) into its chat message. */
+    private void refreshInvoiceMessage(Invoice invoice, Order order) {
+        try {
+            String updatedJson = buildInvoiceJson(invoice, order);
+            messageRepository.findByConversation_IdAndTypeOrderBySentAtDesc(invoice.getConversation().getId(), MessageType.INVOICE)
+                    .stream()
+                    .findFirst()
+                    .ifPresent(msg -> {
+                        msg.setContent(updatedJson);
+                        messageRepository.save(msg);
+                    });
+            eventPublisher.publishMessageNew(invoice.getConversation().getCode(), null);
+        } catch (Exception e) {
+            log.warn("Failed to refresh invoice message for invoice {}: {}", invoice.getCode(), e.getMessage());
         }
     }
 

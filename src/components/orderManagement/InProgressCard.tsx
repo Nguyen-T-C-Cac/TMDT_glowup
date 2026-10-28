@@ -16,12 +16,14 @@ interface InProgressCardProps {
     onViewDetail: (id: string) => void;
     onCreateInvoice?: (id: string) => Promise<void>;
     onConfirmCash?: (id: string) => Promise<void>;
+    onCompleteWarranty?: (id: string) => Promise<void>;
 }
 
-export const InProgressCard: React.FC<InProgressCardProps> = ({data, role, onViewDetail, onCreateInvoice, onConfirmCash}) => {
+export const InProgressCard: React.FC<InProgressCardProps> = ({data, role, onViewDetail, onCreateInvoice, onConfirmCash, onCompleteWarranty}) => {
     const navigate = useNavigate();
     const [invoiceLoading, setInvoiceLoading] = React.useState(false);
     const [cashLoading, setCashLoading] = React.useState(false);
+    const [warrantyCompleting, setWarrantyCompleting] = React.useState(false);
 
     const handleChatClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -59,6 +61,17 @@ export const InProgressCard: React.FC<InProgressCardProps> = ({data, role, onVie
             await onConfirmCash(data.id);
         } finally {
             setCashLoading(false);
+        }
+    };
+
+    const handleCompleteWarranty = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!onCompleteWarranty || warrantyCompleting) return;
+        setWarrantyCompleting(true);
+        try {
+            await onCompleteWarranty(data.id);
+        } finally {
+            setWarrantyCompleting(false);
         }
     };
 
@@ -102,16 +115,30 @@ export const InProgressCard: React.FC<InProgressCardProps> = ({data, role, onVie
 
             <div className="ip-card-actions" onClick={(e) => e.stopPropagation()}>
                 <div className="price-display">
-                    <span className="price-label">Chi phí hiện tại</span>
-                    <span className={`price-value ${data.isWaitingApproval ? 'text-warning' : ''}`}>
-                        {data.currentPrice.toLocaleString('vi-VN')}đ
-                    </span>
+                    {data.isWarranty ? (
+                        <>
+                            <span className="price-label">Chi phí bảo hành</span>
+                            <span className="price-value">Miễn phí</span>
+                        </>
+                    ) : (
+                        <>
+                            <span className="price-label">Chi phí hiện tại</span>
+                            <span className={`price-value ${data.isWaitingApproval ? 'text-warning' : ''}`}>
+                                {data.currentPrice.toLocaleString('vi-VN')}đ
+                            </span>
+                        </>
+                    )}
                 </div>
 
                 <button className="btn-primary" onClick={() => onViewDetail(data.id)}>
                     <FaWrench/> Xem tiến độ
                 </button>
                 {role === 'technician' && (
+                    data.isWarranty ? (
+                        <button className="btn-success" onClick={handleCompleteWarranty} disabled={warrantyCompleting}>
+                            <FaCheck/> {warrantyCompleting ? 'Đang hoàn tất sửa chữa...' : 'Hoàn tất sửa chữa'}
+                        </button>
+                    ) : (
                     <>
                         <button className="btn-warning" onClick={handleSendInvoice} disabled={invoiceLoading}>
                             <FaFileInvoiceDollar/> {invoiceLoading ? 'Đang gửi...' : 'Gửi hoá đơn'}
@@ -120,6 +147,7 @@ export const InProgressCard: React.FC<InProgressCardProps> = ({data, role, onVie
                             <FaCheck/> {cashLoading ? 'Đang xử lý...' : 'Thu tiền mặt'}
                         </button>
                     </>
+                    )
                 )}
                 {role === 'customer' && (
                     <button type="button" className="btn-secondary" onClick={handleChatClick}>

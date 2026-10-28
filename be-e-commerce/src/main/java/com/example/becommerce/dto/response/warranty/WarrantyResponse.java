@@ -17,6 +17,7 @@ public class WarrantyResponse {
     private String id;
     private String orderId;
     private String status;
+    private Long claimCount;
     private String description;
 
     private List<String> images;

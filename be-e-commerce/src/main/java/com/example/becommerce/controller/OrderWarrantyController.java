@@ -50,11 +50,6 @@ public class OrderWarrantyController {
         return ResponseEntity.ok(ApiResponse.success(warrantyService.acceptWarranty(warrantyCode)));
     }
 
-    @PostMapping("/warranty/{code}/complete")
-    public ResponseEntity<ApiResponse<WarrantyResponse>> completeWarranty(@PathVariable("code") String warrantyCode) {
-        return ResponseEntity.ok(ApiResponse.success(warrantyService.completeWarranty(warrantyCode)));
-    }
-
     @PostMapping("/warranty/{code}/reject")
     public ResponseEntity<ApiResponse<WarrantyResponse>> rejectWarranty(
             @PathVariable("code") String warrantyCode,

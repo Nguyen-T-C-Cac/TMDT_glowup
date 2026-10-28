@@ -10,4 +10,5 @@ export interface InProgressOrder {
     statusText: string;
     currentPrice: number;
     isWaitingApproval: boolean; // True nếu thợ vừa điều chỉnh giá và chờ khách đồng ý
+    isWarranty?: boolean;
 }

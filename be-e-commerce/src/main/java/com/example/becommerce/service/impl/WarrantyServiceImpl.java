@@ -9,10 +9,12 @@ import com.example.becommerce.dto.response.warranty.WarrantyResponse;
 import com.example.becommerce.entity.Conversation;
 import com.example.becommerce.entity.Message;
 import com.example.becommerce.entity.Order;
+import com.example.becommerce.entity.OrderStatusHistory;
 import com.example.becommerce.entity.User;
 import com.example.becommerce.entity.WarrantyClaim;
 import com.example.becommerce.entity.enums.MessageType;
 import com.example.becommerce.entity.enums.NotificationType;
+import com.example.becommerce.entity.enums.OrderActor;
 import com.example.becommerce.entity.enums.OrderStatus;
 import com.example.becommerce.entity.enums.Role;
 import com.example.becommerce.entity.enums.WarrantyStatus;
@@ -47,7 +49,7 @@ import java.util.Map;
  *  - warrantyExpiresAt = order.completedAt + (order.warrantyMonths OR default 3 months).
  *  - One claim per order at a time; new claim replaces the prior pending one.
  *  - When a claim is created -> chat message + notification sent to technician.
- *  - Technician can accept -> order is re-opened with isWarranty=true.
+ *  - Technician can accept -> order returns to SCHEDULED and follows the repair lifecycle.
  *  - Technician can reject with reason -> customer notified.
  */
 @Service
@@ -164,11 +166,30 @@ public class WarrantyServiceImpl implements WarrantyService {
         WarrantyClaim saved = warrantyRepository.save(claim);
 
         Order order = claim.getOrder();
+        OrderStatus previousOrderStatus = order.getStatus();
+        order.setStatus(OrderStatus.SCHEDULED);
+        if (claim.getScheduledAt() != null) {
+            order.setScheduledAt(claim.getScheduledAt());
+        }
+        order.setStartedAt(null);
+        order.getStatusHistory().add(OrderStatusHistory.builder()
+                .order(order)
+                .fromStatus(previousOrderStatus)
+                .toStatus(OrderStatus.SCHEDULED)
+                .actor(OrderActor.TECHNICIAN)
+                .actorUserId(technician.getId())
+                .note("Thợ chấp nhận yêu cầu bảo hành")
+                .build());
+        orderRepository.save(order);
+        eventPublisher.publishOrderStatusChanged(
+                order.getCode(), previousOrderStatus.apiValue(), OrderStatus.SCHEDULED.apiValue());
+
         log.info("Warranty {} accepted by technician {} for order {}",
                 warrantyCode, technician.getCode(), order.getCode());
 
         // Send chat message
-        sendWarrantyStatusMessage(order, saved, "warranty_accepted", technician, "Thợ đã chấp nhận yêu cầu bảo hành");
+        sendWarrantyStatusMessage(order, saved, "warranty_accepted", technician,
+                "Thợ đã tiếp nhận yêu cầu. Đơn sẽ tiếp tục qua lịch hẹn và các bước sửa chữa bảo hành.");
 
         // Notify customer
         notifyUser(order.getCustomer(), NotificationType.WARRANTY_RESPONSE,
@@ -203,13 +224,16 @@ public class WarrantyServiceImpl implements WarrantyService {
         claim.setRejectReason(reason);
         warrantyRepository.save(claim);
 
+        Order order = claim.getOrder();
+        order.setIsWarranty(false);
+        orderRepository.save(order);
+
         log.info("Warranty {} rejected by technician {}: {}", warrantyCode, technician.getCode(), reason);
 
         // Send chat message
-        sendWarrantyStatusMessage(claim.getOrder(), claim, "warranty_rejected", technician, "Lý do: " + reason);
+        sendWarrantyStatusMessage(order, claim, "warranty_rejected", technician, reason);
 
         // Notify customer
-        Order order = claim.getOrder();
         notifyUser(order.getCustomer(), NotificationType.WARRANTY_RESPONSE,
                 "Yêu cầu bảo hành bị từ chối",
                 "Thợ " + technician.getFullName() + " đã từ chối bảo hành đơn " + order.getCode() + ". Lý do: " + reason,
@@ -218,42 +242,10 @@ public class WarrantyServiceImpl implements WarrantyService {
         return toResponse(claim);
     }
 
-    @Override
-    @Transactional
-    public WarrantyResponse completeWarranty(String warrantyCode) {
-        User technician = getCurrentUser();
-        if (technician.getRole() != Role.TECHNICIAN) {
-            throw AppException.forbidden("Chỉ thợ mới có thể hoàn thành bảo hành");
-        }
-
-        WarrantyClaim claim = warrantyRepository.findByCode(warrantyCode)
-                .orElseThrow(() -> AppException.notFound("Không tìm thấy yêu cầu bảo hành " + warrantyCode));
-
-        if (claim.getStatus() != WarrantyStatus.IN_PROGRESS) {
-            throw AppException.badRequest(ErrorCode.INVALID_ORDER_STATUS_TRANSITION,
-                    "Chỉ có thể hoàn thành yêu cầu bảo hành đang xử lý");
-        }
-
-        if (claim.getTechnician() == null || !claim.getTechnician().getId().equals(technician.getId())) {
-            throw AppException.forbidden("Bạn không phải thợ phụ trách yêu cầu bảo hành này");
-        }
-
-        claim.setStatus(WarrantyStatus.COMPLETED);
-        WarrantyClaim saved = warrantyRepository.save(claim);
-
-        Order order = claim.getOrder();
-        sendWarrantyStatusMessage(order, claim, "warranty_completed", technician, "Bảo hành đã hoàn thành");
-        notifyUser(order.getCustomer(), NotificationType.WARRANTY_RESPONSE,
-                "Yêu cầu bảo hành đã hoàn thành",
-                "Yêu cầu bảo hành cho đơn " + order.getCode() + " đã được hoàn thành.",
-                Map.of("orderId", order.getCode(), "warrantyId", claim.getCode()));
-
-        return toResponse(saved);
-    }
-
     private WarrantyResponse toResponse(WarrantyClaim claim) {
         WarrantyClaim previousRejectedClaim = findPreviousRejectedClaim(claim);
-        return warrantyMapper.toResponse(claim, previousRejectedClaim);
+        long claimCount = warrantyRepository.countByOrder_Id(claim.getOrder().getId());
+        return warrantyMapper.toResponse(claim, previousRejectedClaim, claimCount);
     }
 
     private WarrantyClaim findPreviousRejectedClaim(WarrantyClaim claim) {
@@ -335,7 +327,9 @@ public class WarrantyServiceImpl implements WarrantyService {
                     .sender(null)
                     .type(MessageType.WARRANTY)
                     .content(jsonContent)
-                    .title(eventType.equals("warranty_accepted") ? "Bảo hành được chấp nhận" : "Bảo hành bị từ chối")
+                    .title(eventType.equals("warranty_accepted")
+                            ? "Yêu cầu bảo hành đã được tiếp nhận"
+                            : "Yêu cầu bảo hành chưa được chấp nhận")
                     .build();
             Message saved = messageRepository.save(message);
 
@@ -353,6 +347,12 @@ public class WarrantyServiceImpl implements WarrantyService {
     }
 
     private LocalDateTime computeExpiry(Order order) {
+        LocalDateTime previousExpiry = warrantyRepository.findTopByOrder_IdOrderByCreatedAtDesc(order.getId())
+                .map(WarrantyClaim::getWarrantyExpiresAt)
+                .orElse(null);
+        if (previousExpiry != null) {
+            return previousExpiry;
+        }
         if (order.getCompletedAt() == null) return null;
         int months = order.getWarrantyMonths() != null ? order.getWarrantyMonths() : DEFAULT_WARRANTY_MONTHS;
         return order.getCompletedAt().plusMonths(months);

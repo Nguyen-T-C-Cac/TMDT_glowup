@@ -1,187 +1,274 @@
 .warranty-modal {
-    width: 100%;
-    max-width: 450px;
+    box-sizing: border-box;
+    width: min(100%, 480px);
     max-height: 90vh;
     background: var(--white);
     border-radius: 24px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    color: var(--text-main);
+    text-align: left;
+    font-family: var(--font-family);
 }
 
-/* HEADER */
 .warranty-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 24px 32px 15px 32px;
-    border-bottom: 1px solid var(--plate-white);
+    gap: 16px;
+    padding: 22px 28px 18px;
+    border-bottom: 1px solid var(--border);
 }
 
-.header-info {
-    text-align: left;
+.warranty-header-info {
+    min-width: 0;
 }
 
-.warranty-header .title {
+.warranty-title {
+    margin: 0;
+    color: var(--blueberry-skin);
     font-size: var(--fs-md);
     font-weight: var(--fw-bold);
-    color: var(--blueberry-skin);
-    margin: 0;
+    line-height: 1.35;
 }
 
-.warranty-header .sub {
+.warranty-subtitle {
+    display: block;
+    margin-top: 4px;
+    color: var(--stem-grey);
     font-size: var(--fs-xs);
-    color: var(--stem-grey);
 }
 
-/* CLOSE */
-.close-btn {
-    border: none;
-    background: none;
+.warranty-close-btn {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--plate-white);
+    color: var(--stem-grey);
     cursor: pointer;
-    color: var(--stem-grey);
-    padding: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s;
+    transition: background 0.2s, color 0.2s;
 }
 
-.close-btn:hover {
-    transform: scale(1.1);
+.warranty-close-btn:hover {
+    background: #e8eeff;
+    color: var(--blueberry-skin);
 }
 
-/* BODY */
 .warranty-body {
-    padding: 5px 32px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 20px;
+    padding: 22px 28px;
     overflow-y: auto;
 }
 
-/* NOTICE */
-.notice {
-    background: #E8EEFF;
+.warranty-notice {
+    padding: 14px 16px;
     border-left: 4px solid var(--berry-bloom);
-    padding: 16px;
-    border-radius: 12px;
-    font-size: var(--fs-sm);
+    border-radius: 10px;
+    background: #f2f5eb;
     color: var(--blueberry-skin);
-    text-align: left;
-    line-height: 1.4;
-}
-
-/* FORM */
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.form-group label {
-    font-size: var(--fs-xs);
-    font-weight: var(--fw-bold);
-    text-transform: uppercase;
-    color: var(--blueberry-skin);
-    text-align: left;
-    padding-left: 4px;
-}
-
-/* INPUTS */
-.warranty-modal textarea,
-.warranty-modal input {
-    border: 1px solid var(--border);
-    background: var(--white);
-    border-radius: 16px;
-    padding: 14px 18px;
     font-size: var(--fs-sm);
-    color: var(--text-main);
-    transition: all 0.2s;
-}
-
-.warranty-modal textarea:focus,
-.warranty-modal input:focus {
-    border-color: var(--berry-bloom);
-    background: var(--white);
-    outline: none;
-}
-
-.warranty-modal textarea {
-    min-height: 50px;
-    width: 350px;
-    resize: none;
     line-height: 1.5;
 }
 
-/* UPLOAD */
-.upload-box {
-    border: 2px dashed var(--yogurt-tint);
-    padding: 5px;
-    text-align: center;
-    border-radius: 20px;
-    font-size: var(--fs-xs);
-    font-weight: var(--fw-semibold);
-    color: var(--stem-grey);
-    background: var(--plate-white);
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.upload-box:hover {
-    background: var(--white);
-}
-
-/* IMAGE PREVIEW */
-.preview-img img {
-    width: 100%;
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-/* DATETIME ROW */
-.datetime-row {
-    display: flex;
-    gap: 12px;
-}
-
-.datetime-row input {
-    flex: 1;
-}
-
-/* FOOTER */
-.warranty-footer {
-    padding: 24px 32px;
-    border-top: 1px solid var(--plate-white);
-    background: var(--white);
+.warranty-form-group {
     display: flex;
     flex-direction: column;
+    gap: 9px;
+}
+
+.warranty-form-group label {
+    color: var(--text-main);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+}
+
+.warranty-modal .warranty-description,
+.warranty-modal .warranty-date-input,
+.warranty-modal .warranty-time-input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--white);
+    color: var(--text-main);
+    font: inherit;
+    font-size: var(--fs-sm);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.warranty-modal .warranty-description {
+    min-height: 120px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.warranty-modal .warranty-description::placeholder {
+    color: #9299a5;
+}
+
+.warranty-modal .warranty-description:focus,
+.warranty-modal .warranty-date-input:focus,
+.warranty-modal .warranty-time-input:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(104, 168, 119, 0.16);
+}
+
+.warranty-upload-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 100px;
+    padding: 16px;
+    border: 1px dashed var(--primary);
+    border-radius: 12px;
+    background: #f7faf7;
+    color: var(--blueberry-skin);
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.warranty-upload-box:hover,
+.warranty-upload-box:focus-visible {
+    border-color: var(--primary-hover);
+    background: #eef6ef;
+    outline: none;
+}
+
+.warranty-upload-box span {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+}
+
+.warranty-upload-box small {
+    color: var(--stem-grey);
+    font-size: var(--fs-xs);
+}
+
+.warranty-image-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.warranty-image-item {
+    position: relative;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 10px;
+    background: var(--plate-white);
+}
+
+.warranty-image-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.warranty-image-remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(20, 25, 20, 0.72);
+    color: var(--white);
+    cursor: pointer;
+}
+
+.datetime-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 12px;
 }
 
-/* BUTTONS */
-.btn-primary {
+.warranty-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px 28px 22px;
+    border-top: 1px solid var(--border);
+    background: var(--white);
+}
+
+.warranty-submit-btn {
+    min-height: 48px;
+    padding: 12px 18px;
+    border: 0;
+    border-radius: 10px;
     background: var(--blueberry-skin);
     color: var(--white);
-    border: none;
-    padding: 16px;
-    border-radius: 16px;
+    font: inherit;
     font-size: var(--fs-sm);
     font-weight: var(--fw-bold);
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: background 0.2s, opacity 0.2s;
 }
 
+.warranty-submit-btn:hover:not(:disabled) {
+    background: var(--primary-hover);
+}
 
-.btn-text {
-    background: none;
-    border: none;
+.warranty-submit-btn:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+.warranty-back-btn {
+    min-height: 40px;
+    border: 0;
+    background: transparent;
     color: var(--stem-grey);
+    font: inherit;
     font-size: var(--fs-sm);
     font-weight: var(--fw-medium);
     cursor: pointer;
-    padding: 8px;
-    display: block;
-    text-align: center;
-    transition: color 0.2s;
+}
+
+.warranty-back-btn:hover {
+    color: var(--text-main);
+}
+
+@media (max-width: 520px) {
+    .warranty-modal {
+        max-height: 92vh;
+        border-radius: 18px;
+    }
+
+    .warranty-header {
+        padding: 18px 18px 14px;
+    }
+
+    .warranty-body {
+        gap: 16px;
+        padding: 18px;
+    }
+
+    .warranty-footer {
+        padding: 14px 18px 18px;
+    }
+
+    .datetime-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
 }

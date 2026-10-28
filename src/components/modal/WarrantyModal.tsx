@@ -38,17 +38,21 @@ const WarrantyModal: React.FC<WarrantyModalProps> = ({ open, onClose, orderId, o
     };
 
     const handleImageUpload = () => {
+        if (images.length >= 5) {
+            alert("Bạn chỉ có thể tải lên tối đa 5 ảnh");
+            return;
+        }
         const input = document.createElement("input");
         input.type = "file";
         input.accept = "image/*";
-        input.multiple = false;
+        input.multiple = true;
         input.onchange = async () => {
-            const file = input.files?.[0];
-            if (!file) return;
+            const files = Array.from(input.files ?? []).slice(0, 5 - images.length);
+            if (files.length === 0) return;
             try {
-                const res = await uploadService.uploadImage(file, "warranty");
-                const url = res.data?.url;
-                if (url) setImages((prev) => [...prev, url]);
+                const results = await Promise.all(files.map((file) => uploadService.uploadImage(file, "warranty")));
+                const urls = results.map((res) => res.data?.url).filter((url): url is string => Boolean(url));
+                setImages((prev) => [...prev, ...urls].slice(0, 5));
             } catch {
                 alert("Không thể tải ảnh lên");
             }
@@ -64,42 +68,49 @@ const WarrantyModal: React.FC<WarrantyModalProps> = ({ open, onClose, orderId, o
         <Modal open={open} onClose={onClose}>
             <div className="warranty-modal">
                 <header className="warranty-header">
-                    <div className="header-info">
-                        <h2 className="title">YÊU CẦU BẢO HÀNH</h2>
-                        <span className="sub">Đơn hàng {orderId}</span>
+                    <div className="warranty-header-info">
+                        <h2 className="warranty-title">YÊU CẦU BẢO HÀNH</h2>
+                        <span className="warranty-subtitle">Đơn hàng {orderId}</span>
                     </div>
-                    <button className="close-btn" onClick={onClose} aria-label="Close modal">
+                    <button className="warranty-close-btn" onClick={onClose} aria-label="Đóng biểu mẫu">
                         <X size={24} />
                     </button>
                 </header>
 
                 <div className="warranty-body">
-                    <div className="notice">
+                    <div className="warranty-notice">
                         Bảo hành miễn phí theo chính sách của GlowUp
                     </div>
 
-                    <div className="form-group">
-                        <label htmlFor="warranty-desc">MÔ TẢ SỰ CỐ TÁI PHÁT</label>
+                    <div className="warranty-form-group">
+                        <label htmlFor="warranty-desc">Mô tả sự cố tái phát</label>
                         <textarea
                             id="warranty-desc"
+                            className="warranty-description"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             placeholder="Vui lòng mô tả chi tiết vấn đề bạn đang gặp phải..."
                         />
                     </div>
 
-                    <div className="form-group">
-                        <label>ẢNH CHỤP BẰNG CHỨNG ({images.length}/5 ẢNH)</label>
-                        <div className="upload-box" role="button" tabIndex={0} onClick={handleImageUpload}>
+                    <div className="warranty-form-group">
+                        <label>Ảnh chụp bằng chứng ({images.length}/5 ảnh)</label>
+                        <div className="warranty-upload-box" role="button" tabIndex={0} onClick={handleImageUpload} onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                handleImageUpload();
+                            }
+                        }}>
                             <Upload size={20} />
-                            TẢI ẢNH LÊN
+                            <span>Tải ảnh lên</span>
+                            <small>JPG, PNG · Tối đa 5 ảnh</small>
                         </div>
                         {images.length > 0 && (
-                            <div className="image-preview-list">
+                            <div className="warranty-image-list">
                                 {images.map((url, idx) => (
-                                    <div key={idx} className="image-preview-item">
+                                    <div key={idx} className="warranty-image-item">
                                         <img src={url} alt={`Ảnh ${idx + 1}`} />
-                                        <button className="image-remove-btn" onClick={() => removeImage(idx)}>
+                                        <button className="warranty-image-remove" onClick={() => removeImage(idx)} aria-label={`Xóa ảnh ${idx + 1}`}>
                                             <X size={14} />
                                         </button>
                                     </div>
@@ -108,18 +119,18 @@ const WarrantyModal: React.FC<WarrantyModalProps> = ({ open, onClose, orderId, o
                         )}
                     </div>
 
-                    <div className="form-group">
-                        <label>LỊCH HẸN KIỂM TRA</label>
+                    <div className="warranty-form-group">
+                        <label>Lịch hẹn kiểm tra (không bắt buộc)</label>
                         <div className="datetime-row">
                             <input
                                 type="date"
-                                className="date-input"
+                                className="warranty-date-input"
                                 value={scheduledDate}
                                 onChange={(e) => setScheduledDate(e.target.value)}
                             />
                             <input
                                 type="time"
-                                className="time-input"
+                                className="warranty-time-input"
                                 value={scheduledTime}
                                 onChange={(e) => setScheduledTime(e.target.value)}
                             />
@@ -128,10 +139,10 @@ const WarrantyModal: React.FC<WarrantyModalProps> = ({ open, onClose, orderId, o
                 </div>
 
                 <footer className="warranty-footer">
-                    <button className="btn-primary" onClick={handleSubmit} disabled={submitting}>
+                    <button className="warranty-submit-btn" onClick={handleSubmit} disabled={submitting}>
                         {submitting ? "Đang gửi..." : "Gửi yêu cầu bảo hành"}
                     </button>
-                    <button className="btn-text" onClick={onClose}>
+                    <button className="warranty-back-btn" onClick={onClose}>
                         Quay lại
                     </button>
                 </footer>

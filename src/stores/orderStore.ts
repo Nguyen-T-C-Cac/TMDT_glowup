@@ -282,12 +282,11 @@ const normalizeStatus = (status: string): string => status.trim().toLowerCase();
 export const getOrderTab = (order: OrderResponse): OrderTabId => {
     const normalized = normalizeStatus(order.status);
 
-    // Warranty orders are identified by the isWarranty flag
-    if (order.isWarranty) return 'warranty';
     if (normalized.includes('cancel')) return 'cancelled';
-    if (normalized.includes('complete')) return 'completed';
+    if (normalized.includes('complete')) return order.isWarranty ? 'warranty' : 'completed';
     if (normalized.includes('progress') || normalized.includes('working') || normalized.includes('repair')) return 'in-progress';
     if (normalized.includes('schedule') || normalized.includes('confirm') || normalized.includes('assigned')) return 'scheduled';
+    if (order.isWarranty) return 'warranty';
     if (normalized.includes('warranty')) return 'warranty';
 
     return 'new';
@@ -397,6 +396,7 @@ export const mapOrderToInProgressOrder = (order: OrderResponse): InProgressOrder
     statusText: getOrderStatusLabel(order),
     currentPrice: formatMoney(order.finalPrice ?? order.estimatedPrice),
     isWaitingApproval: order.priceAdjustment?.status?.toLowerCase() === 'pending',
+    isWarranty: order.isWarranty ?? false,
 });
 
 export const mapOrderToCompletedOrder = (order: OrderResponse): CompletedOrder => ({

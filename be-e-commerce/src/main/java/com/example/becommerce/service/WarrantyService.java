@@ -11,7 +11,5 @@ public interface WarrantyService {
 
     WarrantyResponse acceptWarranty(String warrantyCode);
 
-    WarrantyResponse completeWarranty(String warrantyCode);
-
     WarrantyResponse rejectWarranty(String warrantyCode, String reason);
 }

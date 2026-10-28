@@ -31,23 +31,19 @@ interface CompletedDetailProps {
         technicianName: string;
     };
 }
-// Thay hàm isWithinWarranty và cách tính withinWarranty
 const isWithinWarranty = (
     completedAt: string,
     warrantyMonths?: number,
-    warrantyExpiresAt?: string,   // Ưu tiên dùng field này nếu có
+    warrantyExpiresAt?: string,
 ): boolean => {
-    // Ưu tiên dùng warrantyExpiresAt từ API nếu có — chính xác nhất
     if (warrantyExpiresAt) {
         const expiry = new Date(warrantyExpiresAt);
         return !Number.isNaN(expiry.getTime()) && new Date() <= expiry;
     }
-    // Fallback: tính từ completedAt + warrantyMonths
-    if (!warrantyMonths) return true;
     const completed = new Date(completedAt);
     if (Number.isNaN(completed.getTime())) return false;
     const expiry = new Date(completed);
-    expiry.setMonth(expiry.getMonth() + warrantyMonths);
+    expiry.setMonth(expiry.getMonth() + (warrantyMonths ?? 3));
     return new Date() <= expiry;
 };
 export const CompletedDetail: React.FC<CompletedDetailProps> = ({ role, onBack, onOpenRating, order }) => {

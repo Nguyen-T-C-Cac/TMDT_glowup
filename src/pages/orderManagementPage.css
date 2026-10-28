@@ -8,6 +8,28 @@
     padding-top: 24px;
 }
 
+/* When sidebar present (customer role), use a flex row */
+.orders-outer-row {
+    display: block;
+}
+.orders-outer-row.has-sidebar {
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+    padding: 0 24px;
+}
+.orders-outer-row.has-sidebar .orders-container {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+}
+@media (max-width: 1100px) {
+    .orders-outer-row.has-sidebar {
+        flex-wrap: wrap;
+    }
+}
+
 .page-header {
     display: flex;
     align-items: center;
@@ -546,16 +568,6 @@
 
 .detail-warranty-btn:hover {
     background: #e8f5e9;
-}
-
-.detail-warranty-retry-btn {
-    background: #2563eb;
-    color: white;
-    border-color: #2563eb;
-}
-
-.detail-warranty-retry-btn:hover {
-    background: #1d4ed8;
 }
 
 .detail-warranty-submitted {

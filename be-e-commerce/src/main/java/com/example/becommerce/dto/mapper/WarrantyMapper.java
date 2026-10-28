@@ -18,6 +18,14 @@ public class WarrantyMapper {
     }
 
     public WarrantyResponse toResponse(WarrantyClaim claim, WarrantyClaim previousRejectedClaim) {
+        return toResponse(claim, previousRejectedClaim, null);
+    }
+
+    public WarrantyResponse toResponse(
+            WarrantyClaim claim,
+            WarrantyClaim previousRejectedClaim,
+            Long claimCount
+    ) {
         if (claim == null) return null;
 
         List<String> images = claim.getImages();
@@ -27,6 +35,7 @@ public class WarrantyMapper {
                 .id(claim.getCode())
                 .orderId(claim.getOrder() == null ? null : claim.getOrder().getCode())
                 .status(claim.getStatus() == null ? null : claim.getStatus().apiValue())
+                .claimCount(claimCount)
                 .description(claim.getDescription())
                 .images(images != null && !images.isEmpty() ? images : null)
                 .scheduledAt(claim.getScheduledAt())
@@ -59,7 +68,9 @@ public class WarrantyMapper {
 
     private Long calculateRemainingDays(LocalDateTime expiresAt) {
         if (expiresAt == null) return null;
-        long days = Duration.between(LocalDateTime.now(), expiresAt).toDays();
-        return Math.max(days, 0);
+        Duration remaining = Duration.between(LocalDateTime.now(), expiresAt);
+        if (remaining.isNegative()) return 0L;
+        long fullDays = remaining.toDays();
+        return remaining.minusDays(fullDays).isZero() ? fullDays : fullDays + 1;
     }
 }

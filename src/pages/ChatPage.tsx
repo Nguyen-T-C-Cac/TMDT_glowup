@@ -23,8 +23,10 @@ import type { Contact } from '../types/Message';
 import type { UserRole } from '../types/UserRole';
 import type { ChatLocationState, ChatMessage, ConversationItem } from '../types/chat';
 import type { OrderResponse } from '../types/order/order';
+import type { EmbeddedWarranty } from '../types/warranty';
 import type { Quote } from '../types/Quote';
 import { BookingCard } from '../components/chat/BookingCard';
+import { WarrantyCard } from '../components/chat/WarrantyCard';
 
 const pageMap: Record<string, string> = {
     home: '/',
@@ -40,6 +42,52 @@ const pageMap: Record<string, string> = {
 const stripHtml = (text: string): string =>
     text.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
 
+const parseEmbeddedWarranty = (content?: string | null): EmbeddedWarranty | null => {
+    if (!content) return null;
+
+    const candidates = [content.trim(), stripHtml(content)];
+    for (const candidate of candidates) {
+        try {
+            const parsed: unknown = JSON.parse(candidate);
+            if (!parsed || typeof parsed !== 'object') continue;
+
+            const data = parsed as Record<string, unknown>;
+            const validEvents: EmbeddedWarranty['event'][] = [
+                'warranty_request',
+                'warranty_accepted',
+                'warranty_rejected',
+                'warranty_completed',
+            ];
+            if (
+                typeof data.event !== 'string' ||
+                !validEvents.includes(data.event as EmbeddedWarranty['event']) ||
+                typeof data.warrantyId !== 'string'
+            ) {
+                continue;
+            }
+
+            return {
+                event: data.event as EmbeddedWarranty['event'],
+                warrantyId: data.warrantyId,
+                description: typeof data.description === 'string' ? data.description : undefined,
+                images: Array.isArray(data.images)
+                    ? data.images.filter((image): image is string => typeof image === 'string')
+                    : undefined,
+                scheduledAt: typeof data.scheduledAt === 'string' ? data.scheduledAt : undefined,
+                warrantyExpiresAt: typeof data.warrantyExpiresAt === 'string' ? data.warrantyExpiresAt : undefined,
+                customerName: typeof data.customerName === 'string' ? data.customerName : undefined,
+                technicianName: typeof data.technicianName === 'string' ? data.technicianName : undefined,
+                note: typeof data.note === 'string' ? data.note : undefined,
+                rejectReason: typeof data.rejectReason === 'string' ? data.rejectReason : undefined,
+            };
+        } catch {
+            // Try the HTML-stripped form if the original content is not valid JSON.
+        }
+    }
+
+    return null;
+};
+
 const friendlyPreview = (msg: ConversationItem['lastMessage']): string => {
     if (!msg) return '';
     const type = msg.type;
@@ -48,6 +96,7 @@ const friendlyPreview = (msg: ConversationItem['lastMessage']): string => {
     if (type === 'quotation') return '📄 Báo giá';
     if (type === 'invoice') return '🧾 Hoá đơn';
     if (type === 'booking') return '🔧 Yêu cầu sửa chữa';
+    if (type === 'warranty' || parseEmbeddedWarranty(content)) return '🛡️ Thông tin bảo hành';
     if (type === 'system') return '🔔 Thông báo hệ thống';
     if (!content) return '';
     const cleaned = stripHtml(content);
@@ -707,6 +756,10 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                                 const isQuotation = message.type === 'quotation' && message.quotation;
                                 const isInvoice = message.type === 'invoice';
                                 const isBooking = message.type === 'booking';
+                                const warranty = message.warranty ??
+                                    ((message.type === 'warranty' || message.type === 'text')
+                                        ? parseEmbeddedWarranty(message.content)
+                                        : null);
                                 let invoiceParsed: Record<string, unknown> | null = null;
                                 if (isInvoice && message.content) {
                                     try {
@@ -725,7 +778,17 @@ export const ChatPage: React.FC<{ role?: UserRole }> = ({ role = 'customer' }) =
                                             <Avatar src={activeContact.avatar} size={32} isOnline={false} />
                                         )}
                                         <div className={styles.messageContent}>
-                                            {isBooking && message.booking ? (
+                                            {warranty ? (
+                                                <WarrantyCard
+                                                    warranty={warranty}
+                                                    role={role}
+                                                    onStatusChange={() => {
+                                                        if (activeConversationId) {
+                                                            void loadMessages(activeConversationId);
+                                                        }
+                                                    }}
+                                                />
+                                            ) : isBooking && message.booking ? (
                                                 <BookingCard
                                                     booking={message.booking}
                                                     role={role}

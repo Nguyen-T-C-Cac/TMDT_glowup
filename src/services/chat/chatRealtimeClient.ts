@@ -26,6 +26,7 @@ export type MessageNewWsPayload = {
     title?: string | null;
     quotation?: ChatMessage['quotation'];
     booking?: ChatMessage['booking'];
+    warranty?: ChatMessage['warranty'];
     sentAt: string;
     isRead?: boolean;
   };
@@ -207,6 +208,7 @@ export const mapWsMessageToChatMessage = (
     title: msg.title ?? null,
     quotation: msg.quotation ?? null,
     booking: msg.booking ?? null,
+    warranty: msg.warranty ?? null,
     sentAt:
       typeof msg.sentAt === 'string'
         ? msg.sentAt

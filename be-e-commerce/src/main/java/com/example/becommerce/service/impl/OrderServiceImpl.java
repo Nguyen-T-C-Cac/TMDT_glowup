@@ -21,6 +21,7 @@ import com.example.becommerce.entity.OrderStatusHistory;
 import com.example.becommerce.entity.Review;
 import com.example.becommerce.entity.TechnicianScheduleSlot;
 import com.example.becommerce.entity.User;
+import com.example.becommerce.entity.WarrantyClaim;
 import com.example.becommerce.entity.Wallet;
 import com.example.becommerce.entity.WalletTransaction;
 import com.example.becommerce.entity.enums.OrderActor;
@@ -29,6 +30,7 @@ import com.example.becommerce.entity.enums.PriceAdjustmentStatus;
 import com.example.becommerce.entity.enums.Role;
 import com.example.becommerce.entity.enums.TransactionStatus;
 import com.example.becommerce.entity.enums.TransactionType;
+import com.example.becommerce.entity.enums.WarrantyStatus;
 import com.example.becommerce.entity.enums.WalletType;
 import com.example.becommerce.exception.AppException;
 import com.example.becommerce.repository.OrderPriceAdjustmentRepository;
@@ -36,6 +38,7 @@ import com.example.becommerce.repository.OrderRepository;
 import com.example.becommerce.repository.ReviewRepository;
 import com.example.becommerce.repository.SystemSettingRepository;
 import com.example.becommerce.repository.UserRepository;
+import com.example.becommerce.repository.WarrantyClaimRepository;
 import com.example.becommerce.repository.WalletRepository;
 import com.example.becommerce.repository.WalletTransactionRepository;
 import com.example.becommerce.entity.enums.NotificationType;
@@ -89,6 +92,7 @@ public class OrderServiceImpl implements OrderService {
     private final UserRepository                  userRepository;
     private final WalletRepository                walletRepository;
     private final WalletTransactionRepository     walletTransactionRepository;
+    private final WarrantyClaimRepository         warrantyClaimRepository;
     private final SystemSettingRepository         systemSettingRepository;
     private final OrderMapper                     orderMapper;
     private final OrderCodeGenerator              codeGenerator;
@@ -341,7 +345,11 @@ public class OrderServiceImpl implements OrderService {
         OrderStatus from = order.getStatus();
         order.setStatus(target);
 
-        if (target == OrderStatus.IN_PROGRESS && order.getStartedAt() == null) {
+        boolean restartingWarrantyRepair = from == OrderStatus.COMPLETED
+                && target == OrderStatus.IN_PROGRESS
+                && Boolean.TRUE.equals(order.getIsWarranty());
+        if (target == OrderStatus.IN_PROGRESS
+                && (order.getStartedAt() == null || restartingWarrantyRepair)) {
             order.setStartedAt(LocalDateTime.now());
         }
         if (target == OrderStatus.COMPLETED && order.getCompletedAt() == null) {
@@ -353,6 +361,9 @@ public class OrderServiceImpl implements OrderService {
         recordHistory(order, from, target, actor, current.getId(), null);
 
         Order saved = orderRepository.save(order);
+        if (target == OrderStatus.COMPLETED) {
+            completeWarrantyClaim(order);
+        }
         eventPublisher.publishOrderStatusChanged(
                 saved.getCode(), from.apiValue(), target.apiValue());
         return orderMapper.toStatusChange(saved);
@@ -408,6 +419,7 @@ public class OrderServiceImpl implements OrderService {
         // keyed on order.settled to avoid double-counting.
 
         Order saved = orderRepository.save(order);
+        completeWarrantyClaim(saved);
         eventPublisher.publishOrderStatusChanged(
                 saved.getCode(), from.apiValue(), OrderStatus.COMPLETED.apiValue());
         notifyOrderEvent(saved.getCustomer(), NotificationType.ORDER_COMPLETED,
@@ -605,7 +617,12 @@ public class OrderServiceImpl implements OrderService {
             throw AppException.forbidden("Bạn không phải thợ phụ trách đơn này");
         }
 
+        boolean acceptedWarrantyRestart = from == OrderStatus.COMPLETED
+                && target == OrderStatus.IN_PROGRESS
+                && Boolean.TRUE.equals(order.getIsWarranty())
+                && warrantyClaimRepository.existsByOrder_IdAndStatus(order.getId(), WarrantyStatus.IN_PROGRESS);
         boolean allowed = (from == OrderStatus.SCHEDULED && target == OrderStatus.IN_PROGRESS)
+                || acceptedWarrantyRestart
                 || (from == OrderStatus.IN_PROGRESS && target == OrderStatus.COMPLETED);
 
         if (!allowed) {
@@ -668,6 +685,21 @@ public class OrderServiceImpl implements OrderService {
     private Order findOrder(String code) {
         return orderRepository.findByCodeAndDeletedFalse(code)
                 .orElseThrow(() -> AppException.notFound("Không tìm thấy đơn hàng " + code));
+    }
+
+    private void completeWarrantyClaim(Order order) {
+        if (!Boolean.TRUE.equals(order.getIsWarranty())) {
+            return;
+        }
+
+        warrantyClaimRepository.findTopByOrder_IdOrderByCreatedAtDesc(order.getId())
+                .filter(claim -> claim.getStatus() == WarrantyStatus.IN_PROGRESS)
+                .ifPresent(claim -> {
+                    claim.setStatus(WarrantyStatus.COMPLETED);
+                    warrantyClaimRepository.save(claim);
+                    order.setIsWarranty(false);
+                    orderRepository.save(order);
+                });
     }
 
     private void recordHistory(Order order, OrderStatus from, OrderStatus to,

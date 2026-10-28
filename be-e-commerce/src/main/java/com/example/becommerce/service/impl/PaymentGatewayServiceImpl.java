@@ -28,6 +28,7 @@ import com.example.becommerce.repository.SystemSettingRepository;
 import com.example.becommerce.repository.WalletRepository;
 import com.example.becommerce.repository.WalletTransactionRepository;
 import com.example.becommerce.service.PaymentGatewayService;
+import com.example.becommerce.service.VoucherService;
 import com.example.becommerce.service.WalletSettlementService;
 import com.example.becommerce.service.WsEventPublisher;
 import com.example.becommerce.utils.HmacUtils;
@@ -66,6 +67,7 @@ public class PaymentGatewayServiceImpl implements PaymentGatewayService {
     private final TransactionCodeGenerator transactionCodeGenerator;
     private final MessageMapper messageMapper;
     private final WalletSettlementService settlementService;
+    private final VoucherService voucherService;
     private final WsEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
 
@@ -207,11 +209,16 @@ public class PaymentGatewayServiceImpl implements PaymentGatewayService {
         
         Order order = tx.getOrder();
         if (order != null && order.getStatus() != OrderStatus.COMPLETED) {
+            Invoice invoice = invoiceRepository.findByOrder_Id(order.getId()).orElse(null);
+            Long payableAmount = invoice != null && invoice.getPayableAmount() != null
+                    ? invoice.getPayableAmount()
+                    : (invoice != null ? invoice.getTotalPrice() : order.getFinalPrice());
+
+            order.setFinalPrice(payableAmount);
             order.setStatus(OrderStatus.COMPLETED);
             order.setCompletedAt(LocalDateTime.now());
             orderRepository.save(order);
 
-            Invoice invoice = invoiceRepository.findByOrder_Id(order.getId()).orElse(null);
             if (invoice != null) {
                 invoice.setStatus(InvoiceStatus.PAID_VNPAY);
                 invoice.setPaymentMethod("VNPAY");
@@ -221,6 +228,16 @@ public class PaymentGatewayServiceImpl implements PaymentGatewayService {
 
                 // Update the invoice message content with paid status
                 updateInvoiceMessage(invoice, order);
+
+                User customer = order.getCustomer();
+                if (customer != null) {
+                    try {
+                        voucherService.finalizeRewards(customer, order, invoice.getVoucherCode(),
+                                invoice.getPointsUsed() != null ? invoice.getPointsUsed() : 0L, payableAmount);
+                    } catch (Exception ex) {
+                        log.warn("Failed to finalize voucher/points rewards for order {}: {}", order.getCode(), ex.getMessage());
+                    }
+                }
             }
 
             // Unified settlement: credit the technician's PERSONAL wallet with the
@@ -272,15 +289,19 @@ public class PaymentGatewayServiceImpl implements PaymentGatewayService {
             Conversation conversation = conversationRepository.findByOrder_Id(order.getId()).orElse(null);
             if (conversation == null) return;
 
-            Map<String, Object> updatedData = Map.of(
-                    "invoiceCode", invoice.getCode(),
-                    "totalPrice", invoice.getTotalPrice(),
-                    "serviceName", order.getServiceName() != null ? order.getServiceName() : "",
-                    "subService", order.getSubService() != null ? order.getSubService() : "",
-                    "description", order.getDescription() != null ? order.getDescription() : "",
-                    "status", invoice.getStatus().name(),
-                    "createdAt", invoice.getCreatedAt() != null ? invoice.getCreatedAt().toString() : ""
-            );
+            Map<String, Object> updatedData = new java.util.LinkedHashMap<>();
+            updatedData.put("invoiceCode", invoice.getCode());
+            updatedData.put("totalPrice", invoice.getTotalPrice());
+            updatedData.put("serviceName", order.getServiceName() != null ? order.getServiceName() : "");
+            updatedData.put("subService", order.getSubService() != null ? order.getSubService() : "");
+            updatedData.put("description", order.getDescription() != null ? order.getDescription() : "");
+            updatedData.put("status", invoice.getStatus().name());
+            updatedData.put("createdAt", invoice.getCreatedAt() != null ? invoice.getCreatedAt().toString() : "");
+            updatedData.put("voucherCode", invoice.getVoucherCode());
+            updatedData.put("discountAmount", invoice.getDiscountAmount());
+            updatedData.put("pointsUsed", invoice.getPointsUsed());
+            updatedData.put("pointsDiscountAmount", invoice.getPointsDiscountAmount());
+            updatedData.put("payableAmount", invoice.getPayableAmount() != null ? invoice.getPayableAmount() : invoice.getTotalPrice());
             String updatedJson = objectMapper.writeValueAsString(updatedData);
 
             messageRepository.findByConversation_IdAndTypeOrderBySentAtDesc(conversation.getId(), MessageType.INVOICE)

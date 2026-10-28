@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import './orderManagementPage.css';
-import { useLocation, useNavigate } from 'react-router-dom';
+
 import type { UserRole } from '../types/UserRole.ts';
 import type { OrderResponse } from '../types/order/order.ts';
 import type { OrderTabId } from '../stores/orderStore.ts';
@@ -26,7 +26,7 @@ import { OrderDetailPanel } from '../components/orderManagement/OrderDetailPanel
 import { WarrantyDetailPanel } from '../components/orderManagement/WarrantyDetailPanel.tsx';
 import ReviewModal from '../components/modal/ReviewModal.tsx';
 import ReportModal from '../components/modal/ReportModal.tsx';
-import { useToast } from '../components/common/Toast';
+import { SavedVouchersSidebar } from '../components/orderManagement/SavedVouchersSidebar.tsx';
 
 interface OrderPageProps {
     role: UserRole;
@@ -43,7 +43,6 @@ const tabStatusMap: Record<Exclude<OrderTabId, 'warranty'>, string | undefined> 
 };
 
 export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
-    const { showToast } = useToast();
     const [activeTab, setActiveTab] = useState<OrderTabId>('new');
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState('');
@@ -73,9 +72,7 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
     const [reviewOrder, setReviewOrder] = useState<OrderResponse | null>(null);
     const [reviewEditData, setReviewEditData] = useState<{ rating: number; content?: string } | undefined>(undefined);
     const [reportOrder, setReportOrder] = useState<OrderResponse | null>(null);
-    
-    const location = useLocation();
-    const navigate = useNavigate();
+
     const loadOrders = useCallback(async () => {
         setLoadingList(true);
         setError(null);
@@ -138,41 +135,9 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
         setSelectedOrder(null);
     }, [activeTab]);
 
-    // Xử lý deep-link từ thông báo: { openOrderId, openTab }
-    useEffect(() => {
-        const state = location.state as Record<string, unknown> | null;
-        if (!state?.openOrderId) return;
-
-        const id = state.openOrderId as string;
-        const openTab = state.openTab as string | undefined;
-
-        // Clear state ngay để tránh re-trigger khi navigate nội bộ
-        navigate(location.pathname, { replace: true, state: {} });
-
-        if (openTab === 'warranty') {
-            // Chuyển sang tab bảo hành và mở chi tiết đơn
-            setActiveTab('warranty');
-            setPage(1);
-            setSelectedOrder(null);
-            orderService.getOrderById(id)
-                .then((order) => setSelectedOrder(order))
-                .catch(() => setError('Không thể tải chi tiết đơn hàng'));
-        } else {
-            // Tìm đúng tab của đơn rồi mở chi tiết
-            orderService.getOrderById(id)
-                .then((order) => {
-                    const tab = getOrderTab(order) as OrderTabId;
-                    setActiveTab(tab);
-                    setPage(1);
-                    setSelectedOrder(order);
-                })
-                .catch(() => setError('Không thể tải chi tiết đơn hàng'));
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [location.state]);
-        const handleTabChange = (tabId: string) => {
-            setActiveTab(tabId as OrderTabId);
-        };
+    const handleTabChange = (tabId: string) => {
+        setActiveTab(tabId as OrderTabId);
+    };
 
     const handleSelectOrder = async (orderId: string) => {
         setLoadingDetail(true);
@@ -205,6 +170,12 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
         setSelectedOrder(order);
     };
 
+    const handleWarrantyAccepted = useCallback(() => {
+        setSelectedOrder(null);
+        setPage(1);
+        setActiveTab('scheduled');
+    }, []);
+
     const handleOpenCancelModal = (orderId: string) => {
         setOrderToCancel(orderId);
         setCancelReason('');
@@ -217,7 +188,7 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
         }
 
         if (!cancelReason.trim()) {
-            showToast('Vui lòng nhập lý do hủy đơn.', 'warning');
+            window.alert('Vui lòng nhập lý do hủy đơn.');
             return;
         }
 
@@ -250,27 +221,12 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
         setError(null);
         try {
             await orderService.createInvoice(orderId);
-            showToast('Hoá đơn đã được gửi vào chat thành công!', 'success');
+            alert('Hoá đơn đã được gửi vào chat thành công!');
         } catch (err: unknown) {
             const axiosError = err as { response?: { data?: { error?: { message?: string } } } };
             const serverMsg = axiosError?.response?.data?.error?.message;
             const msg = serverMsg || (err instanceof Error ? err.message : 'Không thể gửi hoá đơn');
             setError(msg);
-        }
-    };
-
-    // Thu tiền mặt → xác nhận thanh toán: đơn hoàn thành + settle (trừ phí ví tín dụng, cộng điểm).
-    // Đây là bước "hoàn thành" đúng nghiệp vụ — chỉ chạy sau khi đã thu tiền.
-    const handleConfirmCash = async (orderId: string) => {
-        setError(null);
-        try {
-            await orderService.confirmCashPayment(orderId);
-            showToast('Đã thu tiền mặt — đơn hoàn thành, ví & điểm đã cập nhật', 'success');
-            await loadOrders();
-        } catch (err: unknown) {
-            const axiosError = err as { response?: { data?: { error?: { message?: string } } } };
-            const serverMsg = axiosError?.response?.data?.error?.message;
-            showToast(serverMsg || (err instanceof Error ? err.message : 'Không thể xác nhận thu tiền. Hãy gửi hoá đơn trước.'), 'error');
         }
     };
 
@@ -293,6 +249,18 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
             setSubmittingStatus(null);
         }
     };
+
+    const handleCompleteWarranty = useCallback(async (orderId: string) => {
+        setError(null);
+        try {
+            await orderService.completeOrder(orderId);
+            await loadOrders();
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Không thể hoàn tất sửa chữa bảo hành';
+            setError(msg);
+            alert(msg);
+        }
+    }, [loadOrders]);
 
     const handleAcceptWarranty = useCallback(async (orderId: string) => {
         setError(null);
@@ -453,7 +421,7 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                     role={role}
                     onViewDetail={handleSelectOrder}
                     onCreateInvoice={role === 'technician' ? handleCreateInvoice : undefined}
-                    onConfirmCash={role === 'technician' ? handleConfirmCash : undefined}
+                    onCompleteWarranty={role === 'technician' ? handleCompleteWarranty : undefined}
                 />
             ));
         }
@@ -477,18 +445,20 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                 onViewDetail={handleSelectOrder}
             />
         ));
-    }, [activeTab, handleSelectOrder, role, visibleOrders, warrantyData, handleAcceptWarranty, handleRejectWarranty]);
+    }, [activeTab, handleSelectOrder, role, visibleOrders, warrantyData, handleAcceptWarranty, handleRejectWarranty, handleCompleteWarranty]);
 
     return (
         <div className="layout-wrapper">
             <div className="main-content">
                 <main className="page-body bg-plate-white">
+                    <div className={`orders-outer-row${role === 'customer' ? ' has-sidebar' : ''}`}>
                     <div className="orders-container">
                         {selectedOrder && activeTab === 'warranty' && (
             <WarrantyDetailPanel
                 orderId={selectedOrder.id}
                 role={role}
                 onBack={() => setSelectedOrder(null)}
+                onAccepted={handleWarrantyAccepted}
             />
                         )}
 
@@ -680,7 +650,9 @@ export const OrderManagementPage: React.FC<OrderPageProps> = ({ role }) => {
                             orderId={reportOrder?.id ?? ''}
                             onSuccess={handleReportSuccess}
                         />
-                    </div>
+                    </div>{/* orders-container */}
+                    {role === 'customer' && <SavedVouchersSidebar />}
+                    </div>{/* orders-outer-row */}
                 </main>
             </div>
         </div>

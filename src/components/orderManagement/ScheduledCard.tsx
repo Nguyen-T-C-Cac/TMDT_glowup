@@ -84,7 +84,7 @@ export const ScheduledCard: React.FC<ScheduledCardProps> = ({ data, role, onView
             </div>
 
             <div className="sched-card-actions" onClick={(e) => e.stopPropagation()}>
-                {isWarranty ? (
+                {isPendingWarranty ? (
                     <>
                         <button className="btn-primary" onClick={handleDetailClick}>
                             <FaShieldHalved /> Xem chi tiết

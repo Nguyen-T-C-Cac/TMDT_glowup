@@ -15,10 +15,14 @@ public interface WarrantyClaimRepository extends JpaRepository<WarrantyClaim, Lo
 
     Optional<WarrantyClaim> findTopByOrder_IdOrderByCreatedAtDesc(Long orderId);
 
+    long countByOrder_Id(Long orderId);
+
     Optional<WarrantyClaim> findTopByOrder_IdAndStatusAndCreatedAtBeforeOrderByCreatedAtDesc(
             Long orderId, WarrantyStatus status, LocalDateTime createdAt);
 
     boolean existsByOrder_Id(Long orderId);
+
+    boolean existsByOrder_IdAndStatus(Long orderId, WarrantyStatus status);
 
     boolean existsByCode(String code);
 

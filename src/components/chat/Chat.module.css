@@ -750,98 +750,202 @@
 
 .warrantyCard {
     background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
-    padding: 16px;
-    max-width: 400px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    border: 1px solid #dce6dc;
+    border-radius: 14px;
+    padding: 18px;
+    width: min(100%, 440px);
+    box-shadow: 0 4px 14px rgba(36, 51, 36, 0.08);
     cursor: default;
 }
 
 .warrantyBadge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.8px;
-    padding: 3px 10px;
-    border-radius: 4px;
-    margin-bottom: 10px;
+    letter-spacing: 0.35px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+}
+
+.warrantyBadgePending {
     background: #e8f5e9;
     color: #2e7d32;
+}
+
+.warrantyBadgeAccepted {
+    background: #e8f5e9;
+    color: #256b35;
+}
+
+.warrantyBadgeRejected {
+    background: #fff1f0;
+    color: #b42318;
 }
 
 .warrantyHeader {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.warrantyTitle {
+    display: block;
+    color: #243353;
+    font-size: 15px;
+    line-height: 1.4;
+}
+
+.warrantyIntro {
+    margin-top: 5px;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.5;
 }
 
 .warrantyCode {
-    font-size: 12px;
-    color: #888;
+    flex-shrink: 0;
+    padding: 4px 7px;
+    border-radius: 6px;
+    background: #f3f6f3;
+    color: #64748b;
+    font-size: 11px;
 }
 
 .warrantyBody {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin-bottom: 12px;
+    gap: 12px;
+    margin-bottom: 14px;
 }
 
-.warrantyRow {
+.warrantyMetaGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.warrantyMetaItem {
     display: flex;
-    justify-content: space-between;
-    font-size: 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid #e6ece6;
+    border-radius: 9px;
+    background: #f8faf8;
+}
+
+.warrantyLabel {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.warrantyValue {
+    display: block;
+    width: 100%;
+    color: #243353;
+    font-size: 13px;
     line-height: 1.5;
+    overflow-wrap: anywhere;
 }
 
-.warrantyRow span:first-child {
-    color: #666;
+.warrantyDescription {
+    padding: 11px 12px;
+    border: 1px solid #e6ece6;
+    border-left: 3px solid #68a877;
+    border-radius: 8px;
+    background: #f8faf8;
+}
+
+.warrantyDescription p {
+    margin: 5px 0 0;
+    color: #243353;
+    font-size: 13px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.warrantyScheduleMissing {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: #fff8e7;
+    color: #8a5b00;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.warrantyScheduleMissing svg {
     flex-shrink: 0;
-    margin-right: 8px;
 }
 
-.warrantyRow span:last-child {
-    color: #222;
-    text-align: right;
+.warrantyEvidence {
+    margin-bottom: 12px;
 }
 
 .warrantyImages {
     display: flex;
-    gap: 6px;
-    margin-bottom: 12px;
+    gap: 8px;
+    margin-top: 8px;
     flex-wrap: wrap;
 }
 
 .warrantyImage {
-    width: 64px;
-    height: 64px;
+    display: block;
+    width: 72px;
+    height: 72px;
     object-fit: cover;
-    border-radius: 6px;
+    border-radius: 8px;
+    border: 1px solid #e2e8e2;
+    transition: transform 0.15s ease;
+}
+
+.warrantyImages a:hover .warrantyImage {
+    transform: scale(1.04);
+}
+
+.warrantyActionHint {
+    margin: 0;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.45;
 }
 
 .warrantyActions {
     display: flex;
-    gap: 8px;
-    margin-top: 12px;
+    gap: 10px;
+    margin-top: 9px;
 }
 
 .warrantyAcceptBtn {
     flex: 1;
-    padding: 8px 16px;
+    padding: 10px 14px;
     background: #2e7d32;
     color: #fff;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
     font-size: 14px;
-    transition: background 0.2s;
+    transition: background 0.2s, transform 0.2s;
 }
 
 .warrantyAcceptBtn:hover {
     background: #1b5e20;
+    transform: translateY(-1px);
 }
 
 .warrantyAcceptBtn:disabled {
@@ -851,31 +955,86 @@
 
 .warrantyRejectBtn {
     flex: 1;
-    padding: 8px 16px;
-    background: #ef4444;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
+    padding: 10px 14px;
+    background: #fff;
+    color: #b42318;
+    border: 1px solid #f0b6b1;
+    border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
     font-size: 14px;
-    transition: background 0.2s;
+    transition: background 0.2s, border-color 0.2s;
 }
 
 .warrantyRejectBtn:hover {
-    background: #c62828;
+    background: #fff1f0;
+    border-color: #d9928a;
 }
 
 .warrantyRejectBtn:disabled {
-    background: #ef9a9a;
+    opacity: 0.6;
     cursor: not-allowed;
 }
 
 .warrantyStatusInfo {
-    font-size: 14px;
-    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: #475569;
+    font-size: 13px;
+    line-height: 1.55;
 }
 
 .warrantyStatusInfo p {
-    margin: 4px 0;
+    margin: 0;
+}
+
+.warrantyStatusMessage {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 11px 12px;
+    border-radius: 9px;
+}
+
+.warrantyStatusMessage svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.warrantyStatusAccepted {
+    background: #eff8f0;
+    color: #256b35;
+}
+
+.warrantyStatusRejected {
+    background: #fff4f2;
+    color: #a93226;
+}
+
+.warrantyStatusNote {
+    padding: 10px 12px;
+    border-left: 3px solid #dce6dc;
+    border-radius: 0 7px 7px 0;
+    background: #f8faf8;
+    color: #334155;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+    .warrantyCard {
+        padding: 14px;
+    }
+
+    .warrantyMetaGrid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .warrantyHeader {
+        flex-direction: column;
+    }
+
+    .warrantyActions {
+        flex-direction: column;
+    }
 }

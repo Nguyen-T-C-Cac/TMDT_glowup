@@ -1,5 +1,7 @@
 package com.example.becommerce.controller;
 
+import com.example.becommerce.dto.request.ApplyInvoiceDiscountRequest;
+import com.example.becommerce.dto.response.InvoiceDiscountResponse;
 import com.example.becommerce.dto.response.ApiResponse;
 import com.example.becommerce.service.InvoiceService;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,6 +27,14 @@ public class InvoiceController {
     public ResponseEntity<ApiResponse<Void>> createInvoice(@PathVariable("id") String orderCode) {
         invoiceService.createInvoice(orderCode);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PostMapping("/apply-discount")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ADMIN')")
+    public ResponseEntity<ApiResponse<InvoiceDiscountResponse>> applyDiscount(
+            @PathVariable("id") String orderCode,
+            @RequestBody ApplyInvoiceDiscountRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(invoiceService.applyDiscount(orderCode, request)));
     }
 
     @PostMapping("/vnpay-checkout")

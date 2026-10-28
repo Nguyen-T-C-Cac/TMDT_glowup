@@ -191,12 +191,6 @@ export const orderService = {
         return unwrap<WarrantyResponse>(response.data);
     },
 
-    completeWarranty: async (warrantyCode: string): Promise<WarrantyResponse> => {
-        const response = await apiClient.post(`/api/warranty/${warrantyCode}/complete`);
-        return unwrap<WarrantyResponse>(response.data);
-    },
-
-
     completeOrder: async (orderId: string, payload: { finalPrice?: number; images?: string[] } = {}): Promise<OrderResponse> => {
         const response = await apiClient.post(`/api/orders/${orderId}/complete`, payload);
         unwrap(response.data);

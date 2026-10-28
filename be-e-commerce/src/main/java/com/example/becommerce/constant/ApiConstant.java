@@ -19,7 +19,7 @@ public final class ApiConstant {
     public static final String CONVERSATION_BASE = BASE_API + "/conversations";
     public static final String QUOTE_BASE        = BASE_API + "/quotes";
     public static final String BOOKING_BASE      = BASE_API + "/bookings";
-
+    public static final String VOUCHER_BASE      = BASE_API + "/vouchers";
     // Auth endpoints
     public static final String AUTH_REGISTER         = "/register";
     public static final String AUTH_LOGIN            = "/login";

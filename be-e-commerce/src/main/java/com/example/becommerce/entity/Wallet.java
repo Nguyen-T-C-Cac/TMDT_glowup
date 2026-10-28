@@ -50,6 +50,11 @@ public class Wallet {
     @Builder.Default
     private BigDecimal personalBalance = BigDecimal.ZERO;
 
+    /** Customer-facing reward points balance, redeemable when paying an invoice. */
+    @Column(name = "reward_points", nullable = false)
+    @Builder.Default
+    private long rewardPoints = 0L;
+
     @Column(name = "total_earned", nullable = false, precision = 19, scale = 0)
     @Builder.Default
     private BigDecimal totalEarned = BigDecimal.ZERO;

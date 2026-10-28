@@ -44,6 +44,19 @@ const warrantyStatusLabel = (status: string): string => {
     }
 };
 
+const isWithinWarranty = (completedAt?: string, warrantyMonths?: number, warrantyExpiresAt?: string): boolean => {
+    if (warrantyExpiresAt) {
+        const expiry = new Date(warrantyExpiresAt);
+        return !Number.isNaN(expiry.getTime()) && Date.now() <= expiry.getTime();
+    }
+    if (!completedAt) return false;
+
+    const completed = new Date(completedAt);
+    if (Number.isNaN(completed.getTime())) return false;
+    completed.setMonth(completed.getMonth() + (warrantyMonths ?? 3));
+    return Date.now() <= completed.getTime();
+};
+
 export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({ order, role, onBack, onCancel, onReview, onEditReview, onReport, onViewWarranty }) => {
     const [showWarrantyModal, setShowWarrantyModal] = useState(false);
     const [warrantySubmitted, setWarrantySubmitted] = useState(false);
@@ -55,6 +68,11 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({ order, role,
     const isCompleted = order.status.toLowerCase() === 'completed';
     const isCustomer = role === 'customer';
     const hasImages = (order.images?.length ?? 0) > 0;
+    const withinWarranty = isWithinWarranty(
+        order.completedAt,
+        order.warrantyMonths,
+        existingWarranty?.warrantyExpiresAt,
+    );
 
     useEffect(() => {
         if (isCompleted && isCustomer) {
@@ -207,20 +225,26 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({ order, role,
                                         <span>Lý do: {existingWarranty.rejectReason}</span>
                                     </div>
                                 )}
-                                {existingWarranty.status === 'rejected' && (
-                                    <button className="detail-warranty-btn detail-warranty-retry-btn" onClick={() => setShowWarrantyModal(true)}>
-                                        <FaShieldHalved /> Yêu cầu lại bảo hành
-                                    </button>
+                                {(existingWarranty.status === 'rejected' || existingWarranty.status === 'completed') && (
+                                    withinWarranty ? (
+                                        <button className="detail-warranty-btn detail-warranty-retry-btn" onClick={() => setShowWarrantyModal(true)}>
+                                            <FaShieldHalved /> Yêu cầu bảo hành lại
+                                        </button>
+                                    ) : (
+                                        <div className="detail-warranty-rejected">Đã hết thời hạn bảo hành.</div>
+                                    )
                                 )}
                             </div>
                         ) : warrantySubmitted ? (
                             <div className="detail-warranty-submitted">
                                 <FaShieldHalved /> Yêu cầu bảo hành đã gửi
                             </div>
-                        ) : (
+                        ) : withinWarranty ? (
                             <button className="detail-warranty-btn" onClick={() => setShowWarrantyModal(true)}>
                                 <FaShieldHalved /> Yêu cầu bảo hành
                             </button>
+                        ) : (
+                            <div className="detail-warranty-rejected">Đã hết thời hạn bảo hành.</div>
                         )}
                         <button className="detail-report-btn" onClick={() => onReport?.(order)}>
                             <FaTriangleExclamation /> Báo cáo sự cố

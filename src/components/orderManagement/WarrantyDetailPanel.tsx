@@ -13,6 +13,7 @@ interface WarrantyDetailPanelProps {
     orderId: string;
     role: UserRole;
     onBack: () => void;
+    onAccepted: () => void;
 }
 
 const statusBadgeClass = (status: string): string => {
@@ -37,7 +38,7 @@ const statusLabel = (status: string): string => {
     }
 };
 
-export const WarrantyDetailPanel: React.FC<WarrantyDetailPanelProps> = ({ orderId, role, onBack }) => {
+export const WarrantyDetailPanel: React.FC<WarrantyDetailPanelProps> = ({ orderId, role, onBack, onAccepted }) => {
     const [warranty, setWarranty] = useState<WarrantyResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -49,7 +50,6 @@ export const WarrantyDetailPanel: React.FC<WarrantyDetailPanelProps> = ({ orderI
     // Reject modal state
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
-    const [completing, setCompleting] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -81,6 +81,7 @@ export const WarrantyDetailPanel: React.FC<WarrantyDetailPanelProps> = ({ orderI
             const updated = await orderService.acceptWarranty(warranty.id);
             setWarranty(updated);
             alert('Đã chấp nhận yêu cầu bảo hành!');
+            onAccepted();
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Không thể chấp nhận yêu cầu');
         } finally {
@@ -104,20 +105,6 @@ export const WarrantyDetailPanel: React.FC<WarrantyDetailPanelProps> = ({ orderI
         }
     };
 
-    const handleComplete = async () => {
-        if (!warranty?.id) return;
-        setCompleting(true);
-        try {
-            const updated = await orderService.completeWarranty(warranty.id);
-            setWarranty(updated);
-            alert('Đã hoàn thành bảo hành.');
-        } catch (err) {
-            alert(err instanceof Error ? err.message : 'Không thể hoàn thành bảo hành');
-        } finally {
-            setCompleting(false);
-        }
-    };
-
     const handleWarrantySubmit = async (description: string, images: string[], scheduledAt: string | null) => {
         setSubmittingCreate(true);
         try {
@@ -138,7 +125,7 @@ export const WarrantyDetailPanel: React.FC<WarrantyDetailPanelProps> = ({ orderI
 
     const isTechnician = role === 'technician';
     const isPending = warranty?.status === 'pending';
-    const canCompleteWarranty = isTechnician && warranty?.status === 'in-progress';
+    const warrantyPeriodActive = (warranty?.remainingDays ?? 0) > 0;
 
     if (loading) {
         return (
@@ -204,6 +191,15 @@ export const WarrantyDetailPanel: React.FC<WarrantyDetailPanelProps> = ({ orderI
                                 {warranty.createdAt
                                     ? new Date(warranty.createdAt).toLocaleString('vi-VN')
                                     : '--'}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="wd-info-item">
+                        <FaShieldHalved className="wd-info-icon" />
+                        <div>
+                            <span className="wd-info-label">Số lần yêu cầu bảo hành của đơn</span>
+                            <span className="wd-info-value">
+                                {warranty.claimCount ?? 1} lần
                             </span>
                         </div>
                     </div>
@@ -308,15 +304,19 @@ export const WarrantyDetailPanel: React.FC<WarrantyDetailPanelProps> = ({ orderI
                 </div>
             )}
 
-            {!isTechnician && warranty.status === 'rejected' && (
+            {!isTechnician && (warranty.status === 'rejected' || warranty.status === 'completed') && (
                 <div className="wd-actions">
-                    <button
-                        className="wd-btn wd-btn-retry"
-                        onClick={() => setShowWarrantyModal(true)}
-                        disabled={submitting || submittingCreate}
-                    >
-                        <FaShieldHalved /> {submittingCreate ? 'Đang gửi lại...' : 'Yêu cầu lại bảo hành'}
-                    </button>
+                    {warrantyPeriodActive ? (
+                        <button
+                            className="wd-btn wd-btn-retry"
+                            onClick={() => setShowWarrantyModal(true)}
+                            disabled={submitting || submittingCreate}
+                        >
+                            <FaShieldHalved /> {submittingCreate ? 'Đang gửi lại...' : 'Yêu cầu lại bảo hành'}
+                        </button>
+                    ) : (
+                        <span>Đã hết thời hạn bảo hành.</span>
+                    )}
                 </div>
             )}
 
@@ -336,18 +336,6 @@ export const WarrantyDetailPanel: React.FC<WarrantyDetailPanelProps> = ({ orderI
                         disabled={submitting}
                     >
                         <FaXmark /> Từ chối bảo hành
-                    </button>
-                </div>
-            )}
-
-            {canCompleteWarranty && (
-                <div className="wd-actions">
-                    <button
-                        className="wd-btn wd-btn-complete"
-                        onClick={handleComplete}
-                        disabled={completing}
-                    >
-                        <FaCheck /> {completing ? 'Đang hoàn thành...' : 'Hoàn thành'}
                     </button>
                 </div>
             )}

@@ -975,10 +975,9 @@ FROM generate_series(1,46) s
 ON CONFLICT (code) DO NOTHING;
 
 -- WALLETS
--- Cột đúng theo entity Wallet: balance = ví tín dụng (credit), personal_balance = ví cá nhân,
--- pending_balance = chờ rút, version = 0 (bắt buộc cho optimistic locking khi insert thô).
+-- Cột đúng theo entity Wallet; reward_points khởi tạo bằng 0 cho ví mới.
 INSERT INTO wallets (
-    user_id, balance, personal_balance, pending_balance,
+    user_id, balance, personal_balance, pending_balance, reward_points,
     total_earned, total_withdrawn, currency, version, created_at, updated_at
 )
 SELECT
@@ -986,6 +985,7 @@ SELECT
     70000,  -- balance (credit)
     0,      -- personal_balance
     0,      -- pending_balance
+    0,      -- reward_points
     70000,  -- total_earned
     0,      -- total_withdrawn
     'VND', 0, NOW(), NOW()
@@ -994,7 +994,7 @@ WHERE u.code = 'USR-004'
     ON CONFLICT (user_id) DO NOTHING;
 
 INSERT INTO wallets (
-    user_id, balance, personal_balance, pending_balance,
+    user_id, balance, personal_balance, pending_balance, reward_points,
     total_earned, total_withdrawn, currency, version, created_at, updated_at
 )
 SELECT
@@ -1002,6 +1002,7 @@ SELECT
     15000,  -- balance (credit)
     0,      -- personal_balance
     0,      -- pending_balance
+    0,      -- reward_points
     35000,  -- total_earned
     20000,  -- total_withdrawn
     'VND', 0, NOW(), NOW()
@@ -1010,7 +1011,7 @@ WHERE u.code = 'USR-005'
     ON CONFLICT (user_id) DO NOTHING;
 
 INSERT INTO wallets (
-    user_id, balance, personal_balance, pending_balance,
+    user_id, balance, personal_balance, pending_balance, reward_points,
     total_earned, total_withdrawn, currency, version, created_at, updated_at
 )
 SELECT
@@ -1018,6 +1019,7 @@ SELECT
     0,      -- balance (credit)
     0,      -- personal_balance
     0,      -- pending_balance
+    0,      -- reward_points
     15000,  -- total_earned
     15000,  -- total_withdrawn
     'VND', 0, NOW(), NOW()
@@ -1091,8 +1093,8 @@ WHERE u.code = 'USR-006'
   AND NOT EXISTS (SELECT 1 FROM wallet_transactions wt WHERE wt.transaction_code = 'TX-COMM-005');
 
 -- Wallets for new technicians (USR-011 ~ USR-030)
-INSERT INTO wallets (user_id, balance, personal_balance, pending_balance, total_earned, total_withdrawn, currency, version, created_at, updated_at)
-SELECT u.id, 50000, 0, 0, 50000, 0, 'VND', 0, NOW(), NOW()
+INSERT INTO wallets (user_id, balance, personal_balance, pending_balance, reward_points, total_earned, total_withdrawn, currency, version, created_at, updated_at)
+SELECT u.id, 50000, 0, 0, 0, 50000, 0, 'VND', 0, NOW(), NOW()
 FROM users u WHERE u.code IN ('USR-011','USR-012','USR-013','USR-014','USR-015',
   'USR-016','USR-017','USR-018','USR-019','USR-020',
   'USR-021','USR-022','USR-023','USR-024','USR-025',
@@ -1100,8 +1102,8 @@ FROM users u WHERE u.code IN ('USR-011','USR-012','USR-013','USR-014','USR-015',
   AND NOT EXISTS (SELECT 1 FROM wallets w WHERE w.user_id = u.id);
 
 -- Wallets for technicians without balance yet (USR-009, USR-010)
-INSERT INTO wallets (user_id, balance, personal_balance, pending_balance, total_earned, total_withdrawn, currency, version, created_at, updated_at)
-SELECT u.id, 45000, 0, 0, 45000, 0, 'VND', 0, NOW(), NOW()
+INSERT INTO wallets (user_id, balance, personal_balance, pending_balance, reward_points, total_earned, total_withdrawn, currency, version, created_at, updated_at)
+SELECT u.id, 45000, 0, 0, 0, 45000, 0, 'VND', 0, NOW(), NOW()
 FROM users u WHERE u.code IN ('USR-009','USR-010')
   AND NOT EXISTS (SELECT 1 FROM wallets w WHERE w.user_id = u.id);
 

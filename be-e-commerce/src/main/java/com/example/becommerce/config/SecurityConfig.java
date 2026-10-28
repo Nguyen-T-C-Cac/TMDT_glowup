@@ -114,6 +114,10 @@ public class SecurityConfig {
                 .requestMatchers(ApiConstant.CONVERSATION_BASE + "/**").authenticated()
                 .requestMatchers(ApiConstant.QUOTE_BASE + "/**").authenticated()
 
+                // Vouchers — GET /api/vouchers (list) is authenticated; save/saved require CUSTOMER role (enforced via @PreAuthorize)
+                .requestMatchers(HttpMethod.GET, ApiConstant.VOUCHER_BASE).authenticated()
+                .requestMatchers(ApiConstant.VOUCHER_BASE + "/**").authenticated()
+
                 .requestMatchers("/api/upload/**").authenticated()
 
                 // Swagger/actuator (if added later)

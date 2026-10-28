@@ -76,6 +76,26 @@ public class Invoice {
     @Column(name = "transaction_code", length = 50)
     private String transactionCode;
 
+    /** Code of the voucher currently staged (or finalized) on this invoice, if any. */
+    @Column(name = "voucher_code", length = 40)
+    private String voucherCode;
+
+    @Column(name = "discount_amount", nullable = false)
+    @Builder.Default
+    private Long discountAmount = 0L;
+
+    @Column(name = "points_used", nullable = false)
+    @Builder.Default
+    private Long pointsUsed = 0L;
+
+    @Column(name = "points_discount_amount", nullable = false)
+    @Builder.Default
+    private Long pointsDiscountAmount = 0L;
+
+    /** Amount the customer actually needs to pay after voucher/points discount. */
+    @Column(name = "payable_amount")
+    private Long payableAmount;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
