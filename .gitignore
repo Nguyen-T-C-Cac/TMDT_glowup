@@ -28,3 +28,4 @@ dist-ssr
 
 
 docker-compose.yml
+/be-e-commerce/docker-compose.yml

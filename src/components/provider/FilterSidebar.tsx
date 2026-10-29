@@ -1,6 +1,7 @@
 import React from 'react';
 import './FilterSidebar.css';
 import { StarIcon } from '../common/Icons';
+import { HCMC_DISTRICTS } from '../../data';
 
 export interface ProviderFilters {
   district?: string;
@@ -8,16 +9,9 @@ export interface ProviderFilters {
   isAvailable?: boolean;
 }
 
-const DISTRICT_OPTIONS = [
-  'Quận 1, HCMC',
-  'Quận 7, HCMC',
-  'Thủ Đức, HCMC',
-  'Quận Bình Thạnh, HCMC',
-];
-
 const RATING_OPTIONS = [
-  { value: 4.5, label: '4.5+', filled: 5 },
-  { value: 4.0, label: '4.0+', filled: 4 },
+  { value: 4.5, label: '4.5 sao trở lên', filled: 5 },
+  { value: 4.0, label: '4.0 sao trở lên', filled: 4 },
 ];
 
 interface FilterSidebarProps {
@@ -37,6 +31,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
 }) => {
   const update = (patch: Partial<ProviderFilters>) => {
     onFiltersChange?.({ ...filters, ...patch });
+    onPageChange?.(1);
   };
 
   return (
@@ -44,55 +39,42 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
       <div className="filter-section">
         <h3 className="filter-title">Lọc theo khu vực</h3>
         <p className="filter-subtitle">TP.HCM</p>
-        
-        <div className="filter-options">
-          <label className="filter-checkbox">
-            <input
-              type="radio"
-              name="district"
-              checked={!filters.district}
-              onChange={() => update({ district: undefined })}
-            />
-            <span className="checkmark border-circle"></span>
-            <span className="filter-text">Tất cả khu vực</span>
-          </label>
-          {DISTRICT_OPTIONS.map((district) => (
-            <label className="filter-checkbox" key={district}>
-              <input
-                type="radio"
-                name="district"
-                checked={filters.district === district}
-                onChange={() => update({ district })}
-              />
-              <span className="checkmark border-circle"></span>
-              <span className="filter-text">{district}</span>
-            </label>
+        <label className="district-select-label" htmlFor="provider-district-filter">Chọn quận / huyện</label>
+        <select
+          id="provider-district-filter"
+          className="district-select"
+          value={filters.district ?? ''}
+          onChange={(event) => update({ district: event.target.value || undefined })}
+        >
+          <option value="">Tất cả khu vực</option>
+          {HCMC_DISTRICTS.map(({ name }) => (
+            <option key={name} value={name}>{name}</option>
           ))}
-        </div>
+        </select>
       </div>
 
       <div className="filter-section">
         <h3 className="filter-title">Đánh giá</h3>
         <div className="filter-options">
-          <label className="filter-checkbox">
+          <label className="filter-checkbox filter-radio">
             <input
               type="radio"
               name="rating"
               checked={!filters.minRating}
               onChange={() => update({ minRating: undefined })}
             />
-            <span className="checkmark border-circle"></span>
+            <span className="radio-mark" aria-hidden="true"></span>
             <span className="filter-text">Tất cả</span>
           </label>
           {RATING_OPTIONS.map((option) => (
-            <label className="filter-checkbox" key={option.value}>
+            <label className="filter-checkbox filter-radio" key={option.value}>
               <input
                 type="radio"
                 name="rating"
                 checked={filters.minRating === option.value}
                 onChange={() => update({ minRating: option.value })}
               />
-              <span className="checkmark border-circle"></span>
+              <span className="radio-mark" aria-hidden="true"></span>
               <div className="filter-rating">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <StarIcon

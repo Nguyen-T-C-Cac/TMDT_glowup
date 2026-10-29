@@ -32,8 +32,41 @@
 .filter-subtitle {
   font-size: 14px;
   color: var(--text-secondary);
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   margin-top: 0;
+}
+
+.district-select-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.district-select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 36px 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background-color: #fff;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.district-select:hover,
+.district-select:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+.district-select:focus-visible {
+  box-shadow: 0 0 0 3px rgba(104, 168, 119, 0.18);
 }
 
 /* ─── Filter Options ─── */
@@ -99,11 +132,89 @@
   transform: scale(1);
 }
 
+/* Radio options use a circular outline and a centered dot, not a filled checkbox. */
+.filter-radio {
+  min-height: 22px;
+  padding-left: 30px;
+}
+
+.filter-radio input {
+  width: 1px;
+  height: 1px;
+}
+
+.radio-mark {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: grid;
+  width: 19px;
+  height: 19px;
+  box-sizing: border-box;
+  transform: translateY(-50%);
+  place-items: center;
+  border: 1.5px solid #aeb8c2;
+  border-radius: 50%;
+  background: #fff;
+  transition: border-color 0.2s ease;
+}
+
+.radio-mark::after {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--primary);
+  content: "";
+  transform: scale(0);
+  transition: transform 0.15s ease;
+}
+
+.filter-radio:hover .radio-mark {
+  border-color: var(--primary);
+}
+
+.filter-radio input:checked ~ .radio-mark {
+  border-color: var(--primary);
+  background: #fff;
+}
+
+.filter-radio input:checked ~ .radio-mark::after {
+  transform: scale(1);
+}
+
+.filter-radio input:focus-visible ~ .radio-mark {
+  outline: 3px solid rgba(104, 168, 119, 0.2);
+  outline-offset: 2px;
+}
+
+.filter-radio input:checked ~ .filter-text {
+  color: var(--text-primary);
+}
+
 /* ─── Filter Text ─── */
 .filter-text {
   font-size: 14px;
   color: var(--text-primary);
   font-weight: 500;
+}
+
+.filter-rating {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.filter-rating .star-icon {
+  flex-shrink: 0;
+}
+
+.rating-text {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
 /* ─── Pagination ─── */
